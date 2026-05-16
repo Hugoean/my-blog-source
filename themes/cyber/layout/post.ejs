@@ -1,0 +1,16 @@
+<article class="post-full">
+  <div class="post-header">
+    <div class="post-meta">
+      <span class="post-date"><%= date(page.date, 'YYYY-MM-DD') %></span>
+      <% if(page.tags && page.tags.length) { %>
+        <% page.tags.each(function(tag) { %>
+          <span class="tag"># <%= tag.name %></span>
+        <% }) %>
+      <% } %>
+    </div>
+    <h1 class="post-title"><%= page.title %></h1>
+  </div>
+  <div class="post-content">
+    <%- page.content %>
+  </div>
+</article>

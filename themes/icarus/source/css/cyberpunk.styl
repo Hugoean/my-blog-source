@@ -1,0 +1,315 @@
+$family-sans-serif = 'Inter', 'Helvetica Neue', Ubuntu, 'Microsoft YaHei', sans-serif
+$family-code = 'Roboto Mono', monospace, 'Microsoft YaHei'
+$shadow = none
+$radius = 0
+$radius-small = 0
+$white = #fff
+$white-bis = #c8c0d8
+$grey = #7a7090
+$black = #05000f
+$black-bis = #0a0018
+$orange = #ff8e3c
+$yellow = #b400ff
+$green = #00ff41
+$blue = #00d4ff
+$purple = #b400ff
+$red = #ff003c
+$primary = $yellow
+$info = $blue
+$success = $green
+$warning = $orange
+$danger = $red
+$orange-invert = #05000f
+$yellow-invert = #05000f
+$green-invert = #05000f
+$blue-invert = #05000f
+$purple-invert = #05000f
+$red-invert = #05000f
+$primary-invert = #05000f
+$info-invert = #05000f
+$success-invert = #05000f
+$warning-invert = #05000f
+$danger-invert = #05000f
+$scheme-main = #05000f
+$link = $blue
+$link-hover = $yellow
+$text = #c8c0d8
+$text-strong = #b400ff
+$body-background-color = #05000f
+$input-color = $text
+$input-placeholder-color = rgba($input-color, .8)
+$footer-color = #b400ff
+$footer-background-color = #05000f
+$navbar-background-color = #05000f
+$navbar-item-color = #b400ff
+$navbar-item-active-color = #00d4ff
+$navbar-item-hover-color = #00d4ff
+$navbar-item-hover-background-color = transparent
+$navbar-item-margin-v = 1.25rem
+$navbar-item-margin-h = .25rem
+$navbar-item-padding-v = 0
+$navbar-item-padding-h = .5rem
+$card-background-color = transparent
+$menu-label-color = #b400ff
+$menu-item-hover-color = #05000f
+$menu-item-hover-background-color = rgba(180,0,255,0.25)
+$menu-item-active-color = #05000f
+$menu-item-active-background-color = rgba(180,0,255,0.35)
+$menu-list-border-left = 1px solid #b400ff
+$tag-color = #b400ff
+$tag-background-color = rgba(180,0,255,0.2)
+$timeline-fg-line = $blue
+$timeline-bg-line = $body-background-color
+$post-navigation-fg = $white-bis
+$searchbox-bg-container = #0a0018
+$searchbox-border = #b400ff
+$searchbox-bg-input = #0a0018
+$searchbox-bg-close-hover = #05000f
+$searchbox-bg-close-active = $searchbox-bg-close-hover
+$searchbox-bg-result-item-hover = #05000f
+
+@import 'style'
+
+clip-path(clip)
+    clip-path: clip
+    -webkit-clip-path: clip
+
+cut-corner(size)
+    clip-path(unquote('polygon(' + size + ' 0, 100% 0, 100% calc(100% - ' + size + '), calc(100% - ' + size + ') 100%, 0 100%, 0 ' + size + ')'))
+
+cut-corner-reverse(size)
+    clip-path(unquote('polygon(0 0, calc(100% - ' + size + ') 0, 100% ' + size + ', 100% 100%, ' + size + ' 100%, 0 calc(100% - ' + size + '), 0 0)'))
+
+cut-corner-top-right(size)
+    clip-path(unquote('polygon(0 0, calc(100% - ' + size + ') 0, 100% ' + size + ', 100% 100%, 0 100%)'))
+
+cut-corner-bottom-left(size)
+    clip-path(unquote('polygon(0 0, 100% 0, 100% 100%, ' + size + ' 100%, 0 calc(100% - ' + size + '))'))
+
+cut-corner-bottom-right(size)
+    clip-path(unquote('polygon(0 0, 100% 0, 100% calc(100% - ' + size + '), calc(100% - ' + size + ') 100%, 0 100%)'))
+
+undercover-before()
+    position: relative
+
+    &:before
+        content: ''
+        position: absolute
+        z-index: -1
+        top: 0
+        left: 0
+        right: 0
+        bottom: 0
+
+body
+    counter-reset: card
+
+::selection
+    color: #05000f
+    background: #b400ff
+
+.card:not(#back-to-top)
+    position: relative
+    counter-increment: card
+
+    &, .card-content
+        undercover-before()
+
+    &:before
+        top: -1.2px
+        left: -1.2px
+        right: -1.2px
+        bottom: -1.2px
+        background-color: #b400ff
+        cut-corner-reverse(16px)
+
+    &:after
+        content: 'R' counter(card)
+        position: absolute
+        color: #b400ff
+        right: 2rem
+        bottom: -.6em
+        font-size: .75rem
+        padding: 0 .25em
+        background: $body-background-color
+
+    .card-image
+        cut-corner-top-right(16px)
+
+    .card-content:before
+        background-color: $body-background-color
+        cut-corner-reverse(16px)
+
+    .card-image + .card-content:before
+        cut-corner-bottom-left(16px)
+
+clip-button($color, $color-invert)
+    &:before
+        background-color: $color
+        color: $color-invert
+
+    &:hover:before, &.is-hovered:before
+        background-color: darken($color, 2.5%)
+        color: $color-invert
+
+    &:focus:before, &.is-focused:before
+        color: $color-invert
+
+    &:active:before, &.is-active:before
+        background-color: darken($color, 5%)
+        color: $color-invert
+
+    &[disabled]:before, fieldset[disabled] &:before
+        background-color: $color
+
+    &.is-inverted
+        &:before
+            background-color: $color-invert
+            color: $color
+
+            &:hover:before, &.is-hovered:before
+                background-color: darken($color-invert, 5%)
+
+            &[disabled]:before, fieldset[disabled] &:before
+                background-color: $color-invert
+                border-color: transparent
+                box-shadow: none
+                color: $color
+
+.button:not(input)
+    border: none
+    outline: none
+    background: transparent !important
+    undercover-before()
+
+    &:before
+        cut-corner(8px)
+
+    for $name, $pair in $colors
+        $color = $pair['1']
+        $color-invert = $pair['2']
+
+        &.is-{$name}
+            clip-button($color, $color-invert)
+
+.field.has-addons
+    .control:not(:first-child)
+        .button
+            cut-corner-bottom-right(8px)
+
+.menu-list a
+    cut-corner(8px)
+
+.tags.has-addons
+    .tag:first-child
+        background: #b400ff !important
+
+    .tag:last-child
+        background: #00d4ff !important
+
+.pagination-previous, .pagination-next, .pagination-link
+    cut-corner(8px)
+
+    &:hover
+        background-color: #b400ff
+
+        &, a
+            color: #05000f
+
+.navbar-main
+    padding-top: 10px
+    padding-bottom: 30px
+
+    &:after
+        content: ''
+        position: absolute
+        left: 0
+        right: 0
+        bottom: -2px
+        background: url('../img/razor-top-black.svg') repeat-x top
+        height: 40px
+
+    .navbar-menu
+        .navbar-item
+            &:hover, &.is-active
+                color: #00d4ff
+                background-color: $body-background-color !important
+
+article.article, article.media
+    .title a
+        background-image: linear-gradient(transparent calc(100% - 2px), #b400ff 2px)
+        background-repeat: no-repeat
+        background-size: 0 100%
+        transition: background-size .25s ease-in-out
+
+    .title:hover a
+        background-size: 100% 100%
+
+article.article
+    .article-more
+        clip-button($info, $info-invert)
+
+.article-licensing
+    background: #0a0018
+
+.content
+    blockquote
+        background: transparent
+        border: .5px solid #b400ff
+        border-left: 5px solid #b400ff
+
+.footer
+    position: relative
+
+    &:before
+        content: ''
+        position: absolute
+        left: 0
+        right: 0
+        top: -1px
+        height: 39px
+        background: url('../img/razor-bottom-black.svg') repeat-x top
+
+    & > .container
+        padding-top: 40px
+
+.timeline .media
+    &:before
+        clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%)
+
+.searchbox .searchbox-container
+    border: 1px solid #b400ff
+
+    .searchbox-body
+        border-bottom: 1px solid #b400ff
+
+        li:last-child .searchbox-result-section
+            border-bottom: none
+
+    .searchbox-result-item
+        em
+            color: #05000f
+
+#back-to-top
+    color: #05000f
+    background: #b400ff
+    margin-top: 45px
+    cut-corner(8px)
+
+.cc-window, .cc-revoke
+    border-radius: 0 !important
+
+.cc-window
+    &:not(.cc-banner)
+        border: 1px solid #b400ff
+
+    &.cc-theme-classic, &.cc-theme-block
+        .cc-compliance > .cc-btn
+            border-radius: 0
+
+    &.cc-banner
+        .cc-compliance > .cc-btn
+            background-color: #b400ff
+
+            &:hover, &:focus
+                background-color: darken(#b400ff, 2.5%)

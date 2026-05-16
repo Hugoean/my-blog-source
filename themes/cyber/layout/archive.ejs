@@ -1,0 +1,9 @@
+<div class="archive">
+  <h1 class="page-title">ARCHIVES</h1>
+  <% page.posts.each(function(post) { %>
+  <div class="archive-item">
+    <span class="archive-date"><%= date(post.date, 'YYYY-MM-DD') %></span>
+    <a class="archive-title" href="<%- url_for(post.path) %>"><%= post.title %></a>
+  </div>
+  <% }) %>
+</div>

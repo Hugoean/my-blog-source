@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= page.title ? page.title + ' | ' : '' %><%= config.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <nav class="navbar">
+    <div class="nav-brand">⬡ <%= config.title %></div>
+    <div class="nav-links">
+      <a href="/">HOME</a>
+      <a href="/archives">ARCHIVES</a>
+      <a href="/tags">TAGS</a>
+      <a href="/about">ABOUT</a>
+    </div>
+  </nav>
+  <main class="container">
+    <%- body %>
+  </main>
+  <footer class="footer">
+    <span>© <%= config.author %> | POWERED BY HEXO</span>
+  </footer>
+  <script src="/js/stars.js"></script>
+</body>
+</html>
