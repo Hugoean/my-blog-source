@@ -1,21 +1,5 @@
 [
   {
-    "slug": "fineweb",
-    "href": "papers/fineweb.html",
-    "title": "The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale",
-    "arxiv": "2406.17557",
-    "tags": [
-      "数据工程"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "质量过滤消融最透；FineWeb-Edu 把\"教材级\"概念量化，2024 后训练数据范式。"
-  },
-  {
     "slug": "datacomp-lm",
     "href": "papers/datacomp-lm.html",
     "title": "DataComp-LM: In Search of the Next Generation of Training Sets",

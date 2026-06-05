@@ -71,5 +71,186 @@
       ],
       "sentence_count": 270
     }
+  },
+  {
+    "slug": "fineweb",
+    "href": "papers/fineweb.html",
+    "title": "The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale",
+    "arxiv": "2406.17557",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "质量过滤消融最透；FineWeb-Edu 把\"教材级\"概念量化，2024 后训练数据范式。",
+    "published_at": "2026-06-05",
+    "path": "source/papers-reader/papers/fineweb.html",
+    "audit": {
+      "slug": "fineweb",
+      "title": "The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2406.17557_fig_1.png",
+          "exists": true,
+          "bytes": 19786,
+          "dimensions": [
+            640,
+            480
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_2.png",
+          "exists": true,
+          "bytes": 19873,
+          "dimensions": [
+            640,
+            480
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_3.png",
+          "exists": true,
+          "bytes": 16247,
+          "dimensions": [
+            640,
+            480
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_4.png",
+          "exists": true,
+          "bytes": 16179,
+          "dimensions": [
+            640,
+            480
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_5.png",
+          "exists": true,
+          "bytes": 24447,
+          "dimensions": [
+            640,
+            480
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_6.png",
+          "exists": true,
+          "bytes": 24589,
+          "dimensions": [
+            640,
+            480
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_7.png",
+          "exists": true,
+          "bytes": 184548,
+          "dimensions": [
+            828,
+            1306
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_8.png",
+          "exists": true,
+          "bytes": 167544,
+          "dimensions": [
+            790,
+            1144
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_9.png",
+          "exists": true,
+          "bytes": 86128,
+          "dimensions": [
+            782,
+            646
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_10.png",
+          "exists": true,
+          "bytes": 244246,
+          "dimensions": [
+            1568,
+            1006
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_11.png",
+          "exists": true,
+          "bytes": 238867,
+          "dimensions": [
+            1576,
+            854
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_12.png",
+          "exists": true,
+          "bytes": 313340,
+          "dimensions": [
+            1574,
+            1156
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_13.png",
+          "exists": true,
+          "bytes": 274542,
+          "dimensions": [
+            1558,
+            998
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_14.png",
+          "exists": true,
+          "bytes": 381866,
+          "dimensions": [
+            1584,
+            1406
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_15.png",
+          "exists": true,
+          "bytes": 339937,
+          "dimensions": [
+            1558,
+            1256
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_16.png",
+          "exists": true,
+          "bytes": 127052,
+          "dimensions": [
+            444,
+            1350
+          ]
+        },
+        {
+          "src": "../figures/2406.17557_fig_17.png",
+          "exists": true,
+          "bytes": 72516,
+          "dimensions": [
+            462,
+            702
+          ]
+        }
+      ],
+      "sentence_count": 325
+    }
   }
 ]
