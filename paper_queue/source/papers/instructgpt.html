@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training language models to follow instructions · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2203.02155 · 68 页 · 6 张图</div>
+    <h1>Training language models to follow instructions</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-skim">优先级 skim</span>
+      <span>W10</span>
+      <span>RLHF</span><span>Classic</span>
+      <span><a href="https://arxiv.org/abs/2203.02155" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2203.02155.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>InstructGPT 把"如何让大模型听人话"这件事工程化为<strong>经典三阶段 RLHF 流水线:SFT → RM → PPO</strong>;在该流水线下,1.3B 的 InstructGPT 在人工偏好评测上反超 175B 的原始 GPT-3——这是 ChatGPT 与全行业 RLHF 的奠基之作。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>三阶段流水线(必默写)</strong>:① <em>SFT</em>——在 40 个 labelers 写的 demonstration 上 supervised fine-tune GPT-3;② <em>RM</em>——冻结 SFT 主干(去掉 unembedding,接线性头),在同一 prompt 下对 $K\!\in\![4,9]$ 个候选做 pairwise ranking,训成 6B reward model;③ <em>PPO</em>——以 RM 输出为标量奖励,从 SFT 初始化策略,在 bandit 环境里用 PPO 优化,并对每个 token 加 KL 惩罚以防 reward over-optimization。
+        </li>
+        <li>
+          <strong>RM 的 pairwise loss</strong>:每个 prompt 把 $\binom{K}{2}$ 对当作一个 batch 元素(避免在一个 epoch 内重复样本导致过拟合):
+          $$\mathcal{L}_{\text{RM}}(\theta) = -\frac{1}{\binom{K}{2}}\,\mathbb{E}_{(x,\,y_w,\,y_l)\sim\mathcal{D}}\bigl[\log\sigma\bigl(r_\theta(x, y_w) - r_\theta(x, y_l)\bigr)\bigr].$$
+          RM 用 6B 而非 175B 是因为 175B RM 训练不稳定且当 value function 用太贵。
+        </li>
+        <li>
+          <strong>PPO + KL + 预训练混合(PPO-ptx)目标</strong>:
+          $$\mathrm{objective}(\phi) = \mathbb{E}_{(x,y)\sim\mathcal{D}_{\pi_\phi^{\mathrm{RL}}}}\!\left[r_\theta(x,y) - \beta\log\!\frac{\pi_\phi^{\mathrm{RL}}(y\mid x)}{\pi^{\mathrm{SFT}}(y\mid x)}\right] + \gamma\,\mathbb{E}_{x\sim\mathcal{D}_{\mathrm{pretrain}}}\!\bigl[\log \pi_\phi^{\mathrm{RL}}(x)\bigr].$$
+          $\beta$ 控制 KL 强度(防止策略漂离 RM 准确的分布);$\gamma$ 把预训练的语言建模 loss 混回来,专门治疗 alignment tax。$\gamma=0$ 就是普通 PPO。
+        </li>
+        <li><strong>Labelers 选取与训练</strong>:Upwork + ScaleAI 招 ~40 人,做<em>筛选测试</em>(对敏感/有害输出的判别能力)、付费、共享 chat room 协同。inter-annotator agreement ~72.6%(训练 labelers)、77.3%(held-out);训练时优先 helpful,评测时优先 truthful & harmless。</li>
+        <li><strong>Alignment tax</strong>:RLHF 微调会在 SQuAD/DROP/HellaSwag/WMT 等公开 NLP 集上掉点(这就叫"对齐税")。PPO-ptx 用预训练梯度混合把税降到几乎为零,而 labeler 偏好得分不退化——这是 RLHF 能被广泛采纳的关键工程 trick。</li>
+        <li><strong>1.3B 击败 175B</strong>:175B GPT-3 输出 vs 175B InstructGPT,labeler 在 85±3% 的时间偏好后者;1.3B PPO-ptx 已经在 win-rate 上超过 175B GPT-3。说明对齐质量比纯参数规模重要,这是 ChatGPT 商业化的直接前提。</li>
+        <li><strong>对 ChatGPT/全行业的奠基意义</strong>:本文确立"pretrain → SFT → RM → PPO"为 LLM 对齐的<em>事实标准</em>,直接催生 ChatGPT(2022.11);Anthropic Claude、Llama-2/3-chat、DeepSeek-Chat、Qwen-Chat 等几乎所有 chat 模型都是它的变体或简化(DPO/GRPO/RLAIF/Constitutional AI 都建立在它的概念框架上)。</li>
+        <li><strong>已知局限</strong>:① 对齐的是<em>40 个 labeler 的偏好</em>,而非"全体人类价值";② 偏好优先 helpful 与 truthful/harmless 在评测口径上冲突;③ RM hacking、奖励过拟合、长答偏置;④ 仍会犯简单错误、虚构事实、对 false premise 失败。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      RLHF 三阶段经典背景,默写 SFT/RM/PPO 三个公式
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-4a">§2 Related Work / 相关工作</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-4b">§3.1 High-level Methodology / 三阶段流水线</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-4c">§3.2–3.3 Dataset &amp; Tasks / 数据与任务</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-4d">§3.4 Human Data Collection / Labelers</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-4e">§3.5 Models: SFT / RM / PPO</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-4f">§3.6 Evaluation / 评测口径</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-5">§4 Results / 实验结果</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-6">§5 Discussion / 讨论</a><span class="toc-page">p.17</span></li>
+
+      <li><a href="#sec-7">§5.3 Limitations / 局限</a><span class="toc-page">p.19</span></li>
+
+      <li><a href="#sec-8">References</a><span class="toc-page">p.21</span></li>
+
+    </ul>
+  </div>
+
+
+  <!-- 图表画廊 -->
+
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (4 张) · 点击放大</h2>
+    <div class="figure-grid">
+
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2203.02155_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.3 · 434×435</div>
+          <div class="fig-caption">Figure 2: 方法三步流水线示意:SFT → RM → PPO。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>本文的"灵魂图",定义了之后五年所有 RLHF 论文的视觉模板。三列分别是 ① <em>Collect demonstration data, train SFT</em>;② <em>Collect comparison data, train RM</em>(labelers 对 4–9 个候选 A/B/C/D… 做排序);③ <em>Optimize policy with PPO</em>(从 RM 拿 reward,KL 拉回 SFT)。</p>
+          <p><strong>② 关键数据 / 对照:</strong>蓝色箭头表示用于训练某个模型的数据流;Step 2 的 A–D 是从 SFT/PPO 采样的多个候选;Step 3 写明"reward model calculates a reward for the output, the reward is used to update the policy using PPO"。</p>
+          <p><strong>③ 启示:</strong>三步可以<em>反复迭代</em>——拿新策略采样、重新打标、训新 RM、再 PPO,这就是后来 Anthropic、Meta 都在跑的 iterative RLHF;DPO 等"砍掉 RM"的方法,本质都是在攻击此图中 Step 2 与 Step 3 的合并。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_4">
+        <img src="../figures/2203.02155_fig_4.png" alt="fig_4" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_4</span> · p.3 · 434×435</div>
+          <div class="fig-caption">Figure 4: 元数据细项:Attempts correct instruction / Follows explicit constraints / Hallucinations / Customer-assistant-appropriate。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_4">
+          <p><strong>① 图说明:</strong>把 labeler 标注的元数据拆成 4 个子柱状图,五个模型并排(GPT / GPT-prompted / SFT / PPO / PPO-ptx)。</p>
+          <p><strong>② 关键数据:</strong>① <em>Hallucination</em>:PPO/PPO-ptx 把闭域 QA 上的虚构率从 ~41% 降到 ~21%(腰斩);② <em>Follows explicit constraints</em>:PPO 大幅高于 GPT-3(例如 "2 段话以内");③ <em>Customer-assistant-appropriate</em>:PPO-ptx 比 GPT-3 高出近一倍。</p>
+          <p><strong>③ 启示:</strong>RLHF 的收益不是"模型变聪明了",而是"按指令、按约束、不瞎编"——这正是 ChatGPT 让普通用户突然觉得"AI 能用了"的根本原因。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_5">
+        <img src="../figures/2203.02155_fig_5.png" alt="fig_5" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_5</span> · p.39 · 2108×1240</div>
+          <div class="fig-caption">Appendix 图(标注员界面):用于演示 demonstration / ranking 的 UI。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_5">
+          <p><strong>① 图说明:</strong>附录里 labeler 工作界面截图——左边是 prompt + 多个候选回答,右边是评分量表(Overall quality 1–7 Likert,以及一组 binary 元数据如 hallucination / harmful / sexual / violent / 偏离指令 等)。</p>
+          <p><strong>② 关键数据:</strong>论文 Table 3 把 12 项元数据都做成 binary 或 1–7 Likert;<em>customer-assistant appropriate</em>、<em>denigrates a protected class</em>、<em>encourages violence</em> 都被显式追踪。</p>
+          <p><strong>③ 启示:</strong>RLHF 数据质量 ≈ 指南质量 + UI 质量。看本图就能理解:为什么后来 Anthropic 的 Constitutional AI、Meta 的 LLaMa-2 安全标注、阿里的 Qwen,都在 SOP / 评分量表上下大功夫——RM 学到的就是这张表。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_6">
+        <img src="../figures/2203.02155_fig_6.png" alt="fig_6" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_6</span> · p.39 · 2546×1548</div>
+          <div class="fig-caption">Appendix 图(标注指南 / 比较界面):labeler 看到的 ranking 任务示例。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_6">
+          <p><strong>① 图说明:</strong>ranking 任务的工作界面:同一 prompt 下并排显示 $K\!\in\![4,9]$ 个候选回答,labeler 需要给出整体排序,而不仅是 A/B 二选一。</p>
+          <p><strong>② 关键数据:</strong>每个 prompt 一次性产生 $\binom{K}{2}$ 个 pair;论文把这 $\binom{K}{2}$ 个 pair 作为<em>同一个 batch 元素</em>训练 RM,而非拆成独立样本——这样既高效(每个 completion 只过一次 RM forward),又避免一个 epoch 内对同一 completion 多次梯度更新而过拟合。</p>
+          <p><strong>③ 启示:</strong>这是工程 trick 但极其关键:朴素地把所有 pair 拆开,RM 一个 epoch 就过拟合了。后续 trlx / DeepSpeed-Chat / OpenRLHF 等开源框架的 RM dataloader 都沿用了这个 group-by-prompt 的设计。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- 章节正文 -->
+
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(中英对照,按章节折叠)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>Training language models to follow instructions with human feedback. Long Ouyang∗, Jeff Wu∗, Xu Jiang∗, Diogo Almeida∗, Carroll L. Wainwright∗, Pamela Mishkin∗, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell†, Peter Welinder, Paul Christiano∗†, Jan Leike∗, Ryan Lowe∗. OpenAI.</p></div>
+    </details>
+
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Making language models bigger does not inherently make them better at following a user's intent: large LMs can produce outputs that are untruthful, toxic, or unhelpful. We align language models with user intent by fine-tuning with human feedback. Starting from labeler-written prompts and prompts submitted through the OpenAI API, we collect a dataset of labeler demonstrations of desired model behavior and fine-tune GPT-3 with supervised learning; we then collect a dataset of rankings of model outputs and further fine-tune with reinforcement learning from human feedback. The resulting models, called InstructGPT, are preferred by labelers over GPT-3: outputs from the 1.3B InstructGPT are preferred to those from the 175B GPT-3, despite a 100× parameter gap. InstructGPT also shows improvements in truthfulness and reduced toxic generation while incurring only minimal performance regressions on public NLP datasets, suggesting fine-tuning with human feedback is a promising direction for alignment.</p>
+          </div>
+          <div class="zh">
+            <p>把语言模型做大,并不会自动让它更善于遵循用户意图:大模型可以输出不真实、有毒、或对用户毫无用处的内容。我们通过<em>用人类反馈微调</em>来让语言模型与用户意图对齐。先从 labelers 写的 prompt 与 OpenAI API 提交的 prompt 出发,收集 labelers 演示"理想模型行为"的数据集,用监督学习微调 GPT-3;再收集对模型输出的排序数据集,在此基础上用<em>基于人类反馈的强化学习</em>(RLHF)继续微调。所得模型称为 <strong>InstructGPT</strong>,labelers 显著更偏好它而非 GPT-3:1.3B 参数的 InstructGPT 输出被偏好于 175B GPT-3,尽管参数少 100 倍。InstructGPT 在真实性上有所提升、有毒生成有所下降,而在公开 NLP 数据集上的退化极小——这表明"用人类反馈微调"是对齐的一条有前途的道路。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Large language models can be "prompted" to perform a range of NLP tasks, but they often express unintended behaviors: making up facts, generating biased or toxic text, or simply not following user instructions. The root cause is a misalignment between the LM training objective (predict the next token on internet text) and the practical objective ("follow the user's instructions helpfully and safely"). We aim to align LMs with user intentions — both explicit (instruction-following) and implicit (truthful, unbiased, non-toxic, non-harmful) — and adopt the Askell et al. framing of <em>helpful, honest, harmless</em>. To do so, we use reinforcement learning from human feedback (RLHF) to fine-tune GPT-3 on a broad class of written instructions. Our quantitative outcome is striking: a 1.3B InstructGPT beats the 175B GPT-3 in labeler preference on our API distribution, demonstrating that alignment fine-tuning can dominate two orders of magnitude of pretraining scale.</p>
+          </div>
+          <div class="zh">
+            <p>大型语言模型可以被 "prompt" 起来完成各种 NLP 任务,但常常表现出非期望行为:虚构事实、产生偏见或有毒文本、或干脆不遵循用户指令。根源在于训练目标(在互联网文本上预测下一个 token)与实用目标("有帮助且安全地遵循用户指令")之间存在<em>错位(misalignment)</em>。我们的目标是让 LM 与用户意图对齐——既包括<em>显式</em>意图(遵循指令),也包括<em>隐式</em>意图(真实、无偏见、不有毒、不造成伤害)——并采用 Askell 等人的"helpful / honest / harmless(3H)"框架。为此,我们用<em>基于人类反馈的强化学习</em>(RLHF)在一大类书面指令上微调 GPT-3。一个量化结论极为震撼:在我们的 API 分布上,1.3B 的 InstructGPT 在 labeler 偏好上击败 175B 的 GPT-3——这说明对齐微调可以盖过两个数量级的预训练规模。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our methodology follows Ziegler et al. (2019) and Stiennon et al. (2020): we hire a team of about 40 contractors selected by a screening test, collect human-written demonstrations on prompts submitted to OpenAI API (plus some labeler-written prompts) to train an SFT baseline, then collect comparison data between model outputs and train a reward model (RM) to predict labeler preferences. Finally we use the RM as a reward function and fine-tune the supervised baseline with PPO to maximize that reward, illustrated in Figure 2. The procedure aligns GPT-3 to the stated preferences of a specific group of people — mostly our labelers and researchers — rather than to any broader notion of "human values"; we revisit this caveat in §5.2. We train three model sizes (1.3B, 6B, 175B) on the GPT-3 architecture, and call the resulting models InstructGPT.</p>
+          </div>
+          <div class="zh">
+            <p>方法学沿用 Ziegler 等(2019)与 Stiennon 等(2020):我们雇约 40 个 contractor(经筛选测试录用),在 OpenAI API 提交的 prompts(加上 labelers 自写的一部分)上收集人写 demonstration 训练 SFT 基线;然后采集模型输出之间的比较数据,训一个奖励模型(RM)预测 labeler 偏好;最后,以 RM 作为奖励函数,用 PPO 微调 SFT 基线,使其最大化该奖励,流程见图 2。这一过程把 GPT-3 对齐到<em>某个特定人群</em>(主要是我们的 labelers 与研究员)的偏好,而不是某种更宽泛的"人类价值"——我们在 §5.2 重谈这一点。我们用 GPT-3 架构训三种规模(1.3B / 6B / 175B),所得模型称为 InstructGPT。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our main findings are: (i) labelers significantly prefer InstructGPT over GPT-3 — 175B InstructGPT outputs win against 175B GPT-3 85±3% of the time, and 71±4% against few-shot 175B GPT-3; (ii) InstructGPT improves on truthfulness — on TruthfulQA it produces truthful and informative answers about twice as often as GPT-3, and on closed-domain tasks it halves the hallucination rate (41% → 21%); (iii) toxicity drops modestly (about 25% fewer toxic outputs under a "respectful" prompt), but bias on Winogender / CrowS-Pairs barely moves; (iv) RLHF fine-tuning induces an <em>alignment tax</em> — performance regressions on SQuAD, DROP, HellaSwag, WMT — which we largely remove by mixing pretraining gradients into PPO updates (PPO-ptx); (v) the models generalize to held-out labelers (similar preference rates) and to instructions outside the fine-tuning distribution (non-English, coding), though they still make simple mistakes such as hedging, hallucinating, or accepting false premises.</p>
+          </div>
+          <div class="zh">
+            <p>我们的主要发现:(i) labelers 显著更偏好 InstructGPT——175B InstructGPT 对 175B GPT-3 的胜率为 85±3%,对 few-shot 175B GPT-3 为 71±4%;(ii) 真实性显著改善——TruthfulQA 上"真实且有信息量"的回答比 GPT-3 多约 2 倍,在闭域任务上虚构率从 41% 降到 21%;(iii) 毒性小幅下降("尊重"prompt 下 toxic 输出少约 25%),但在 Winogender / CrowS-Pairs 上的偏见几乎不变;(iv) RLHF 微调会带来<em>对齐税</em>——SQuAD / DROP / HellaSwag / WMT 翻译上掉点——我们用"PPO 梯度 + 预训练梯度混合"(PPO-ptx)几乎完全消除该退化;(v) 模型能泛化到 held-out labelers(偏好率相近)与微调分布外的指令(非英语、代码),但仍会犯简单错误:啰嗦回避、虚构事实、接受错误前提。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4a">
+      <summary>
+        <span>§2 Related Work / 相关工作<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We build on prior RLHF work originally developed for simple robots and Atari games (Christiano et al. 2017; Ibarz et al. 2018) and more recently applied to fine-tune LMs for summarization (Ziegler et al. 2019; Stiennon et al. 2020; Wu et al. 2021), dialogue, translation, semantic parsing, story generation, and evidence extraction. Conceptually our work is a direct application of RLHF to aligning language models on a <em>broad</em> distribution of language tasks rather than a single task. A second line of related work is cross-task instruction tuning (FLAN, T0, etc.), which fine-tunes LMs on a mix of public NLP datasets prefixed with natural-language instructions and evaluates on held-out tasks; we compare InstructGPT head-to-head with FLAN- and T0-finetuned GPT-3 in §4. A third line concerns evaluating and mitigating harms — toxicity (RealToxicityPrompts), bias (CrowS-Pairs, Winogender), data leakage and misuse — much of which informs both our evaluation and our labeling rubric.</p>
+          </div>
+          <div class="zh">
+            <p>本文建立在以往 RLHF 工作之上:最早用于训练简单机器人和 Atari 游戏(Christiano 等 2017;Ibarz 等 2018),近年用于摘要(Ziegler 2019;Stiennon 2020;Wu 2021)、对话、翻译、语义解析、故事生成、证据抽取等。从概念上,本文是 RLHF 在<em>大范围</em>语言任务(而非单一任务)上的直接应用。第二条相关线是"跨任务指令微调"(FLAN、T0 等):把一堆公开 NLP 数据集按"自然语言指令"格式拼起来微调 LM,再在 held-out 任务上评测;§4 我们让 InstructGPT 直接对打用同样 175B GPT-3 训的 FLAN/T0 模型。第三条线是"衡量与缓解 LM 危害":毒性(RealToxicityPrompts)、偏见(CrowS-Pairs、Winogender)、数据泄漏与滥用——它们既是我们的评测来源,也是 labeling 量表的参考。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4b">
+      <summary>
+        <span>§3.1 High-level Methodology / 三阶段流水线<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our methodology follows Ziegler et al. (2019) and Stiennon et al. (2020). Starting from a pretrained LM (GPT-3), a prompt distribution, and a team of trained human labelers, we apply three steps (Figure 2). <strong>Step 1 (SFT):</strong> labelers provide demonstrations of desired behavior on the input prompt distribution; we fine-tune the pretrained GPT-3 on these demonstrations with supervised learning. <strong>Step 2 (RM):</strong> we collect a dataset of comparisons between model outputs for the same prompt, where labelers indicate which output they prefer; we train a reward model $r_\theta(x, y)$ to predict the human-preferred output. <strong>Step 3 (PPO):</strong> we treat the RM output as a scalar reward and fine-tune the SFT policy with PPO to maximize it. Steps 2 and 3 can be iterated: collect more comparisons on the current best policy, train a new RM, then a new policy.</p>
+          </div>
+          <div class="zh">
+            <p>方法学沿用 Ziegler 等(2019)与 Stiennon 等(2020)。从一个预训练 LM(GPT-3)、一份 prompt 分布、一支训练有素的 labeler 团队出发,应用三步(图 2)。<strong>第 1 步(SFT):</strong>labelers 在输入 prompt 分布上提供"理想行为"的 demonstrations,我们用监督学习在这些 demonstrations 上微调预训练 GPT-3。<strong>第 2 步(RM):</strong>采集同一 prompt 下模型输出之间的比较数据,由 labeler 指出更偏好哪一个;训练奖励模型 $r_\theta(x, y)$ 以预测"人类更偏好的输出"。<strong>第 3 步(PPO):</strong>把 RM 输出当作标量奖励,用 PPO 微调 SFT 策略使其最大化该奖励。第 2、3 步可以反复迭代:用当前最优策略采更多比较数据,训新的 RM,再训新的策略——大部分比较数据来自 SFT 策略,小部分来自 PPO 策略。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4c">
+      <summary>
+        <span>§3.2–3.3 Dataset &amp; Tasks / 数据与任务<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our prompt dataset comes primarily from text prompts submitted to the OpenAI API Playground on an earlier InstructGPT model (trained only on demonstration data); users were informed via a recurring notification that their data could be used for further training, and we do <em>not</em> use prompts from production API traffic. We heuristically deduplicate by long common prefixes, cap to 200 prompts per user-ID, and split train/val/test by user-ID so that no user appears in two splits. PII is filtered out of the training split. To bootstrap the very first models, labelers also wrote three kinds of prompts themselves: <em>plain</em> (arbitrary tasks with diversity), <em>few-shot</em> (one instruction plus several query/response pairs), and <em>user-based</em> (use-cases drawn from API waitlist applications). From these prompts we derive three datasets: the SFT dataset (~13k training prompts), the RM dataset (~33k training prompts), and the PPO dataset (~31k training prompts, unlabeled). Use-case mix on the RM dataset: Generation 45.6%, Open QA 12.4%, Brainstorming 11.2%, Chat 8.4%, Rewrite 6.6%, Summarization 4.2%, Classification 3.5%, Other 3.5%, Closed QA 2.6%, Extract 1.9%. The dataset is over 96% English. Labelers are instructed to infer user intent, and to consider implicit intentions such as truthfulness and harm avoidance.</p>
+          </div>
+          <div class="zh">
+            <p>我们的 prompt 数据集主要来自 OpenAI API Playground 上,被早期 InstructGPT 模型(仅用 demonstration 数据训练)接收的提交;用户通过反复出现的通知被告知其数据可能被用于训练,且我们<em>不</em>使用生产 API 流量。我们用"长公共前缀"启发式去重,限制每个 user-ID 最多 200 条 prompt,并按 user-ID 切分 train/val/test 使三个集合中没有同一用户;训练集内的 PII 被过滤。为引导最初的模型,labelers 还自己写了三类 prompt:<em>plain</em>(任意但保持多样的任务)、<em>few-shot</em>(一条指令 + 若干 query/response 对)、<em>user-based</em>(从 API waitlist 申请里抽出的用例)。由此衍生三份数据:SFT 数据集(约 13k 训练 prompt)、RM 数据集(约 33k)、PPO 数据集(约 31k,无人工标签)。RM 数据集 use-case 分布:Generation 45.6%,Open QA 12.4%,Brainstorming 11.2%,Chat 8.4%,Rewrite 6.6%,Summarization 4.2%,Classification 3.5%,Other 3.5%,Closed QA 2.6%,Extract 1.9%。数据集超过 96% 是英文。labelers 被要求<em>推断用户意图</em>,并兼顾隐式意图——真实性与不造成伤害。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4d">
+      <summary>
+        <span>§3.4 Human Data Collection / Labelers 的选取与协作<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We hired about 40 contractors on Upwork and ScaleAI to produce demonstrations and comparisons and to perform our main evaluations. Compared to prior work that collected human preferences on a single task such as summarization, our inputs span a much broader range of tasks and can include controversial or sensitive topics, so we designed a <em>screening test</em> to measure each candidate's sensitivity to different demographic groups and their ability to flag potentially harmful outputs; only those who scored well were retained. During training we instruct labelers to <em>prioritize helpfulness</em> to the user; during the final evaluations we instruct them to <em>prioritize truthfulness and harmlessness</em>, since this matches what we care about in deployment. We onboard labelers, write detailed per-task instructions (Appendix B.2), and run a shared chat room to answer questions in real time. As a generalization check we also hire a separate set of "held-out" labelers (same vendors, no screening test) who produce none of the training data. Inter-annotator agreement is high despite task complexity — 72.6±1.5% among training labelers and 77.3±1.3% among held-out labelers (Stiennon et al. 2020 reported 73±4% researcher-researcher agreement).</p>
+          </div>
+          <div class="zh">
+            <p>我们在 Upwork 与 ScaleAI 上雇了约 40 名 contractor 来产生 demonstration / 比较数据,并执行主要评测。相较于以往只在摘要等<em>单一任务</em>上采人类偏好的工作,我们的输入横跨极广的任务,且偶尔涉及有争议或敏感话题——因此我们设计了一份<em>筛选测试</em>,衡量候选者对不同人群偏好的敏感度以及识别有害输出的能力;只录用得分高的人。<strong>训练期间</strong>,我们让 labelers <em>优先 helpfulness</em>;<strong>最终评测期间</strong>,我们让 labelers <em>优先 truthfulness 与 harmlessness</em>——后者才是部署时真正关心的。我们有 onboarding 流程,为每项任务写详细标注指南(附录 B.2),并通过共享 chat room 实时回答问题。为检验泛化能力,我们另雇一组"held-out" labelers(同样供应商,但<em>未参加筛选</em>),他们不产出任何训练数据。任务复杂但 inter-annotator agreement 较高——训练 labelers 之间为 72.6±1.5%,held-out 之间为 77.3±1.3%(对照 Stiennon 等 2020 中研究员之间为 73±4%)。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4e">
+      <summary>
+        <span>§3.5 Models: SFT / RM / PPO<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Supervised fine-tuning (SFT).</strong> We fine-tune GPT-3 on labeler demonstrations using supervised learning: 16 epochs, cosine learning-rate decay, residual dropout 0.2. Final SFT model selection is based on RM score on the validation set. Similar to Wu et al. (2021), SFT overfits on validation loss after 1 epoch, but training longer continues to improve both RM score and human preference ratings — so we accept that overfitting.</p>
+          </div>
+          <div class="zh">
+            <p><strong>监督微调(SFT)。</strong>在 labeler 演示数据上用监督学习微调 GPT-3:训 16 个 epoch,采用 cosine 学习率衰减,residual dropout 0.2。最终 SFT 模型按"验证集 RM 分数"挑选。和 Wu 等 2021 一样,SFT 在第 1 个 epoch 后就会在验证 loss 上过拟合,但<em>继续训</em>反而能持续提升 RM 分数与人类偏好评分——于是我们接受这一"过拟合"。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Reward modeling (RM).</strong> Starting from the SFT model with its final unembedding layer removed, we add a linear head that outputs a single scalar reward for a (prompt, completion) pair. We use only 6B RMs in this paper because 175B RM training was unstable and less suitable as a value function during RL. To accelerate labeling we present labelers with $K \in [4, 9]$ responses per prompt to rank, producing $\binom{K}{2}$ comparisons per prompt. Critically, we train all $\binom{K}{2}$ comparisons from one prompt as a <em>single</em> batch element rather than as independent samples; this requires only one RM forward pass per completion (instead of $K\!-\!1$), and — because each completion is no longer reused across many gradient updates in one epoch — avoids overfitting. The loss is</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{RM}}(\theta) = -\frac{1}{\binom{K}{2}}\,\mathbb{E}_{(x,\,y_w,\,y_l)\sim \mathcal{D}}\bigl[\log \sigma\bigl(r_\theta(x, y_w) - r_\theta(x, y_l)\bigr)\bigr], \quad (1)$$</div>
+            <p>where $r_\theta(x, y)$ is the scalar output of the RM with parameters $\theta$, $y_w$ is the preferred completion of the pair $(y_w, y_l)$, and $\mathcal{D}$ is the dataset of human comparisons. Because the RM loss is invariant to reward shifts, we add a bias before RL so that labeler demonstrations have mean reward 0.</p>
+          </div>
+          <div class="zh">
+            <p><strong>奖励模型(RM)。</strong>从 SFT 模型出发,去掉最后的 unembedding 层,在其上加一个线性头,输出 (prompt, completion) 的一维标量奖励。本文只用 <strong>6B 的 RM</strong>——175B RM 训练不稳定,而且作为 RL 阶段的 value function 性价比低。为加速 labeling,我们给 labelers 同时展示 $K\!\in\![4,9]$ 个回答让其排序,每个 prompt 生成 $\binom{K}{2}$ 个比较对。关键工程 trick:把<em>同一 prompt 下</em>的 $\binom{K}{2}$ 个 pair 作为<em>同一个 batch 元素</em>训练,而非拆成独立样本。这样每个 completion 在每个 epoch 内只过一次 RM forward(不是 $K\!-\!1$ 次),又避免同一 completion 在一个 epoch 内被多次梯度更新而过拟合。损失函数为公式 (1),其中 $r_\theta(x,y)$ 是参数为 $\theta$ 的 RM 输出,$y_w$ 是 pair $(y_w, y_l)$ 中被偏好的回答,$\mathcal{D}$ 是人类比较数据集。由于 RM loss 对奖励的平移不变,在 RL 之前我们加一个 bias,使 labeler demonstration 的平均奖励为 0。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Reinforcement learning (PPO &amp; PPO-ptx).</strong> Following Stiennon et al. (2020), we fine-tune the SFT model with PPO. The environment is a bandit that presents a random customer prompt and expects a response; given (prompt, response) the RM emits a reward and the episode ends. We additionally add a <em>per-token KL penalty</em> from the SFT model at each token, to mitigate over-optimization of the RM. The value function is initialized from the RM. We call these models "PPO". We also mix the pretraining gradients into the PPO gradients to fix performance regressions on public NLP datasets, calling these "PPO-ptx". The combined RL objective is</p>
+            <div class="bi-eq">$$\mathrm{objective}(\phi) = \mathbb{E}_{(x,\,y)\,\sim\,\mathcal{D}_{\pi_\phi^{\mathrm{RL}}}}\!\left[r_\theta(x,y) - \beta\log\!\frac{\pi_\phi^{\mathrm{RL}}(y\mid x)}{\pi^{\mathrm{SFT}}(y\mid x)}\right] + \gamma\,\mathbb{E}_{x\,\sim\,\mathcal{D}_{\mathrm{pretrain}}}\!\bigl[\log \pi_\phi^{\mathrm{RL}}(x)\bigr], \quad (2)$$</div>
+            <p>where $\pi_\phi^{\mathrm{RL}}$ is the learned RL policy, $\pi^{\mathrm{SFT}}$ is the supervised model, and $\mathcal{D}_{\mathrm{pretrain}}$ is the pretraining distribution. The KL coefficient $\beta$ controls the per-token KL penalty (and hence drift away from $\pi^{\mathrm{SFT}}$); the pretraining-mix coefficient $\gamma$ controls how strongly we keep the language-modeling objective. For "PPO" models $\gamma = 0$; for "PPO-ptx" $\gamma > 0$. Unless stated otherwise, "InstructGPT" in this paper refers to the PPO-ptx models.</p>
+          </div>
+          <div class="zh">
+            <p><strong>强化学习(PPO 与 PPO-ptx)。</strong>沿用 Stiennon 等 2020,用 PPO 微调 SFT 模型。环境是一个 bandit:抛出一个随机的客户 prompt,期待一个回复;给定 (prompt, response) 后,RM 给出奖励,episode 结束。我们在<em>每个 token</em>上加一项相对于 SFT 模型的 KL 惩罚,以缓解对 RM 的过度优化。value function 用 RM 初始化。这类模型我们称为 "PPO"。我们还把<em>预训练梯度</em>混合进 PPO 梯度,以修复公开 NLP 数据集上的退化,称为 "PPO-ptx"。RL 阶段的合成目标见公式 (2),其中 $\pi_\phi^{\mathrm{RL}}$ 为学到的 RL 策略,$\pi^{\mathrm{SFT}}$ 为监督模型,$\mathcal{D}_{\mathrm{pretrain}}$ 为预训练分布。<strong>KL 系数 $\beta$</strong> 控制每个 token 的 KL 惩罚强度(即与 $\pi^{\mathrm{SFT}}$ 的偏离程度);<strong>预训练混合系数 $\gamma$</strong> 控制保留语言建模目标的强度。"PPO" 模型 $\gamma=0$,"PPO-ptx" $\gamma>0$。除非另外说明,本文 "InstructGPT" 默认指 PPO-ptx 模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Baselines.</strong> We compare the PPO models to SFT and to GPT-3, both raw and with a hand-crafted few-shot prefix that nudges GPT-3 into an instruction-following mode ("GPT-3-prompted"). We additionally compare InstructGPT to 175B GPT-3 fine-tuned on the FLAN (Wei et al. 2021) and T0 (Sanh et al. 2021) datasets — instruction-tuned compilations of public NLP tasks — using approximately 1M examples each and picking the checkpoint with the highest validation RM score.</p>
+          </div>
+          <div class="zh">
+            <p><strong>基线。</strong>把 PPO 模型与 SFT 以及 GPT-3 对比;后者既包括 raw GPT-3,也包括加了一段手写 few-shot 前缀、把 GPT-3 调成"指令跟随模式"的版本("GPT-3-prompted")。此外把 InstructGPT 与"用 FLAN(Wei 等 2021)和 T0(Sanh 等 2021)微调过的 175B GPT-3"对打——后两者是公开 NLP 任务 + 自然语言指令的整合数据集,我们各用约 100 万样本微调,并选验证集 RM 分数最高的 checkpoint。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4f">
+      <summary>
+        <span>§3.6 Evaluation / 评测口径<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Following Leike et al. (2018) and Askell et al. (2021), we operationalize "alignment" as <em>helpful, honest, harmless</em>. For <strong>helpful</strong>, the metric is labeler preference on a held-out set of API prompts. For <strong>honest</strong>, since we can't probe a model's "belief", we measure <em>truthfulness</em> via (i) hallucination rate on closed-domain API tasks and (ii) the TruthfulQA dataset. For <strong>harmless</strong>, we use proxy criteria evaluated by labelers (e.g., inappropriate for a customer assistant, denigrates a protected class, contains sexual/violent content) plus public benchmarks (RealToxicityPrompts, CrowS-Pairs, Winogender). Evaluations split into two parts: (a) on the API distribution, using win-rates against a fixed baseline (we pick the 175B SFT model since its performance sits in the middle of the pack) and 1–7 Likert overall-quality ratings; (b) on public NLP datasets — both safety-oriented and traditional zero-shot tasks like QA, reading comprehension, summarization — plus human evaluations of toxicity on RealToxicityPrompts.</p>
+          </div>
+          <div class="zh">
+            <p>沿用 Leike 等(2018)与 Askell 等(2021),我们将"对齐"具体化为<em>helpful / honest / harmless</em>(3H)。<strong>Helpful</strong> 用 labeler 偏好在 held-out API prompts 上度量。<strong>Honest</strong> 由于无法探测模型的"信念",改测<em>truthfulness</em>:(i) 闭域 API 任务上的虚构率,(ii) TruthfulQA 数据集。<strong>Harmless</strong> 用一组由 labeler 评分的代理标准(如:不适合作为客户助手、贬损受保护群体、含色情/暴力内容),加上公开基准(RealToxicityPrompts、CrowS-Pairs、Winogender)。评测分两大块:(a) <em>API 分布</em>——用固定基线(选 175B SFT,因其表现处于中等)算 win-rate,并采集 1–7 Likert 的"整体质量"评分;(b) <em>公开 NLP 数据集</em>——既包含安全方向(真实性、毒性、偏见),也包含 QA、阅读理解、摘要等传统零样本任务;再加上 RealToxicityPrompts 上的人工毒性评测。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§4 Results / 实验结果<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.1 Results on the API distribution.</strong> Across model sizes, labelers significantly prefer InstructGPT over GPT-3 (Figure 1). The ordering is consistent: raw GPT-3 &lt; GPT-3-prompted &lt; SFT &lt; PPO ≈ PPO-ptx. Concretely, 175B InstructGPT wins 85±3% against 175B GPT-3 and 71±4% against few-shot 175B GPT-3; even the 1.3B PPO-ptx beats 175B GPT-3 in pairwise preference. The same ordering holds when evaluated on prompts that were submitted to GPT-3 itself, not to InstructGPT (Figure 3), refuting a "we just rigged the prompt distribution" objection. Along finer-grained metadata (Figure 4), PPO models are more often attempting the correct instruction, more often follow explicit constraints (e.g., "answer in two paragraphs"), are rated more appropriate for a customer assistant, and hallucinate roughly half as often in closed-domain tasks (21% vs. 41% for GPT-3).</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.1 API 分布上的结果。</strong>跨模型规模,labelers 显著更偏好 InstructGPT(图 1)。排序一致:raw GPT-3 &lt; GPT-3-prompted &lt; SFT &lt; PPO ≈ PPO-ptx。具体数字:175B InstructGPT 对 175B GPT-3 胜率 85±3%,对 few-shot 175B GPT-3 胜率 71±4%;甚至 1.3B PPO-ptx 在 pairwise 偏好上击败 175B GPT-3。当我们换到"原本提交给 GPT-3"的 prompts 上评测(图 3),同样的排序仍成立——这反驳了"是不是只是 prompt 分布对你有利"的质疑。在更细的元数据维度(图 4),PPO 模型更频繁地尝试正确指令、更常遵守显式约束(如"用两段话作答")、更适合作为客户助手,并把<em>闭域</em>任务上的虚构率几乎腰斩(21% vs. GPT-3 的 41%)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Generalization to held-out labelers and to FLAN/T0.</strong> Held-out labelers — who produced none of the training data — show preference patterns essentially identical to training labelers (Figure 3), and a 5-fold cross-validation RM achieves 69.6±0.9% on held-out groups vs. 72.4±0.4% on its training groups, indicating the reward signal generalizes beyond the training annotators. In head-to-head comparisons, 175B InstructGPT outputs are preferred over 175B GPT-3-FLAN 78±4% of the time and over 175B GPT-3-T0 79±4% of the time (Figure 5). We attribute this to two factors: (i) public NLP datasets are dominated by classification / QA / summarization that together account for only ~18% of API use cases, while open-ended generation and brainstorming together account for ~57%; (ii) public NLP datasets struggle to match the input diversity that real users actually want — though the broadest instruction-following model should clearly combine both.</p>
+          </div>
+          <div class="zh">
+            <p><strong>对 held-out labelers 与 FLAN/T0 的泛化。</strong>没参与训练数据生产的 held-out labelers,其偏好结果与训练 labelers 几乎一致(图 3);把 labelers 切成 5 组做 5-fold 交叉验证训 RM,在 held-out 组上的准确率 69.6±0.9%,在训练组上 72.4±0.4%——说明奖励信号能泛化到训练标注员之外。在头对头比较里,175B InstructGPT 对 "175B GPT-3 用 FLAN 微调" 胜率 78±4%,对 "175B GPT-3 用 T0 微调" 胜率 79±4%(图 5)。我们归因为两点:(i) 公开 NLP 数据集以"分类 / QA / 摘要"为主,这些只占 API 用例的约 18%,而<em>开放式生成与头脑风暴</em>合起来占约 57%;(ii) 公开 NLP 数据集难以匹配真实用户希望模型处理的输入多样性——当然,最广义的指令跟随模型应同时融合两者。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.2 Public NLP datasets — truthfulness, toxicity, bias, alignment tax.</strong> On TruthfulQA, PPO models produce truthful-and-informative outputs roughly twice as often as GPT-3 (Figure 6), even without being explicitly instructed to tell the truth; the exception is the 1.3B PPO-ptx, which is slightly worse than 1.3B GPT-3. With a "respectful" prompt on RealToxicityPrompts, InstructGPT generates about 25% fewer toxic outputs than GPT-3 (Figure 7); without the respectful prompt the gap disappears, and when explicitly asked to be toxic, InstructGPT can actually be <em>more</em> toxic than GPT-3. On Winogender and CrowS-Pairs (bias) we see no significant improvement. RLHF causes regressions on SQuAD, DROP, HellaSwag, and WMT 2015 fr→en — the classic <em>alignment tax</em>; mixing pretraining gradients into PPO (PPO-ptx) recovers most of these losses without hurting labeler preference scores.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.2 公开 NLP 数据集——真实性、毒性、偏见、对齐税。</strong>TruthfulQA 上,PPO 模型"真实且有信息量"的回答<em>大约是 GPT-3 的两倍</em>(图 6),且无需显式要求"说实话";唯一例外是 1.3B PPO-ptx,比同规模 GPT-3 略差。在 RealToxicityPrompts 上加"尊重"prompt 时,InstructGPT 的毒性输出比 GPT-3 少约 25%(图 7);去掉"尊重"prompt,优势消失;而<em>显式要求</em>有毒时,InstructGPT 反而<em>更毒</em>。在 Winogender、CrowS-Pairs(偏见)上看不到显著改进。RLHF 会让 SQuAD / DROP / HellaSwag / WMT 2015 fr→en 退化——这就是经典的<em>对齐税</em>(alignment tax);把预训练梯度混进 PPO(PPO-ptx)能基本拿回这些损失,而不损害 labeler 偏好评分。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.3 Qualitative results.</strong> InstructGPT shows promising generalization to instructions <em>outside</em> the fine-tuning distribution: it can follow code-summarization prompts, answer questions about code, and sometimes follow instructions in non-English languages, despite these inputs being very rare in the fine-tuning data. By contrast, GPT-3 can perform such tasks with careful prompting but does not reliably follow instructions in these domains. InstructGPT still makes simple mistakes: failing to follow instructions, fabricating facts, giving long hedging answers to simple questions, and failing to detect false premises in the user query. These failures motivate the discussion in §5.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.3 定性结果。</strong>InstructGPT 在<em>微调分布之外</em>的指令上也展现出可喜的泛化:能跟随"摘要代码"的 prompt、回答关于代码的问题,有时还能用非英语遵循指令——尽管这些输入在微调数据里非常稀少。相比之下,GPT-3 在精心 prompting 下也能完成这些任务,但<em>不能可靠地</em>跟随指令。InstructGPT 仍会犯简单错误:不遵循指令、虚构事实、对简单问题给出冗长且回避的答案、检测不到用户问题里的<em>错误前提</em>。这些失败案例引出 §5 的讨论。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§5 Discussion / 讨论<span class="sec-page">p.17</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.1 Implications for alignment research.</strong> The cost of aligning is <em>modest</em> relative to pretraining: training our 175B SFT requires 4.9 petaflops/s-days and our 175B PPO-ptx requires 60 petaflops/s-days, against 3,640 petaflops/s-days for GPT-3 itself. Yet RLHF makes 1.3B models more preferred than 175B GPT-3 in labeler win-rate — currently a more cost-effective investment than scaling further. We observe encouraging cross-distribution generalization (non-English, code) and validate alignment ideas on production-grade models. Finally, by mostly removing the alignment tax via PPO-ptx, we make RLHF a <em>low-tax</em> alignment technique, which is essential if highly capable future systems are to be aligned without a competitive disadvantage.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.1 对对齐研究的启示。</strong>"对齐"相对于"预训练"的成本<em>不大</em>:训 175B SFT 需要 4.9 petaflops/s-days,训 175B PPO-ptx 需要 60 petaflops/s-days,而 GPT-3 本身需要 3,640 petaflops/s-days。但 RLHF 能让 1.3B 在 labeler 偏好上超过 175B GPT-3——当下"在已有大模型上多投入对齐"显然比"继续把模型做更大"更具性价比。我们观察到喜人的跨分布泛化(非英语、代码),并在生产级模型上验证了对齐思路。最后,通过 PPO-ptx 几乎消去 alignment tax,我们让 RLHF 成为一种<em>低税</em>的对齐技术——这一点至关重要,因为只有低税的对齐方案才能在未来高能力系统上被实际采用而不损害竞争力。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.2 Who are we aligning to?</strong> The literature often invokes "human preferences" or "human values", but the operational reality is narrower. We align to (i) the demonstrations and preferences of our ~40 training labelers (mostly English speakers in the US or Southeast Asia hired through Upwork/ScaleAI; inter-annotator agreement ~73%); (ii) the researchers' preferences embedded in the labeling instructions, edge-case answers in the chat room, and the very choice of evaluation metrics; (iii) the OpenAI API customer base whose prompts populate the training data and who pay for the model; (iv) OpenAI's own commercial constraints, which exclude certain content. None of these correspond to "humanity at large", and any of them can be questioned. The right framing is not "the right preferences to align to" but "a process for designing a fair, transparent, and accountable alignment pipeline" — and our work is only a first concrete instance.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.2 我们到底对齐到了"谁"?</strong>文献常用"人类偏好"或"人类价值"等措辞,但实际操作要狭得多。我们对齐到:(i) 约 40 名训练 labelers 的演示与偏好(大多是美国或东南亚的英语使用者,通过 Upwork/ScaleAI 雇佣;inter-annotator agreement ~73%);(ii) 写在标注指南、共享 chat room 边界案例回答以及评测指标里的<em>研究员偏好</em>——经研究员折射的更大组织(OpenAI);(iii) OpenAI API 客户群体,他们的 prompt 进入训练数据、他们付钱用这个模型;(iv) OpenAI 自身的商业约束(禁止某些内容)。这四者没有一个对应"全人类",且都可被质疑。正确的提法不是"该对齐到哪种偏好",而是"如何<em>设计</em>一个公平、透明、可问责的对齐流水线"——本文只是这条道路上的一个具体起点。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5.3 Limitations / 局限<span class="sec-page">p.19</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Methodology.</strong> InstructGPT's behavior is determined in part by human feedback obtained from contractors, and the inter-annotator disagreement (~27%) plus the explicit instruction to prioritize helpfulness during training vs. truthfulness and harmlessness during evaluation can create internal conflicts. We did not explore active learning or careful labeler-pool sizing; with more labelers from broader backgrounds the resulting model could be meaningfully different. We also did not explore alternatives to PPO (e.g., expert iteration, advantage-weighted regression) or alternatives to the per-token KL penalty for controlling drift from $\pi^{\mathrm{SFT}}$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>方法层面的局限。</strong>InstructGPT 的行为相当程度上由 contractor 提供的人类反馈决定;~27% 的 inter-annotator 分歧,加上"训练时优先 helpfulness、评测时优先 truthfulness/harmlessness"的指令冲突,会带来内在的不一致。我们没有研究<em>主动学习</em>,也没系统地探索 labeler 池规模——更大、更多元背景的 labeler 群体可能训出风格明显不同的模型。我们也未尝试 PPO 之外的算法(如 expert iteration、advantage-weighted regression),以及"per-token KL 惩罚"之外的"防漂离 $\pi^{\mathrm{SFT}}$"机制。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Models.</strong> Despite improvements, InstructGPT models are still neither fully aligned nor fully safe. They still generate toxic or biased outputs, make up facts, and produce sexual or violent content when prompted; they may fail to generate reasonable outputs at all for some inputs. The biggest failure of the current models is following user instructions <em>even when those instructions would lead to harm in the real world</em> — e.g., compliance with "write a misleading article" requests; ideally the models would refuse. The right tradeoff between user helpfulness and overall harmlessness is a values question that engineers alone cannot answer.</p>
+          </div>
+          <div class="zh">
+            <p><strong>模型层面的局限。</strong>尽管有改进,InstructGPT 模型既<em>未完全对齐</em>也<em>未完全安全</em>:它们仍会产出有毒或带偏见的内容、虚构事实,在被引导时输出色情/暴力;对某些输入甚至完全产出不合理的结果。当前模型最大的失败,是"在用户指令本身会导致真实世界危害的情况下仍然<em>照做</em>"——例如,接受"写一篇误导性的文章"的请求;理想中,模型应该<em>拒绝</em>。"用户 helpfulness"与"整体 harmlessness"之间正确的权衡,是一个价值问题,不是单凭工程师就能回答的。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>References<span class="sec-page">p.21</span></span>
+      </summary>
+      <div class="sec-content"><p>(参考文献略;详见原文 PDF p.21 起。)</p></div>
+    </details>
+
+  </div>
+
+
+</div>
+
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

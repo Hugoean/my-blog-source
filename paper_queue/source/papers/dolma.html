@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dolma : an Open Corpus of Three Trillion Tokens · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2402.00159 · 64 页 · 5 张图</div>
+    <h1>Dolma : an Open Corpus of Three Trillion Tokens</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-deep">优先级 deep</span>
+      <span>W2</span>
+      <span>CPT</span><span>Data</span>
+      <span><a href="https://arxiv.org/abs/2402.00159" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2402.00159.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>Dolma 是 AI2 开源的 <strong>3T tokens 英文预训练语料</strong>(11 TB 文本,4.37B 文档,来自 6 个域),并配套 <strong>Dolma Toolkit</strong>(Rust 高性能 mixer + filter)完整披露"采集 → 语言过滤 → 质量/内容过滤 → 去重 → 去污染 → 混合"全 pipeline,所有数据决策都用 1.2B OLMo 在 150B tokens 上做 ablation 给出证据。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li><strong>数据来源构成(必背 Table 1)</strong>:Common Crawl 网页 <code>2,479B</code>(81%)、GitHub 代码 <code>411B</code>(StarCoder/RedPajama 过滤)、Reddit 社交 <code>89B</code>、Semantic Scholar(peS2o)论文 <code>70B</code>、Wikipedia/Wikibooks 百科 <code>4.3B</code>、Project Gutenberg 公版书 <code>6.0B</code>。原始 200 TB → 11 TB,~18× 压缩。</li>
+        <li><strong>过滤规则(Web 主线)</strong>:① CCNet(FastText 语言 ID,英文得分 ≥ 0.5)砍掉 61.7% 字节;② Gopher All + C4 NoPunc 启发式(段落不以标点结尾就丢)——C4 NoPunc 优于 C4 All 与 Gopher All 单独使用;③ 内容过滤:在 Jigsaw Toxic Comments 上自训 FastText hate/NSFW 分类器,选 "High Threshold" τ=0.4(去掉 5.5–7.3%),保留更多 tokens;④ PII:用正则匹配 email/IP/phone,≤5 个就替换为 <code>|||EMAIL_ADDRESS|||</code>,>5 整篇删。</li>
+        <li><strong>近似去重(必考 Bloom/MinHash)</strong>:Dolma 走 <strong>Bloom filter</strong> 概率检测(Rust mixer 原生实现,线性时间)做 <em>exact</em> URL/document/paragraph 三级去重——URL 一刀切掉 <code>53.2%</code> 文档,后续 document 又掉 14.9%,paragraph 掉 18.7%。代码子集复用 The Stack,The Stack 内部用 <strong>MinHash + LSH</strong>(near-dup),所以 Dolma-Code 是"已 MinHash 过的语料 + Bloom 兜底"。</li>
+        <li><strong>去污染(decontamination)</strong>:直接把<strong>测试集喂进 Bloom filter</strong> seed,再用同一个 mixer 对训练集打标,命中即丢——和近似去重共用同一基础设施。</li>
+        <li><strong>混合比例 & 多源消融(Figure 5)</strong>:用 Paloma(stratified domain perplexity)评测,1.2B 模型在 150B tokens 上,Dolma ≈ Pile(domain coverage 同档),都明显优于单源的 C4/mC4/RefinedWeb;Dolma 通过堆 Web 又保住了多样性 → 论证"多源是必要的"。</li>
+        <li><strong>Reddit 线性化消融(Figure 4)</strong>:Atomic Content(每条独立文档)> Partial Threads > Full Threads,作者推测拼接 thread 引入的人工格式损伤了 LM 训练。</li>
+        <li><strong>vs Pile / RedPajama v1/v2 / RefinedWeb / Falcon</strong>:Pile 387B 太小;ROOTS 多语言只剩 30% 英文;Falcon 580B、RedPajama v2 30T <em>纯 CC</em> 缺多样性;RedPajama v1 ≈ 1.2T,Dolma 在它基础上扩源(Reddit、更大学术语料 peS2o)并补强 cleanup。Dolma 同时<strong>开放数据 + 开放工具</strong>,这是它最大差异点。</li>
+        <li><strong>下游验证</strong>:用 Dolma 训出 1.2B 的 OLMo-1B(后续 OLMo 项目的 1B 子模型),8 个 zero-shot 任务平均 60.3,超过 TinyLlama-1.1B(59.4)、Pythia-1.1B(54.5),不及 StableLM2-1.6B(66.5,2T 训 2 epoch、数据未公开)。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      完整 pipeline + 工具链开源,对标 mkplalgo_cpt
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言 + Table 1 数据总览</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-4">§2 Related Work / 相关工作(Pile · RedPajama · Falcon)</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-5">§3 Data Design Goals / 数据设计原则</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-6">§4 Methodology / Dolma Toolkit & 消融方案</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-7">§5.1–5.3 Dolma-Web / 网页子集:语言 + 质量 + 内容过滤</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-8">§5.4–5.5 Deduplication / Bloom filter 三级去重</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-9">§6 Dolma-Code / GitHub 代码子集(MinHash)</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-10">§7 Dolma-Social / Reddit 子集 + 线性化消融</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-11">§8 Other Sources / C4 · peS2o · Gutenberg · Wikipedia</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-12">§9 Training OLMo-1B / 下游验证 & Paloma 域适配</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-13">§10 Conclusion / 结论</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-14">§11 Limitations & Ethics / 局限与伦理</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-15">References(略)</a><span class="toc-page">p.10</span></li>
+      
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (5 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2402.00159_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.30 · 3215×2732</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>Appendix 中"tokenizer fertility"图——每个数据源在 GPT-NeoX tokenizer 下平均"一个 Unicode 词被切成几个 subword"。横轴 = Dolma 各子集(C4 / CC Head&Middle&Tail / Project Gutenberg / Reddit / The Stack / Wikipedia / peS2o),纵轴 = fertility。</p>
+          <p><strong>② 关键数据:</strong>自然语言源都集中在 <strong>1.15–1.28</strong>(Reddit 最低 1.15,Project Gutenberg 1.28);<strong>The Stack 异常飙到 2.45</strong>——代码里大量标识符、分隔符切分粒度高;peS2o(学术)1.18,与网页相仿,说明 cleanup 后 LaTeX/数学符号已被合理处理。</p>
+          <p><strong>③ 启示:</strong>这张图回答了"Table 1 的 token 数怎么折算"的暗坑——用 LLaMA tokenizer 算的 3T,如果换 GPT-NeoX 之类对代码不友好的 tokenizer,<strong>Dolma-Code 的 token 数会显著放大</strong>。这也是为什么不同语料之间比较 token 数时,必须先固定一个 tokenizer——论文整张 Table 1 都用 LLaMA tokenizer 折算就是为此。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2402.00159_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.30 · 3321×2732</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>每个数据源的"whitespace token 频率"——也就是 tokenizer 产生的纯空白 token 在该子集中占的比例。横轴同上,纵轴 = 比例。</p>
+          <p><strong>② 关键数据:</strong>C4 / CC 全段 / Wikipedia / peS2o 都贴近 <strong>0.02</strong>(2%);Reddit 0.03 略高,Project Gutenberg 0.09(书有更多对齐排版),<strong>The Stack 高达 0.19</strong>(19% 是缩进/换行)。</p>
+          <p><strong>③ 启示:</strong>当你把代码塞进预训练时,要意识到"近 1/5 的 token 是缩进",这对 Chinchilla 比例计算、对训练效率、对长上下文的有效信息密度都有显著影响——这也是后续 OLMo / DeepSeek 在数据混合时单独对 code/whitespace 做归一化的动机。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_3">
+        <img src="../figures/2402.00159_fig_3.png" alt="fig_3" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_3</span> · p.30 · 3188×2221</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_3">
+          <p><strong>① 图说明:</strong>Appendix 中 Dolma 上 token 频次的散点图——横轴是 GPT-NeoX tokenizer 的 token ID(0–50k),纵轴是该 token 在 Dolma 中出现次数的 <code>log</code>(以 e 为底)。每一点就是词表里的一个 token。</p>
+          <p><strong>② 关键数据:</strong>整体呈现明显的"两条带":上方密集云 ≈ <code>log count = 6–9</code>(即 400–8000 次),下方稀疏带 ≈ <code>log count = 5–7</code>(150–1000);ID = 0 附近和最右端(50256 周围)出现"竖向尖峰",对应 <strong>BOS / EOS / 特殊符号</strong> 与高频功能词。长尾不是 Zipf 的整齐曲线,而是带宽较宽,说明 Dolma 中存在大量 <em>近常用但又不极端高频</em> 的 token。</p>
+          <p><strong>③ 启示:</strong>这张图用来反驳"语料质量不够 → 长尾 token 频次过低"的疑虑——Dolma 的下界 token 仍能出现几十到几百次,意味着 50k vocab 在 3T tokens 量级是"被充分覆盖的"。对实际训练来说,这也是为什么 1B 模型在 Dolma 上 zero-shot 表现已能匹配 TinyLlama:足够厚的语料让 embedding 收敛得稳定。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_4">
+        <img src="../figures/2402.00159_fig_4.png" alt="fig_4" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_4</span> · p.31 · 915×781</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_4">
+          <p><strong>① 图说明:</strong>FastText 英文语言识别分数(横轴 0.80–1.00)与 <em>文档级 filter percentage</em>(纵轴)的累积曲线;每条线对应一个英语方言地区子集——CANADA / EAST_AFRICA / HONG_KONG / INDIA / IRELAND / JAMAICA / PHILIPPINES / SINGAPORE / USA,后缀 <code>S_ALL</code> = strict 全部、<code>W_ALL</code> = weak 全部。</p>
+          <p><strong>② 关键数据:</strong>所有曲线在阈值 <strong>0.95 左右开始陡升</strong>,到 <strong>0.97–0.98 几乎全部命中</strong>。论文采用阈值 0.5 已是非常宽松的下界,但要注意:即便阈值 0.5,<strong>不同英语方言区</strong>(尤其 HONG_KONG / INDIA / PHILIPPINES 这类 World English)被 FastText 误判风险显著高于 USA/CANADA;阈值若拉到 0.95+,会系统性砍掉非西方英语方言。</p>
+          <p><strong>③ 启示:</strong>Dolma 的"英文 ≥ 0.5"是一种公平性折中——CCNet 默认阈值更紧,会把方言英语当作非英语丢掉,从而<strong>放大语料里西方英语的代表性偏差</strong>。这是后续 Llama 3 等更注重多方言英语时,会重新审视的过滤参数。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_5">
+        <img src="../figures/2402.00159_fig_5.png" alt="fig_5" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_5</span> · p.31 · 2633×2531</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_5">
+          <p><strong>① 图说明:</strong>Reddit 子集上,自训 FastText 毒性分类器(<code>toxicity score</code>)在不同地区子论坛上的<strong>评分分布直方图</strong>(纵轴是该地区评论中得到该分值的比例),覆盖 24 个国家/地区 subreddit(united kingdom / Thailand / ... / Nepal)。</p>
+          <p><strong>② 关键数据:</strong>所有地区都呈现强烈的 <strong>U 形双峰</strong>:绝大多数评论得分在 <code>0.0–0.05</code> 或 <code>0.95–1.0</code> 附近,中间 <code>0.2–0.8</code> 区段非常稀疏。这正是论文 §5.3 选择 τ=0.4("High Threshold")或 τ=0.0004("Low")的依据——分布的"中间真空"使得阈值并不敏感,但两端的取舍直接决定丢多少数据。</p>
+          <p><strong>③ 启示:</strong>① 自训分类器的"置信度"在数据上看是<em>双极化</em>的,而不是均匀的——所以阈值不能凭"中位数"拍;② 各地区 subreddit 的曲线几乎重合,说明该 hate/NSFW 分类器没有强地区偏差(至少在评分分布层面);③ 实践中常用"看分布拍阈值",而不是"按比例砍 N%"——Dolma 选 0.4 保住了 token 数,Llama 系常用更严格的二阶段过滤。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>Dolma : an Open Corpus of Three Trillion Tokens for Language Model Pretraining Research Luca Soldaini ♥α Rodney Kinney♥α Akshita Bhagia♥α Dustin Schwenk♥α David Atkinsonα Russell Authurα Ben Boginα ω Khyathi Chanduα Jennifer Dumasα Yanai Elazarα ω Valentin Hofmannα Ananya Harsh Jhaα Sachin Kumarα Li Lucyβ Xinxi Lyuω Nathan Lambertα Ian Magnussonα Jacob Morrisonα Niklas Muennighoff Aakanksha Naikα Crystal Namα Matthew E. Petersσ Abhilasha Ravichanderα Kyle Richardsonα Zejiang Shenτ Emma Strubellχα Nishant Subramaniχ α Oyvind Tafjordα Pete Walshα Luke Zettlemoyerω Noah A. Smithα ω Hannaneh Hajishirziα ω Iz Beltagyα Dirk Groeneveldα Jesse Dodgeα Kyle Lo♥α αAllen Institute for AI βUniversity of California, Berkeley χCarnegie Mellon University σSpiffy AI τMassachusetts Institute of Technology ωUniversity of Washington {lucas,kylel}@allenai.org</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Information about pretraining corpora used to train the current best-performing language models is seldom discussed: commercial models rarely detail their data, and even open models are often released without accompanying training data or recipes to reproduce them. As a result, it is challenging to conduct and advance scientific research on language modeling, such as understanding how training data impacts model capabilities and limitations. To facilitate scientific research on language model pretraining, we curate and release Dolma, a three-trillion-token English corpus, built from a diverse mixture of web content, scientific papers, code, public-domain books, social media, and encyclopedic materials. We extensively document Dolma, including its design principles, details about its construction, and a summary of its contents. We present analyses and experimental results on intermediate states of Dolma to share what we have learned about important data curation practices. Finally, we open-source our data curation toolkit to enable reproduction of our work as well as support further research in large-scale data curation.</p>
+            <p>hf.co/datasets/allenai/dolma · github.com/allenai/dolma</p>
+          </div>
+          <div class="zh">
+            <p>用于训练当前最强语言模型的"预训练语料"细节几乎从不被公开讨论:商用模型很少透露数据,即便是开源模型也常常只放权重而不带训练数据或可复现的配方。结果,关于语言建模的科学研究(例如理解训练数据如何影响模型能力与局限)难以推进。为了支持这类研究,我们整理并发布 <strong>Dolma</strong>——一个三万亿(3T)token 的英文语料,由网页内容、科学论文、代码、公版书、社交媒体、百科材料等多源混合而成。我们对 Dolma 做了详尽的文档化,包括设计原则、构建细节与内容概览;并在 Dolma 中间产物上做分析与实验,分享我们关于数据整理实践的经验教训。最后,我们<strong>开源整套数据整理工具链</strong>,既可复现本工作,也可支持后续大规模数据整理研究。</p>
+            <p>资源:<code>hf.co/datasets/allenai/dolma</code> · <code>github.com/allenai/dolma</code></p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言 + Table 1 数据总览<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Language models are now central to tackling myriad natural language processing tasks, including few-shot learning, summarization, question answering, and more. Increasingly, the most powerful language models are built by a few organizations who withhold most model development details (Anthropic, 2023; OpenAI, 2023; Anil et al., 2023; Gemini Team et al., 2023). In particular, the composition of language model pretraining data is often vaguely described, even in cases where the model itself is released for public use, such as Llama 2 (Touvron et al., 2023b). This hinders understanding of the effects of pretraining corpus composition on model capabilities and limitations, with impacts on scientific progress as well as on the public who interfaces with these models.</p>
+          </div>
+          <div class="zh">
+            <p>语言模型如今已成为解决大量自然语言处理任务的核心:few-shot 学习、摘要、问答等。然而,越来越多的"最强模型"是由少数几家机构构建,他们对模型开发细节守口如瓶(Anthropic 2023、OpenAI 2023、Anil 等 2023、Gemini Team 2023)。尤其是,语言模型预训练数据的构成几乎不被披露,哪怕是 Llama 2 这种"模型本身公开发布"的情况也常常只用模糊语言带过。这阻碍了人们理解"预训练语料构成如何影响模型能力与局限",对科学进展和与这些模型交互的公众都有负面影响。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our aim is to increase participation in scientific research of language models through open corpora:</p>
+            <p>• <strong>Data transparency</strong> helps developers and users of applications that rely on language models to make more informed decisions (Gebru et al., 2021). For example, models have shown to perform better on tasks that are more similar to their pretraining data (Razeghi et al., 2022; Kandpal et al., 2023), or social biases in models' pretraining data may necessitate additional consideration when using them.</p>
+            <p>• <strong>Open pretraining data</strong> is necessary to analyze how its composition influences model behavior, allowing those training models to interrogate and improve current data practices. Examples of this research include memorization (Carlini et al., 2022), deduplication (Lee et al., 2022), adversarial attacks, benchmark contamination, and training data attribution.</p>
+          </div>
+          <div class="zh">
+            <p>我们的目标是通过开放语料,扩大语言模型科研的参与门槛:</p>
+            <p>• <strong>数据透明性</strong>能帮助"依赖语言模型的应用"的开发者与用户做出更有信息含量的决策。例如,模型在"与预训练数据更相似"的任务上表现更好(Razeghi 等 2022;Kandpal 等 2023);预训练数据中的社会偏见也可能要求使用时格外审慎。</p>
+            <p>• <strong>开放预训练数据</strong>是分析"语料构成如何影响模型行为"的前提,使训练者得以审视并改进当前数据实践。这类研究的例子包括:记忆(Carlini 等 2022)、去重(Lee 等 2022)、对抗攻击、基准污染、训练数据归因。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To support broader participation and inquiry in these lines of research, we present <strong>Data for Open Language Models' Appetite (Dolma)</strong>, an open corpus of three trillion tokens designed to support language model pretraining research. We source much of our data from sources similar to those present in past work, including a mix of web text from Common Crawl, scientific research from Semantic Scholar, code from GitHub, public domain books, social media posts from Reddit, and encyclopedic materials from Wikipedia. Compared to other publicly-available pretraining corpora, Dolma offers a larger pool of tokens at comparable quality while maintaining diverse data composition. In summary, our contributions are two-fold:</p>
+            <p>• We release the <strong>Dolma Corpus</strong>, a diverse, multi-source collection of 3T tokens across over 4B documents acquired from 6 different data sources that are (i) commonly seen in large-scale language model pretraining and (ii) made accessible to the general public. Table 1 provides a high-level overview of the amount of data from each source.</p>
+            <p>• We open source the <strong>Dolma Toolkit</strong>, a high-performance, portable tool designed to efficiently curate large datasets for language model pretraining. Through this toolkit, practitioners can not only reproduce our dataset, but also study and improve data curation practices.</p>
+          </div>
+          <div class="zh">
+            <p>为支持这些研究方向上更广泛的参与与探究,我们提出 <strong>Data for Open Language Models' Appetite(Dolma)</strong>——一个面向语言模型预训练研究的、3 万亿 token 的开放语料。其大部分数据源与以往工作类似:Common Crawl 网页、Semantic Scholar 学术论文、GitHub 代码、公版书、Reddit 社交、Wikipedia 百科。相比其它公开预训练语料,Dolma 在保持<em>多样化数据构成</em>的同时,提供了更大的、可比质量的 token 池。我们的两项主要贡献是:</p>
+            <p>• 发布 <strong>Dolma 语料</strong>——一个多源、多样化的 3T tokens / 40 亿+文档集合,来自 6 个数据源,均(i)在大规模语言模型预训练中常见,且(ii)对公众开放可访问。Table 1 给出各源数据量的概览。</p>
+            <p>• 开源 <strong>Dolma Toolkit</strong>——一个高性能、可移植的工具,用于高效整理大规模预训练数据。借助这套工具,实践者不仅能复现我们的数据集,也能研究和改进数据整理实践。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Table 1: The Dolma corpus at-a-glance.</strong> It consists of three trillion tokens sampled from a diverse set of domains; sourced from approximately <strong>200 TB of raw text before curation down to an 11 TB dataset</strong>. Tokens calculated using the LLaMA tokenizer.</p>
+            <table style="border-collapse:collapse; font-family:var(--mono); font-size:12.5px; margin:10px 0; width:100%;">
+              <thead>
+                <tr style="background:var(--bg-elev); border-bottom:1px solid var(--border);">
+                  <th style="text-align:left; padding:6px 8px;">Source</th>
+                  <th style="text-align:left; padding:6px 8px;">Doc Type</th>
+                  <th style="text-align:right; padding:6px 8px;">UTF-8 GB</th>
+                  <th style="text-align:right; padding:6px 8px;">Docs (M)</th>
+                  <th style="text-align:right; padding:6px 8px;">Words (B)</th>
+                  <th style="text-align:right; padding:6px 8px;">LLaMA tokens (B)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td style="padding:4px 8px;">Common Crawl</td><td>web pages</td><td style="text-align:right;">9,812</td><td style="text-align:right;">3,734</td><td style="text-align:right;">1,928</td><td style="text-align:right;"><strong>2,479</strong></td></tr>
+                <tr><td style="padding:4px 8px;">GitHub</td><td>code</td><td style="text-align:right;">1,043</td><td style="text-align:right;">210</td><td style="text-align:right;">260</td><td style="text-align:right;"><strong>411</strong></td></tr>
+                <tr><td style="padding:4px 8px;">Reddit</td><td>social media</td><td style="text-align:right;">339</td><td style="text-align:right;">377</td><td style="text-align:right;">72</td><td style="text-align:right;"><strong>89</strong></td></tr>
+                <tr><td style="padding:4px 8px;">Semantic Scholar</td><td>papers</td><td style="text-align:right;">268</td><td style="text-align:right;">38.8</td><td style="text-align:right;">50</td><td style="text-align:right;"><strong>70</strong></td></tr>
+                <tr><td style="padding:4px 8px;">Project Gutenberg</td><td>books</td><td style="text-align:right;">20.4</td><td style="text-align:right;">0.056</td><td style="text-align:right;">4.0</td><td style="text-align:right;"><strong>6.0</strong></td></tr>
+                <tr><td style="padding:4px 8px;">Wikipedia, Wikibooks</td><td>encyclopedic</td><td style="text-align:right;">16.2</td><td style="text-align:right;">6.2</td><td style="text-align:right;">3.7</td><td style="text-align:right;"><strong>4.3</strong></td></tr>
+                <tr style="border-top:1px solid var(--border); font-weight:700;"><td style="padding:6px 8px;">Total</td><td>—</td><td style="text-align:right;">11,519</td><td style="text-align:right;">4,367</td><td style="text-align:right;">2,318</td><td style="text-align:right;">3,059</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="zh">
+            <p><strong>Table 1 — Dolma 语料一览。</strong>共 3 万亿 token,采样自一组多样化的数据域;原始 200 TB 文本,经整理降至 <strong>11 TB</strong>(~18× 压缩)。Token 数按 LLaMA tokenizer 折算。</p>
+            <p>读图要点:① <strong>Web ≈ 81%</strong> token(2,479B / 3,059B),是绝对主体;② 代码 411B(13%);③ Reddit + Semantic Scholar + 书 + Wiki 合计仅 ~6%,但提供"非网页多样性",对 Paloma 等 stratified 评测极其关键(见 Figure 5);④ 文档量上 Common Crawl 3.7B 占 86%,但每篇平均字节最大;Project Gutenberg 才 5.6 万本却带来高质量长文。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3"></div>
+    </details>
+    
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§2 Related Work / 相关工作(Pile · RedPajama · Falcon)<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Closed data curation practices.</strong> Modern pretraining corpora have become increasingly opaque: proprietary systems such as GPT-4, PaLM 2 and Claude reveal essentially nothing about corpus size or provenance, and even "open-weight" models (Llama 2, Mistral, Yi, Qwen) ship without their data or a reproducible recipe. Among large-scale efforts, only a handful publish detailed curation notes: LLaMA documents methods (data not released), Gopher documents methods (neither model nor data released), and Falcon partially releases its data. This trend toward closure motivates Dolma's open-data + open-toolkit stance.</p>
+          </div>
+          <div class="zh">
+            <p><strong>语言模型预训练中的"封闭式"数据整理实践。</strong>当下的预训练语料越来越不透明:GPT-4、PaLM 2、Claude 等专有系统几乎不披露语料规模与来源;即便是"开权重"模型(Llama 2、Mistral、Yi、Qwen)也只放模型不放数据、也不给可复现的配方。在大规模预训练工作里,只有少数有详尽的整理文档:LLaMA 公开了方法但不放数据,Gopher 方法与模型/数据都未发布,Falcon 部分发布数据。这种"逐步封闭"的趋势,正是 Dolma 选择"数据开 + 工具链开"双开放姿态的动机。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Existing open corpora and why a new one was needed.</strong> Prior open corpora have limitations: <em>C4</em> (175B) and <em>Pile</em> (387B) are high quality but small; <em>ROOTS</em> (~400B) is multilingual so its English slice is only ~30%, too thin for English-only models; <em>Falcon</em> (580B) and <em>RedPajama v2</em> (30T) hit scale but are entirely Common-Crawl — they lack source diversity (no papers, no code) and RedPajama v2 is only lightly cleaned (essentially raw CCNet output). <em>RedPajama v1</em> (~1.2T) is the closest cousin and inspired Dolma, but it reproduces LLaMA narrowly; Dolma broadens to peS2o / Reddit and adds heavier cleanup. Concurrent releases (FineWeb, Zyda, LLM360 Amber/K2, MAP-Neo) appeared during review.</p>
+          </div>
+          <div class="zh">
+            <p><strong>已有开放语料的局限与 Dolma 的差异点。</strong>以往的开放语料各有短板:<em>C4</em>(175B)与 <em>Pile</em>(387B)质量高但太小;<em>ROOTS</em>(~400B)是多语言的,英文部分只占 ~30%,对纯英文模型仍嫌不够;<em>Falcon</em>(580B)和 <em>RedPajama v2</em>(30T)规模到位,但全部来自 Common Crawl,缺乏来源多样性(没有论文、没有代码),且 RedPajama v2 几乎只是 CCNet 原始输出、做的清洗很轻。最接近 Dolma 的是 <em>RedPajama v1</em>(~1.2T),它启发了本工作,但其复现目标仅限 LLaMA;Dolma 把范围扩展到 peS2o 学术语料和 Reddit 社交,并补上更重的清洗。本文评审期间,FineWeb、Zyda、LLM360 Amber/K2、MAP-Neo 等同期开放语料也相继发布。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4"></div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§3 Data Design Goals / 数据设计原则<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Four explicit design goals drove every decision.</strong> (i) <em>Consistency with prior recipes</em>: match sources/methods used by known corpora so Dolma can be used to scrutinize today's LMs, including closed ones; this also drives the English-only scope. (ii) <em>Evidence-backed choices</em>: where best practice is unsettled or implementations differ, pick the option that maximizes downstream performance via the §4.2 ablation pipeline. (iii) <em>Scale</em>: target 2–3T tokens so future Chinchilla-style scaling-law studies remain possible. (iv) <em>Preserve openness</em>: deviate from established recipes when needed for legal/ethical reasons — e.g., drop Books3 (active copyright litigation) and add PII filtering even though prior recipes rarely document it.</p>
+          </div>
+          <div class="zh">
+            <p><strong>四条显式设计原则贯穿整套决策。</strong>(i) <em>与既有配方保持一致</em>:尽量匹配已公开语料用过的来源和方法,让 Dolma 可被用来"审视"如今的 LM(包括闭源模型);这同时也是 Dolma 定为<em>纯英文</em>的原因。(ii) <em>用证据做决策</em>:在没有公认最佳实践、或不同实现细节有差异时,以 §4.2 的消融流水线为准,选择"对下游性能最有利"的方案。(iii) <em>足够规模</em>:目标 2–3T tokens,使后续 Chinchilla 风格的 scaling-law 研究仍有空间。(iv) <em>守住开放性</em>:在开放发布要求下,会出于法律/伦理考虑偏离既有配方——例如<em>剔除 Books3</em>(目前正深陷版权诉讼);<em>加入 PII 过滤</em>(以往配方几乎不讨论)。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="5"></div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§4 Methodology / Dolma Toolkit & 消融方案<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§4.1 The Dolma Toolkit.</strong> The pipeline is implemented as a high-performance, open-sourced toolkit with two operations: <em>filtering</em> and <em>mixing</em>. <strong>Filtering</strong> unifies language/quality/content/PII filters into a single config-driven runner — a text unit (document, paragraph, sentence), a scorer (linear classifier, KenLM perplexity, regex), and a removal policy (delete, replace-with-string). Throughput on a C4-replication benchmark was 122 CPU-hours per TB, so processing the full ~200 TB raw Dolma on a 192-vCPU <code>c6a.48xlarge</code> takes about 5 days. <strong>Mixing</strong> unifies up/down-sampling, deduplication and decontamination into one Rust module that streams documents across files; up-sampling = reading the same path repeatedly. A built-in <em>Bloom filter</em> (Bloom 1970) gives linear-time probabilistic duplicate detection — and is repurposed for test-set decontamination by seeding it with eval examples and flagging any train-side hits.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§4.1 Dolma 工具链。</strong>整套流水线被实现为高性能、开源的工具集,内置两个基本操作:<em>filtering(过滤)</em>与 <em>mixing(混合)</em>。<strong>filtering</strong> 把语言识别、质量、内容、PII 等过滤统一为一个配置驱动的执行器——配置由"文本单元(document / paragraph / sentence)+ 打分器(线性分类器、KenLM 困惑度、正则)+ 删除策略(删除 / 替换为占位 token)"三元组组成。在内部复现 C4 配方的基准上,该工具吞吐为 <strong>122 CPU 小时/TB</strong>;按此估算,在 192 vCPU 的 <code>c6a.48xlarge</code> 上跑完 ~200 TB 原始 Dolma 约需 <strong>5 天</strong>。<strong>mixing</strong> 把上/下采样、去重(dedup)与去污染(decontamination)统一为一个 Rust 模块,跨文件流式混合文档——上采样就是反复读同一份文件路径。模块内置 <em>Bloom filter</em>(Bloom 1970),提供线性时间的概率级重复检测;同一个基础设施被复用来做测试集去污染——把评测样本作为 seed 灌入 Bloom filter,训练阶段命中即丢。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§4.2 Data ablations.</strong> Every non-trivial curation decision is validated by training a <strong>1.2B-parameter OLMo-family decoder-only LM</strong> on the dataset under that intervention and comparing against a baseline on a fixed 8-task zero-shot evaluation suite (ARC-E/C, BoolQ, HellaSwag, OpenBookQA, PIQA, SciQ, WinoGrande). Models are <strong>early-stopped at 150B tokens</strong> — full training would be prohibitive across so many sweeps. Tasks were chosen to (i) match prior LM evaluation practice, (ii) span QA + commonsense reasoning, and (iii) avoid being contaminated by Dolma itself (full contamination report in Appendix §L). Evaluation casts each task as ranked text classification with PromptSource prompts, à la the Eleuther harness.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§4.2 数据消融方案。</strong>每一个非平凡的整理决策都要通过消融来验证:在该决策下整理出的数据上,训一个 <strong>1.2B 参数的 OLMo 家族 decoder-only LM</strong>,然后在固定的 8 任务 zero-shot 评测套件(ARC-E/C、BoolQ、HellaSwag、OpenBookQA、PIQA、SciQ、WinoGrande)上与基线比较。由于训练完整规模过于昂贵,所有消融模型都在 <strong>150B tokens 处提前停止</strong>。任务选择标准:(i) 沿用过往 LM 评测惯例;(ii) 覆盖 QA + 常识推理的多样能力;(iii) 不被 Dolma 自身污染(完整污染分析见附录 §L)。评测形式是把每个任务转写为带排名的文本分类,使用 PromptSource 的 prompt,实现接近 Eleuther 评测套件。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5.1–5.3 Dolma-Web / 网页子集:语言 + 质量 + 内容过滤<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5 Dolma-Web overview.</strong> The web subset contributes ~2.28T tokens drawn from Common Crawl. CC is organized into snapshots (full re-crawls over seed URLs); as of Feb 2024 there are 97 snapshots, and Dolma uses 25 snapshots spanning <strong>2020-05 to 2023-06</strong>. Only enough snapshots were downloaded to hit the 2–3T token target, assuming ~10× shrinkage after all cleanup.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5 Dolma-Web 概览。</strong>网页子集贡献 ~2.28T tokens,全部从 Common Crawl 采得。CC 组织为<em>快照(snapshot)</em>——每个快照是对 seed URL 的一次完整爬取;截至 2024-02 共 97 个快照,Dolma 用了其中跨 <strong>2020-05 至 2023-06</strong> 的 25 个。出于存储与算力考虑,只下载"够用"的数量——以"全套清洗后 ~10× 缩水"反推目标 2–3T token。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.1 Acquisition + language filtering (CCNet).</strong> The web pipeline begins with <em>CCNet</em> (Wenzek et al. 2020), the same first-stage tool used by LLaMA / RedPajama v1 / RedPajama v2. CCNet routes each page through a FastText language-ID model and Dolma <strong>keeps pages with English score ≥ 0.5</strong> — this alone removes <strong>61.7% of bytes</strong>. CCNet additionally removes very-common paragraphs within each snapshot shard group; that step strips ~70% of paragraphs (mostly headers and navigation chrome). End-to-end, CCNet pipeline drops Common Crawl from <strong>175.1 TB → 27.7 TB</strong> (84.2% gone) before Dolma's own filters even start.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.1 采集 + 语言过滤(CCNet)。</strong>网页流水线第一步是 <em>CCNet</em>(Wenzek 等 2020)——LLaMA / RedPajama v1 / RedPajama v2 也都用它作首站。CCNet 给每个页面跑 FastText 语言识别模型,Dolma 选择 <strong>英文得分 ≥ 0.5 即保留</strong>——单这一步就按字节数砍掉 <strong>61.7%</strong>。CCNet 还会把每个 snapshot 内的 shard 分小组,在组内移除"极其常见的段落"——这一步又砍掉 ~70% 的段落(主要是页眉、导航栏)。两步合在一起,Common Crawl 从 <strong>175.1 TB 收缩到 27.7 TB</strong>(共砍掉 84.2%),Dolma 自己的过滤器此时才正式上场。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.2 Heuristic quality filters (Gopher + C4 NoPunc).</strong> Following Rae et al. (Gopher) and Almazrouei et al. (Falcon), Dolma avoids model-based quality classifiers and instead combines two heuristic stacks: <strong>Gopher All</strong> (keep all Gopher rules) plus a single C4 rule — <strong>C4 NoPunc</strong>, which drops paragraphs that do not end in punctuation. The §1 ablation shows C4 NoPunc alone beats both <em>C4 All</em> and <em>Gopher All</em> on perplexity and downstream tasks, and the combination <strong>Gopher All + C4 NoPunc</strong> is best overall. On the chosen recipe, Gopher All tags <strong>15.23%</strong> of UTF-8 chars for removal and C4 NoPunc tags <strong>22.73%</strong>. Separately, CCNet ships a KenLM-perplexity bucket (Wikipedia-likeness; high/med/low ≈ 21.9 / 28.5 / 49.6%); heuristic filtering left those bucket proportions essentially unchanged — suggesting model-based quality signals capture an <em>orthogonal</em> axis to heuristics.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.2 启发式质量过滤(Gopher + C4 NoPunc)。</strong>沿用 Rae 等(Gopher)与 Almazrouei 等(Falcon)的论证,Dolma 避免使用基于模型的质量分类器,改为两套启发式叠用:<strong>Gopher All</strong>(保留 Gopher 的全部规则)+ <strong>一条</strong> C4 规则——<em>C4 NoPunc</em>:段落不以标点结尾就丢。§1 的消融图显示:单独使用 C4 NoPunc 在困惑度和下游任务上都<em>优于 C4 All 与 Gopher All</em>,而 <strong>Gopher All + C4 NoPunc</strong> 组合表现最好。最终配方下,Gopher All 标记移除 <strong>15.23%</strong> 的 UTF-8 字符,C4 NoPunc 标记 <strong>22.73%</strong>。另外,CCNet 自带一个基于 KenLM 困惑度的"Wikipedia 相似度"分桶(high/medium/low ≈ 21.9 / 28.5 / 49.6%);启发式过滤<em>几乎不改变</em>这些分桶比例——说明"模型质量信号"与"启发式信号"捕捉的是<em>相互正交</em>的两条信息。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.3 Toxicity filter (self-trained FastText on Jigsaw).</strong> To avoid downstream toxic generation, Dolma self-trains two FastText classifiers on the <em>Jigsaw Toxic Comments</em> corpus — one for "hate" and one for "NSFW" — and applies them at <strong>sentence</strong> granularity (BlingFire splitter), removing any sentence whose score exceeds τ. Two thresholds are ablated: <strong>"High" τ = 0.4</strong> removes <strong>5.5–7.3%</strong> of content; <strong>"Low" τ = 0.0004</strong> removes <strong>29.1–34.9%</strong>. Low generally yields slightly higher downstream accuracy, but is too costly in token count, so Dolma adopts <strong>High</strong>. The surprise from this experiment: quality / content / dedup filters overlap very little in <em>which</em> texts they remove, so stacking them produces a <em>compounded</em> reduction — future Dolma versions will start from more CC shards and tighten thresholds. (Sentence scores form a strong bimodal distribution at 0 and 1, so threshold choice mostly drives <em>how much data is kept</em>, not <em>which kind</em>.)</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.3 毒性过滤(自训 FastText,基于 Jigsaw)。</strong>为避免下游生成毒性内容,Dolma 在 <em>Jigsaw Toxic Comments</em> 上自训两个 FastText 分类器——分别识别 <em>hate</em> 与 <em>NSFW</em>——在 <strong>句子</strong>粒度上(用 BlingFire 切句)运行,得分超过 τ 即移除该句。论文消融两个阈值:<strong>"High" τ = 0.4</strong> 删 <strong>5.5–7.3%</strong>,<strong>"Low" τ = 0.0004</strong> 删 <strong>29.1–34.9%</strong>。Low 通常对应略高的下游准确率,但 token 数代价过大,Dolma 最终采用 <strong>High</strong>。本实验的"惊喜"在于:质量过滤、内容过滤与去重过滤<em>几乎不重叠</em>在"删哪些文本"上,叠加起来会产生<em>复合式</em>的总损耗——未来版本将从更多 CC shards 起步,并收紧阈值。(句子分数呈强双峰分布,集中在 0 与 1 附近,因此阈值选择主要影响"保留多少",而非"保留哪一类"。)</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.3 (cont.) PII filtering with regex.</strong> Model-based PII detection at Dolma scale is impractical, so Dolma uses carefully-crafted regexes targeting three high-precision categories: <strong>email addresses, IP addresses, phone numbers</strong>. The policy is two-tier: <em>≤ 5 PII spans in a document</em> → replace each with a special token (<code>|||EMAIL_ADDRESS|||</code> etc.), affects <strong>0.02%</strong> of documents; <em>&gt; 5 spans</em> → drop the whole document, affects <strong>0.001%</strong>. Ablations confirmed the replace-vs-remove choice has no measurable effect on downstream performance — expected given how few documents are touched.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.3 续:基于正则的 PII 过滤。</strong>在 Dolma 量级下用模型级 PII 检测不现实,因此使用三种高精度类别的正则:<strong>email、IP 地址、电话号码</strong>。策略分两档:<em>单文档 ≤ 5 个 PII 命中</em> → 每个替换为特殊 token(如 <code>|||EMAIL_ADDRESS|||</code>),共影响 <strong>0.02%</strong> 文档;<em>&gt; 5 个</em> → 整篇删除,共影响 <strong>0.001%</strong>。消融实验表明"替换 vs 删除"对下游性能<em>没有可测差异</em>——这与"受影响数据比例极小"的事实一致。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="7"></div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>§5.4–5.5 Deduplication / Bloom filter 三级去重<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.4 Three-stage dedup.</strong> Prior work (Lee et al. 2022; Abbas et al. 2023; Tirumala et al. 2023) shows dedup substantially improves token efficiency, so Dolma applies it in three stages — all sharing the same Bloom-filter mixer (§4.1): <strong>(i) Exact URL dedup</strong> drops <strong>53.2%</strong> of documents (cheap, runs first); <strong>(ii) Exact document dedup</strong> drops <strong>14.9%</strong> of the survivors, including empties; <strong>(iii) Exact paragraph dedup</strong> drops <strong>18.7%</strong> of paragraphs from the URL-deduped pool, including empties. Stages (i)+(ii) target straight copies (same URL re-crawled, same article on different sites) and run before content/quality filters to cut compute. Stage (iii) targets boilerplate (e.g. author bylines repeated across articles) and runs <em>last</em> because paragraph removal can damage discourse.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.4 三阶段去重。</strong>已有工作(Lee 等 2022;Abbas 等 2023;Tirumala 等 2023)已证明 dedup 能显著提高 token 利用效率,因此 Dolma 做三轮去重,全部共享 §4.1 的 Bloom filter mixer:<strong>(i) 精确 URL 去重</strong>砍掉 <strong>53.2%</strong> 文档(成本最低,优先执行);<strong>(ii) 精确文档级去重</strong>在剩余文档上再砍 <strong>14.9%</strong>,包括空文档;<strong>(iii) 精确段落级去重</strong>在 URL 去重后的池子上砍掉 <strong>18.7%</strong> 段落,包括空段落。(i) + (ii) 处理"原样复制"(同一 URL 重爬、同一篇文章被多家网站转载),放在内容/质量过滤之前以减小计算量;(iii) 主要清除模板套话(如"本文作者 ××"在同一作者所有文章末尾重复),放在<em>最后</em>——因为段落级删除可能损害篇章连贯性。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.5 Pipeline integration.</strong> The full Dolma-Web pipeline is therefore: CCNet output → URL dedup → document dedup → quality filters (Gopher All + C4 NoPunc) → content filters (hate / NSFW / PII) → paragraph dedup. The §3 ablation shows a clean <em>compounding</em> effect on HellaSwag (and the appendix shows the same on all 8 tasks): "quality only" &lt; "quality + dedup" &lt; "quality + dedup + content"; each layer monotonically improves the 1.2B model's downstream accuracy curve over training tokens.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.5 流水线整体串联。</strong>完整的 Dolma-Web 流水线为:CCNet 输出 → URL 去重 → 文档去重 → 质量过滤(Gopher All + C4 NoPunc)→ 内容过滤(hate / NSFW / PII)→ 段落去重。§3 的消融图显示在 HellaSwag 上有清晰的<em>叠加增益</em>(附录展示了 8 个任务上同样规律):"仅质量" &lt; "质量 + dedup" &lt; "质量 + dedup + 内容",每加一层都让 1.2B 模型在训练 token 累加曲线上单调上移。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="8"></div>
+    </details>
+
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>§6 Dolma-Code / GitHub 代码子集(MinHash)<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§6.1 Source: The Stack.</strong> The 411B-token code subset is derived from <em>The Stack</em> (Kocetkov et al. 2022) — same source as StarCoder — a deduplicated collection of permissively-licensed GitHub repos snapshotted in March 2023. Files with data-heavy extensions (JSON, CSV) are filtered out up front.</p>
+            <p><strong>§6.2 Quality filters: RedPajama-v1 + StarCoder rules.</strong> Two heuristic stacks are combined: <em>RedPajama-v1</em> rules drop file preambles (license headers), excessively long lines, and mostly-numeric/template-generated files; <em>StarCoder</em> rules filter repos with too-few stars, files with too-few or too-many comments, and HTML with low code-to-text ratio. Ablation: <strong>RedPajama-v1 + StarCoder</strong> beats RedPajama-v1 alone on HumanEval perplexity <em>and</em> on the 8-task suite — so the combined recipe is adopted.</p>
+            <p><strong>§6.3 Content filters.</strong> Same web-style PII regex (§5), <em>plus</em> code-specific: the <code>detect-secrets</code> library is run over every file, and any document containing a match (API keys, hard-coded passwords, etc.) is removed entirely.</p>
+            <p><strong>§6.4 Dedup.</strong> The Stack itself was already deduplicated using <em>MinHash + LSH</em> (Broder 2002) via the Allal et al. 2023 pipeline — so Dolma-Code inherits near-dup removal from upstream, and Dolma's Bloom-filter stages act as belt-and-suspenders for any residual exact duplicates.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§6.1 数据源:The Stack。</strong>411B token 的代码子集来自 <em>The Stack</em>(Kocetkov 等 2022)——与 StarCoder 同源——这是一个对宽松许可证 GitHub 仓库做过去重的集合,快照时间 2023-03。预先过滤掉数据型扩展名(JSON、CSV)的文件。</p>
+            <p><strong>§6.2 质量过滤:RedPajama-v1 + StarCoder 规则叠用。</strong>两套启发式叠加:<em>RedPajama-v1</em> 规则去掉文件首部模板(许可证 header)、过长行、纯数字/模板生成的文件;<em>StarCoder</em> 规则过滤掉 star 数过少的仓库、注释过少或过多的文件、代码占比过低的 HTML。消融结果:<strong>RedPajama-v1 + StarCoder</strong> 同时在 HumanEval 困惑度<em>和</em> 8 任务套件上优于"单 RedPajama-v1",因此选用组合配方。</p>
+            <p><strong>§6.3 内容过滤。</strong>沿用 §5 的 Web 端 PII 正则;<em>外加</em>代码专属一项:用 <code>detect-secrets</code> 库扫描每个文件,凡命中 API key、硬编码密码等敏感字符串的文件,整篇删除。</p>
+            <p><strong>§6.4 去重。</strong>The Stack 本身就已经用 <em>MinHash + LSH</em>(Broder 2002,管线参照 Allal 等 2023)做过近似去重,因此 Dolma-Code 直接<em>继承</em>了上游的近重复清理;Dolma 流水线的 Bloom filter 各阶段则作为"额外保险",兜底任何残留的精确重复。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="9"></div>
+    </details>
+
+    <details class="sec" id="sec-10">
+      <summary>
+        <span>§7 Dolma-Social / Reddit 子集 + 线性化消融<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§7.1 Acquisition + linearization ablation.</strong> The 80B-token social subset comes from <strong>378M Reddit posts</strong> spanning <strong>Dec 2005 – Mar 2023</strong>, sourced through Pushshift. Both <em>submissions</em> (top-of-thread messages) and <em>comments</em> (replies) are included. Because Reddit threads have tree structure, multiple linearizations are possible; an ablation compares three: <strong>(1) Atomic Content</strong> — each comment and submission is its own document; <strong>(2) Partial Threads</strong> — comments from one thread fused into a multi-turn dialogue, submissions kept separate; <strong>(3) Full Threads</strong> — submission + all child comments fused into one document. The §4 figure shows <strong>Atomic Content wins</strong>; the authors hypothesize the artificial formatting introduced when stitching thread elements actively hurts LM training. Non-English content is then removed via the §5.1 CCNet FastText filter.</p>
+            <p><strong>§7.2 Quality filters.</strong> Building on Henderson et al. 2019: drop comments &lt; 500 chars, drop submissions &lt; 400 chars (submissions tend to be higher quality, so a more permissive minimum); cap document length at 40 000 chars; drop comments with &lt; 3 net votes (deeply nested or inflammatory comments score low). Discard any document that was deleted by author, removed by moderator, or marked NSFW. Exclude any post originating in one of <strong>26 123 banned or NSFW subreddits</strong> (the curated blocklist is published with the toolkit; any subreddit with &gt; 10% NSFW posts is also included).</p>
+            <p><strong>§7.3 Content filters + §7.4 dedup.</strong> Same §5.3 hate / NSFW classifier and PII regex are reused — but because Reddit documents are short, when PII is detected the <em>entire document</em> is removed (no in-place token replacement). Dedup is the same Bloom-filter approach as the web subset but only at <strong>document level</strong> (paragraph dedup makes little sense on such short texts) — this still effectively kills "copypasta" (the same joke text reposted across subs).</p>
+          </div>
+          <div class="zh">
+            <p><strong>§7.1 采集 + 线性化消融。</strong>80B token 的社交子集来自 <strong>3.78 亿条 Reddit 帖子</strong>,时间跨度 <strong>2005-12 至 2023-03</strong>,通过 Pushshift 获取;同时包含 <em>submissions</em>(贴主帖)与 <em>comments</em>(回帖)。由于 Reddit 是树状结构,如何把树<em>线性化</em>成训练文档存在多种选择,论文消融了三种:<strong>(1) Atomic Content</strong>——每条评论、每个帖子各自独立成文档;<strong>(2) Partial Threads</strong>——同一线程的评论合成多轮对话、submission 仍独立;<strong>(3) Full Threads</strong>——submission 与其所有子评论合为一份文档。§4 图显示 <strong>Atomic Content 最优</strong>;作者推测拼接 thread 元素时引入的人工格式会损害 LM 训练。接着用 §5.1 的 CCNet FastText 过滤掉非英文内容。</p>
+            <p><strong>§7.2 质量过滤。</strong>基于 Henderson 等 2019 的管线:删除少于 <strong>500 字符</strong>的评论、少于 <strong>400 字符</strong>的 submission(submission 平均质量更高,所以阈值更宽);文档长度上限 <strong>40 000 字符</strong>;评论净投票 &lt; 3 也丢(深层嵌套或情绪化评论得分低)。被作者删除、被版主移除、被作者标为 NSFW(&gt;18)的文档一律丢弃。来源于 <strong>26 123 个被封禁/NSFW subreddit</strong> 的帖子全部排除(blocklist 随工具链发布;任何 &gt; 10% 帖子带 NSFW 标签的 subreddit 也自动被纳入封禁列表)。</p>
+            <p><strong>§7.3 内容过滤 + §7.4 去重。</strong>沿用 §5.3 的 hate / NSFW 分类器与 PII 正则;但因 Reddit 文档很短,一旦命中 PII 就<em>整篇删除</em>(不再做局部 token 替换)。去重沿用网页子集的 Bloom filter,但仅在<strong>文档级</strong>(段落级在如此短的文本上意义不大)——这一招已能有效杀掉"copypasta"(同一段笑话/段子在多 subreddit 反复粘贴)。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="10"></div>
+    </details>
+
+    <details class="sec" id="sec-11">
+      <summary>
+        <span>§8 Other Sources / C4 · peS2o · Gutenberg · Wikipedia<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§8 Four auxiliary sources, briefly.</strong></p>
+            <p><strong>C4 (curated web).</strong> Mirroring LLaMA and Llama 2, Dolma appends C4 (Raffel et al. 2020) to its web subset, re-processing it through the full §5 web pipeline <em>except</em> URL dedup — this picks up additional low-quality / duplicate scrubbing and adds PII masking on top of the original C4 recipe.</p>
+            <p><strong>peS2o (academic papers).</strong> The ~40M open-access papers in <em>peS2o</em> (Soldaini & Lo 2023) — derived from <em>S2ORC</em>, Semantic Scholar's open research corpus — already ship cleaned, filtered, deduplicated and formatted for LM pretraining, so Dolma ingests them as-is. This is the source of the 70B-token science slice.</p>
+            <p><strong>Project Gutenberg (public-domain books).</strong> Project Gutenberg's archive (&gt;70k books) was snapshotted in April 2023. Dolma keeps only English-language books (CCNet FastText, §5.1) and deduplicates on exact book-title match — yielding 6.0B tokens from 56k titles.</p>
+            <p><strong>Wikipedia + Wikibooks (encyclopedic).</strong> Built from March-2023 Wikimedia dumps using <em>WikiExtractor</em>, covering the English and Simple editions of both Wikipedia and Wikibooks. Any document with ≤ 25 UTF-8-segmented words is dropped (short pages are usually template stubs or XML-parse errors). The dump is duplicate-free by construction, so no extra dedup pass is needed. Output: 4.3B tokens.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§8 四个辅助数据源,简述如下。</strong></p>
+            <p><strong>C4(精选网页)。</strong>与 LLaMA、Llama 2 的做法一致,Dolma 把 C4(Raffel 等 2020)追加到 web 子集中,并把它<em>重新</em>过 §5 的完整网页流水线——但<em>跳过 URL 去重</em>——以多扫一遍低质/重复内容,并在原 C4 之上叠加 PII 屏蔽。</p>
+            <p><strong>peS2o(学术论文)。</strong>~4000 万篇开放获取论文,来自 <em>peS2o</em>(Soldaini & Lo 2023)——它本身派生自 Semantic Scholar 的 <em>S2ORC</em> 开放研究语料,出厂就已为 LM 预训练完成清洗、过滤、去重、格式化,因此 Dolma <em>原样</em>吸收。这就是 70B token 学术切片的来源。</p>
+            <p><strong>Project Gutenberg(公版书)。</strong>2023-04 抓取了 Project Gutenberg 的整个档案库(&gt; 7 万本书),仅保留英文(走 §5.1 的 CCNet FastText),并按"书名精确匹配"做去重——最终从 5.6 万本书提取出 <strong>6.0B token</strong>。</p>
+            <p><strong>Wikipedia + Wikibooks(百科)。</strong>基于 2023-03 的 Wikimedia 转储,使用 <em>WikiExtractor</em> 抽取,覆盖 Wikipedia 与 Wikibooks 的"English"与"Simple"两个版本。删除任何 UTF-8 分词后 ≤ 25 词的文档(过短页通常是模板桩或 XML 解析错误)。转储天然无重复,因此无需额外去重。最终输出 <strong>4.3B token</strong>。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="11"></div>
+    </details>
+
+    <details class="sec" id="sec-12">
+      <summary>
+        <span>§9 Training OLMo-1B / 下游验证 & Paloma 域适配<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§9.1 End-to-end validation: OLMo-1B.</strong> As a final sanity check that the pipeline ships a usable corpus, the authors train and release a 1.2B-parameter decoder-only LM called <strong>OLMo-1B</strong> on full Dolma, and zero-shot it on the §4.2 evaluation suite. Numbers in <em>Table 2</em>:</p>
+            <table style="border-collapse:collapse; font-family:var(--mono); font-size:12.5px; margin:10px 0; width:100%;">
+              <thead>
+                <tr style="background:var(--bg-elev); border-bottom:1px solid var(--border);">
+                  <th style="text-align:left; padding:6px 8px;">Task</th>
+                  <th style="text-align:right; padding:6px 8px;">StableLM2 (1.6B)</th>
+                  <th style="text-align:right; padding:6px 8px;">Pythia (1.1B)</th>
+                  <th style="text-align:right; padding:6px 8px;">TinyLlama (1.1B)</th>
+                  <th style="text-align:right; padding:6px 8px;">OLMo-1B (1.2B)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td style="padding:4px 8px;">ARC-E</td><td style="text-align:right;">63.7</td><td style="text-align:right;">50.2</td><td style="text-align:right;">53.2</td><td style="text-align:right;"><strong>58.1</strong></td></tr>
+                <tr><td style="padding:4px 8px;">ARC-C</td><td style="text-align:right;">43.8</td><td style="text-align:right;">33.1</td><td style="text-align:right;">34.8</td><td style="text-align:right;"><strong>34.5</strong></td></tr>
+                <tr><td style="padding:4px 8px;">BoolQ</td><td style="text-align:right;">76.6</td><td style="text-align:right;">61.8</td><td style="text-align:right;">64.6</td><td style="text-align:right;"><strong>60.7</strong></td></tr>
+                <tr><td style="padding:4px 8px;">HellaSwag</td><td style="text-align:right;">68.2</td><td style="text-align:right;">44.7</td><td style="text-align:right;">58.7</td><td style="text-align:right;"><strong>62.5</strong></td></tr>
+                <tr><td style="padding:4px 8px;">OpenBookQA</td><td style="text-align:right;">45.8</td><td style="text-align:right;">37.8</td><td style="text-align:right;">43.6</td><td style="text-align:right;"><strong>46.4</strong></td></tr>
+                <tr><td style="padding:4px 8px;">PIQA</td><td style="text-align:right;">74.0</td><td style="text-align:right;">69.1</td><td style="text-align:right;">71.1</td><td style="text-align:right;"><strong>73.7</strong></td></tr>
+                <tr><td style="padding:4px 8px;">SciQ</td><td style="text-align:right;">94.7</td><td style="text-align:right;">86.0</td><td style="text-align:right;">90.5</td><td style="text-align:right;"><strong>88.1</strong></td></tr>
+                <tr><td style="padding:4px 8px;">WinoGrande</td><td style="text-align:right;">64.9</td><td style="text-align:right;">53.3</td><td style="text-align:right;">58.9</td><td style="text-align:right;"><strong>58.9</strong></td></tr>
+                <tr style="border-top:1px solid var(--border); font-weight:700;"><td style="padding:6px 8px;">Average</td><td style="text-align:right;">66.5</td><td style="text-align:right;">54.5</td><td style="text-align:right;">59.4</td><td style="text-align:right;">60.3</td></tr>
+              </tbody>
+            </table>
+            <p>Among truly comparable models (same parameter count and similar training-token budget), the only fair head-to-head is <em>TinyLlama-1.1B</em>: OLMo-1B beats it on 4/8 tasks and on average (60.3 vs 59.4). Pythia trained on ~10× fewer tokens, while StableLM2-1.6B is larger, trained on 2T tokens for two epochs, and its data composition is not disclosed — so its 66.5 is informative but not a fair comparison.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§9.1 端到端验证:OLMo-1B。</strong>作为对整套 pipeline 的最终验证,作者用完整 Dolma 训练并发布了 1.2B 参数的 decoder-only LM——<strong>OLMo-1B</strong>,并在 §4.2 评测套件上跑 zero-shot,数字见 Table 2(见上表):</p>
+            <p>在<em>真正</em>可比的模型里(参数量相近、训练 token 量相近),唯一公平的对照是 <em>TinyLlama-1.1B</em>:OLMo-1B 在 8 个任务中 4 个领先,平均分领先(60.3 vs 59.4)。Pythia 训练 token 少了 ~10×;StableLM2-1.6B 模型更大、训了 2T token × 2 个 epoch、且数据构成<em>未公开</em>——其 66.5 仅作参考,不构成公平对比。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§9.2 Domain fit via Paloma.</strong> To check that Dolma's multi-source mix really produces an LM that generalizes across textual domains, the authors repeat the §4.2 ablation methodology — train six 1.2B models on 150B-token samples of <em>C4</em>, <em>mC4 (English)</em>, <em>RedPajama v1</em>, <em>RefinedWeb</em>, <em>Pile</em>, and <em>Dolma</em> — and evaluate perplexity on <strong>Paloma</strong> (Magnusson et al. 2023), a stratified collection of fine-grained textual sources that samples each marked domain <em>equally</em>, not by its frequency in the source. Figure 5 conclusions:</p>
+            <ul style="margin:6px 0 6px 22px;">
+              <li>Pile gets a low perplexity despite small total scale, because its sources are themselves a hand-picked stratified mix.</li>
+              <li>Large multi-source corpora (Dolma, and to a lesser extent RedPajama v1) match Pile's domain coverage at much greater scale.</li>
+              <li>Single-source web-only corpora (C4, mC4-English, RefinedWeb) fit poorly to diverse domains — clearly higher perplexity.</li>
+            </ul>
+            <p>The takeaway: when scaling tokens, the open question is "how do we keep diverse-domain sample efficiency while piling on more web data?" — Dolma's answer is to mix high-volume web with smaller curated non-web sources (papers, books, Reddit, wiki), and Figure 5 shows OLMo-1B's perplexity curve on Paloma <em>tracks the Pile-trained model</em> despite carrying much more web data.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§9.2 用 Paloma 衡量域适配。</strong>为了验证 Dolma 的"多源混合"确实能训出在多种文本域都泛化的 LM,作者重复 §4.2 的消融方法——分别在 <em>C4</em>、<em>mC4(纯英文)</em>、<em>RedPajama v1</em>、<em>RefinedWeb</em>、<em>Pile</em>、<em>Dolma</em> 上各采样 150B token 训 1.2B 模型——并在 <strong>Paloma</strong>(Magnusson 等 2023)上评估困惑度。Paloma 是一个分层(stratified)的细粒度文本源集合,其特点是<em>各域等权采样</em>,而不是按各源中的频率采样。Figure 5 三条结论:</p>
+            <ul style="margin:6px 0 6px 22px;">
+              <li>Pile 在总规模较小的情况下仍取得低困惑度——因为它的数据源本身就是"人挑过的分层组合"。</li>
+              <li>大规模多源语料(Dolma,以及稍弱的 RedPajama v1)在大得多的规模上达到与 Pile 相当的域覆盖。</li>
+              <li>单源 web-only 语料(C4、mC4-English、RefinedWeb)在多样域上拟合很差——困惑度显著更高。</li>
+            </ul>
+            <p>启示:在 token 不断扩张的趋势下,真正的难题是"如何在堆 web 数据的同时不丢掉多域样本效率?"Dolma 的答案是"<em>大量 web + 小量精挑非 web 源(论文、书、Reddit、wiki)</em>",而 Figure 5 显示 OLMo-1B 在 Paloma 上的困惑度曲线<em>紧贴 Pile 模型</em>——尽管它带有远更多的 web 数据。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="12"></div>
+    </details>
+
+    <details class="sec" id="sec-13">
+      <summary>
+        <span>§10 Conclusion / 结论<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Conclusion.</strong> The paper releases Dolma, a 3T-token English pretraining corpus drawn from six sources (web, scientific papers, code, public-domain books, social media, encyclopedic), and documents the full curation pipeline alongside ablation evidence for every non-trivial choice. Both the corpus and the toolkit are open-sourced as part of the OLMo project (Groeneveld et al. 2024). Since the manuscript was written, the team has continued shipping improvements — e.g. <strong>Dolma v1.7</strong> yields meaningful downstream gains under a fixed model. The corpus is released under <strong>ODC-By</strong> and the toolkit under <strong>Apache 2.0</strong>. The stated hope: close the data-availability gap between commercial and "open" LMs and enable scientific work on transparency, reproducibility and data-centric LM research.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论。</strong>本文发布 Dolma——3T token 的英文预训练语料,来自 6 个域(web、学术论文、代码、公版书、社交媒体、百科),完整记录整套整理流水线,并对每个非平凡的选择都附上消融证据。语料与工具链均作为 OLMo 项目(Groeneveld 等 2024)的一部分开源。论文写作后,团队仍在持续迭代——例如 <strong>Dolma v1.7</strong> 在固定模型下带来明显的下游收益。语料采用 <strong>ODC-By</strong> 协议,工具链采用 <strong>Apache 2.0</strong>。本文期望:弥合商用 LM 与"开放" LM 之间的数据可得性鸿沟,使关于透明性、可复现性、数据中心 LM 研究的科学工作得以推进。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="13"></div>
+    </details>
+
+    <details class="sec" id="sec-14">
+      <summary>
+        <span>§11 Limitations & Ethics / 局限与伦理<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Limitations.</strong> (i) <em>English-only.</em> Dolma was scoped to English; FastText LID has false negatives, so trace non-English data may remain, but is too sparse to enable real non-English downstream tasks — and by being English-only, Dolma reinforces the "English-as-default" assumption in NLP. (ii) <em>Representativeness.</em> No single open corpus can cover all data practices, and many open/closed LMs train on data that simply cannot be redistributed. (iii) <em>Ablation model size.</em> Validation uses 1.2B dense decoder-only models — most production LMs sit at 7B–70B, and alternative architectures were not explored. So conclusions may not transfer cleanly to larger scales; downstream developers are expected to re-validate. (iv) <em>Limited eval suite.</em> The 8 tasks were chosen partly because Dolma is provably uncontaminated against them — but they miss capabilities like executable code generation, which only emerge after instruction-tuning. (v) <em>Manual inspection infeasible.</em> At 11 TB / 4B docs, programmatic tools (WIMBD, Data Portraits) help but no human can audit Dolma exhaustively — so the corpus' full distributional and harm profile remains an open question.</p>
+          </div>
+          <div class="zh">
+            <p><strong>局限。</strong>(i) <em>纯英文。</em>Dolma 限定为英文;FastText 语言识别会有假阴,残留少量非英文数据仍可能存在,但密度太低,不足以驱动有意义的非英文下游表现——而且"纯英文"本身就在强化 NLP 把英文当默认语言的假设。(ii) <em>代表性有限。</em>没有任何单一开放语料能覆盖所有数据实践,许多开闭源 LM 训练所用的数据也无法重新分发。(iii) <em>消融模型规模有限。</em>验证用的是 1.2B 稠密 decoder-only 模型——而生产 LM 多在 7B–70B,本文也未探索其他架构,因此结论不一定能干净地外推到更大规模;下游开发者需要自己再验。(iv) <em>评测套件偏窄。</em>8 个任务的选择部分理由是"可证明 Dolma 没有对其污染",但它们不覆盖类似"可执行代码生成"的能力——这类能力通常要在指令微调后才显现。(v) <em>无法人工普查。</em>11 TB / 40 亿文档,WIMBD、Data Portraits 等工具能辅助程序化抽查,但人工不可能彻底审计 Dolma——其完整的分布与危害画像仍是开放问题。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Ethics: harm minimization + copyright.</strong> The team consulted legal/ethics experts throughout, made case-by-case calls (mask known-precise PII, take a "measured" position on toxicity where literature disagrees), and provides a data-removal request form. The authors explicitly accept compromising on reproducibility/performance/extensibility when there is meaningful individual harm. On copyright: the legal status of training on copyrighted material under U.S. fair use is unsettled (Cooper et al. 2023; Lee et al. 2024) and varies sharply by jurisdiction — Israel and (currently) Japan permit AI training on copyrighted content; the U.S. position is still being litigated. Most Dolma sources were chosen for permissive licensing (peS2o = open-access; The Stack = permissively licensed; Wikipedia = CC) but large web crawls likely still contain copyrighted text — at this scale, reliable detection is infeasible. The decision to release was based on (a) all sources being publicly available, (b) all sources already being used in large-scale LM pretraining elsewhere, and (c) the team's commitment to track the rapidly-evolving legal landscape.</p>
+          </div>
+          <div class="zh">
+            <p><strong>伦理:个人危害最小化 + 版权。</strong>团队全程咨询法律/伦理专家、按 case-by-case 处理(屏蔽精度高的 PII,在文献意见分歧的"毒性识别"上采取折中立场),并提供数据下架请求表单。作者明确表态:当存在显著的个人危害时,愿意在"可复现性、性能、可扩展性"等理想属性上做妥协。在版权问题上:美国"合理使用"原则是否覆盖在版权材料上训练模型,目前仍未有定论(Cooper 等 2023;Lee 等 2024),且各法域结论差异巨大——以色列与当前的日本允许将版权内容用于 AI 训练数据,美国仍在诉讼中。Dolma 的大部分数据源都是按宽松许可证挑选的(peS2o = 开放获取;The Stack = 宽松许可证;Wikipedia = CC),但大规模 web 爬取仍可能包含受版权保护的文本——在这个量级上,可靠检测目前并不可行。最终选择发布的依据是:(a) 所有数据源都是公开可得的;(b) 所有数据源都已被其它大规模 LM 预训练用过;(c) 团队会持续跟踪快速演化的法律环境。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="14"></div>
+    </details>
+
+    <details class="sec" id="sec-15">
+      <summary>
+        <span>References(略)<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content"><p>(参考文献略,见原文 PDF。)</p></div>
+      <div class="sec-claude-note" data-sec-idx="15"></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

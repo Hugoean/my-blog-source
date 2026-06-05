@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiniLLM: On-Policy Distillation of Large Language Models · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2306.08543 · 23 页 · 0 张图</div>
+    <h1>MiniLLM: On-Policy Distillation of Large Language Models</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-deep">优先级 deep</span>
+      <span>W7</span>
+      <span>Distillation</span><span>Reverse KL</span>
+      <span><a href="https://arxiv.org/abs/2306.08543" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2306.08543.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>MiniLLM 把白盒 LLM 知识蒸馏的目标函数从 <em>forward KL</em> $\mathrm{KL}[p\,\|\,q_\theta]$ 改成 <em>reverse KL</em> $\mathrm{KL}[q_\theta\,\|\,p]$,迫使 student 进入 teacher 的<em>主模式 (mode-seeking)</em> 而不是去铺满 teacher 所有 low-probability 区域,并用 Policy Gradient + 三个降方差技巧 (single-step decomposition、teacher-mixed sampling、length normalization) 做 on-policy 优化,在 instruction-following 上从 120M 一路 scaling 到 13B 都稳定胜过 SeqKD / Word-KD。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>核心目标(必默写)</strong>:从标准 KD 的 forward KL
+          $$\min_\theta\;\mathrm{KL}[p\,\|\,q_\theta] = \mathbb{E}_{y\sim p}\bigl[\log p(y|x) - \log q_\theta(y|x)\bigr]$$
+          换成 reverse KL
+          $$\mathcal{L}(\theta) = \mathrm{KL}[q_\theta\,\|\,p] = \mathbb{E}_{y\sim q_\theta}\bigl[\log q_\theta(y|x) - \log p(y|x)\bigr].$$
+          区别在于<strong>从谁分布下采样</strong>——forward KL 把 expectation 放在 $p$ 下,会"零回避 (zero-avoiding)",student 必须给 teacher 所有非零模式分配质量;reverse KL 放在 $q_\theta$ 下,会"零强迫 (zero-forcing)",student 只需聚焦于 teacher 的主峰。
+        </li>
+        <li>
+          <strong>为什么 forward KL 在长序列上崩</strong>:LLM 输出空间巨大,$p$ 多模、$q_\theta$ 容量不够;forward KL 强迫 student 把质量铺到 $p$ 的整张 support,但 student 只有那么多参数,结果是 <em>void regions</em>(在 $p$ 下概率几乎为 0 的区域)也分到不少 $q_\theta$ 质量,自由生成时大概率采到低质样本 → 退化文本、幻觉。reverse KL 不会有这种"过度估计 void"的问题。
+        </li>
+        <li>
+          <strong>梯度推导 / 策略梯度形式</strong>:由 Policy Gradient Theorem 得
+          $$\nabla \mathcal{L}(\theta) = -\,\mathbb{E}_{x\sim p_x,\,y\sim q_\theta}\sum_{t=1}^{T}(R_t - 1)\,\nabla \log q_\theta(y_t|y_{<t}, x),\quad R_t = \sum_{t'=t}^T \log\frac{p(y_{t'}|y_{<t'},x)}{q_\theta(y_{t'}|y_{<t'},x)}.$$
+          注意是 <em>on-policy</em>(从 $q_\theta$ 采样),与 RLHF/PPO 同构;<em>奖励即 log-ratio</em>。
+        </li>
+        <li>
+          <strong>三大稳定化技巧(差一个就崩)</strong>:
+          <ul>
+            <li><em>Single-Step Decomposition</em>:把 $R_t$ 拆成 $r_t + R_{t+1}$,$r_t$ 部分对词表求和直接可微(精确 expectation 而非 MC),大幅降方差,加速收敛。</li>
+            <li><em>Teacher-Mixed Sampling</em>:不从纯 $q_\theta$ 采样,而是 $\tilde p = \alpha\,p + (1-\alpha)\,q_\theta$($\alpha=0.2$),搭配 importance weight $w_t = q_\theta/\tilde p$;teacher 把 student 拉回正常分布,缓解 <em>reward hacking</em>(student 学到 teacher 给高分的退化串)。</li>
+            <li><em>Length Normalization</em>:$R_t$ 累加越长越小 → student 学会偷懒输出空回复;改用 $R_t^\text{Norm} = \frac{1}{T-t-1}\sum_{t'} r_{t'}$ 去长度偏置。</li>
+          </ul>
+        </li>
+        <li><strong>vs SeqKD / Word-KD</strong>:SeqKD = student 在 teacher 采样数据上做 MLE(等价 forward KL);Word-KD = 每 token 用 teacher 分布做交叉熵(也是 forward KL)。MiniLLM 反向 KL + on-policy,本质从"模仿学习的 behavior cloning"升级为 inverse-RL,缓解 exposure bias。</li>
+        <li><strong>另一视角(IRL 推导)</strong>:把 token 生成看成 MDP,teacher logits 作为 soft-Q,得到 reward $r_t = f(y_t,\cdot) - \log\sum_{y'} \exp f(y',\cdot) = \log p(y_t|\cdot)$,套 MaxEnt RL → 目标 $\max J = -\mathrm{KL}[q_\theta\|p]$,与公式 (1) 等价。这解释了为什么 MiniLLM 流水线长得像 RLHF(SFT 起步 → PG 优化 → KL 正则 → PT loss)。</li>
+        <li><strong>实验观察</strong>:① Rouge-L / GPT-4 / 人评三套指标全胜;② <em>Exposure bias</em>(ExAccErr)显著下降,长序列不发散;③ <em>Calibration</em>(ECE)比 forward-KL 学生更接近 teacher;④ Long-response 上优势最大,short-response 上 forward 与 reverse KL 差不多(因为输出空间小,student 也能覆盖);⑤ Distinct-4 与 LM loss 维持 → 没有显著掉多样性。</li>
+        <li><strong>容易踩的坑</strong>:reverse KL 是 <em>mode-seeking</em>,理论上会丢小模式,作者用 generation diversity 实验反驳——在 instruction following 这种"只要一个正确答"的场景下,丢小模式不致命;但若任务本身需要 diverse generation(故事创作、风格迁移),reverse KL 可能不合适。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      LLM 蒸馏范式转变,反向 KL
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-4">§2 Method — Reverse KLD &amp; Gradient / 方法:反向 KL 与梯度</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-5">§3 Experimental Setup / 实验设置</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-6">§3.2 Main Results / 主结果</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-7">§3.3-3.4 Analysis &amp; Ablation / 分析与消融</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-8">§4 Related Work / 相关工作</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-9">§5 Conclusion / 结论</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-10">References</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-11">Appendix(IRL 视角 / 实验细节 / 案例)</a><span class="toc-page">p.16</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>MiniLLM: On-Policy Distillation of Large Language Models Yuxian Gu1,2∗, Li Dong2, Furu Wei2, Minlie Huang1† 1The CoAI Group, Tsinghua University 2Microsoft Research guyx21@mails.tsinghua.edu.cn {lidong1,fuwei}@microsoft.com aihuang@tsinghua.edu.cn</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Knowledge Distillation (KD) is a promising technique for reducing the high computational demand of large language models (LLMs). However, previous KD methods are primarily applied to white-box classification models or training small models to imitate black-box model APIs like ChatGPT. How to effectively distill the knowledge of white-box LLMs into small models is still under-explored, which becomes more important with the prosperity of open-source LLMs. In this work, we propose a KD approach that distills LLMs into smaller language models. We first replace the forward Kullback-Leibler divergence (KLD) objective in the standard KD approaches with reverse KLD, which is more suitable for KD on generative language models, to prevent the student model from overestimating the low-probability regions of the teacher distribution. Then, we derive an effective on-policy optimization approach to learn this objective. The student models are named MINILLM. Extensive experiments in the instruction-following setting show that MINILLM generates more precise responses with higher overall quality, lower exposure bias, better calibration, and higher long-text generation performance than the baselines. Our method is scalable for different model families with 120M to 13B parameters.</p>
+          </div>
+          <div class="zh">
+            <p>知识蒸馏(Knowledge Distillation, KD)是降低大语言模型(LLM)高算力开销的一种有前景的技术。然而,以往的 KD 方法主要用于白盒分类模型,或训练小模型去模仿像 ChatGPT 这类<em>黑盒</em>模型 API。如何有效地把<em>白盒 LLM</em> 的知识蒸馏到小模型中仍然是个尚未充分研究的问题——而随着开源 LLM 的繁荣,这件事变得越来越重要。本工作提出一种把 LLM 蒸馏为更小语言模型的 KD 方法。我们首先把标准 KD 方法中的<em>前向 KL 散度</em>(forward KLD)目标替换为<em>反向 KLD</em>(reverse KLD)——后者更适合在生成式语言模型上做 KD,可以防止 student 模型对 teacher 分布的<em>低概率区域过度估计</em>。随后,我们推导出一种有效的 <em>on-policy</em> 优化方法来学习该目标。我们的 student 模型命名为 <strong>MINILLM</strong>。在指令跟随(instruction-following)设定下的大量实验表明,MINILLM 生成的响应比基线更精确、整体质量更高、exposure bias 更低、校准更好、长文本生成表现更强;该方法可在 120M 到 13B 的不同模型家族上稳定扩展。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Figure 1.</strong> The comparison of MINILLM with sequence-level KD (SeqKD) in terms of the average GPT-4 feedback score on our evaluation sets. <em>Left:</em> GPT-2-1.5B as the teacher model and GPT-2 125M / 340M / 760M as the student models. <em>Middle:</em> GPT-J 6B as the teacher and GPT-2 760M, 1.5B, GPT-Neo 2.7B as the students. <em>Right:</em> OPT 13B as the teacher and OPT 1.3B / 2.7B / 6.7B as the students.</p>
+          </div>
+          <div class="zh">
+            <p><strong>图 1.</strong>MINILLM 与序列级蒸馏(SeqKD)在我们评测集上以 GPT-4 反馈分作为指标的对比。<em>左:</em>teacher 为 GPT-2-1.5B,student 为 GPT-2 125M / 340M / 760M;<em>中:</em>teacher 为 GPT-J 6B,student 为 GPT-2 760M、1.5B、GPT-Neo 2.7B;<em>右:</em>teacher 为 OPT 13B,student 为 OPT 1.3B / 2.7B / 6.7B。三条曲线显示 MINILLM 在每一组配置下都稳定优于 SeqKD,且随 student 尺寸增大,优势保持。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>With the rapid development of large language models (LLMs), a common technique to reduce their high computational resource demand is knowledge distillation (KD), where we train a small student model with supervision from a large teacher model. Two categories of KD are commonly applied: <em>black-box KD</em>, where only the teacher-generated texts are accessible, and <em>white-box KD</em>, where the teacher model's output distribution or intermediate hidden states are also available. Recently, black-box KD has shown promising results in fine-tuning small models on the prompt-response pairs generated by LLM APIs. With the emergence of more open-source LLMs, white-box KD becomes more valuable for both research communities and industry sectors because student models receive better signals from the output distribution and hidden states of teacher models, thereby potentially resulting in higher performance. However, white-box KD approaches are mostly studied for small ($&lt;$ 1B parameters) language understanding models, while white-box KD for LLMs is yet to be explored.</p>
+          </div>
+          <div class="zh">
+            <p>随着大语言模型(LLM)迅速发展,降低其高算力需求的一种常用技术是<em>知识蒸馏</em>(KD)——用大 teacher 模型监督小 student 模型。常见的 KD 分两类:<em>黑盒 KD</em>,只能拿到 teacher 生成的文本;<em>白盒 KD</em>,还可访问 teacher 的输出分布或中间隐藏态。近年来,黑盒 KD 通过在 LLM API 生成的 prompt-response 对上微调小模型,取得了不错效果。随着越来越多开源 LLM 出现,白盒 KD 对学术界与工业界都变得更有价值,因为 student 能从 teacher 的输出分布和隐藏态获得更好的训练信号、可能取得更高性能。但目前的白盒 KD 主要研究<em>小型</em>(< 1B 参数)语言<em>理解</em>模型,LLM 的白盒 KD 尚待探索。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we investigate white-box KD of LLMs where the output distribution of the teacher model is available. We argue that the standard KD objectives are sub-optimal for LLMs that perform tasks in a generative manner. Given the teacher distribution $p(y|x)$ and the student distribution $q_\theta(y|x)$ parameterized by $\theta$, standard KD objectives (including several variants for sequence-level models) essentially minimize the approximated forward Kullback-Leibler divergence (KLD) between the teacher and the student distribution, termed as $\mathrm{KL}[p\,\|\,q_\theta]$, which forces $q_\theta$ to cover all modes of $p$. For text classification tasks, $\mathrm{KL}[p\,\|\,q_\theta]$ works well because the output space usually consists of a finite number of classes such that both $p(y|x)$ and $q_\theta(y|x)$ have few modes. However, for open-ended text generation tasks, which is usually the case of LLM applications, the output spaces are much more complex and $p(y|x)$ can contain many more modes than what $q_\theta(y|x)$ can express due to the limited model capacity. Minimizing forward KLD causes $q_\theta$ to assign unreasonably high probabilities to the void regions of $p$ and produces very unlikely samples under $p$ during free-run generation.</p>
+          </div>
+          <div class="zh">
+            <p>本文研究<em>白盒 LLM 蒸馏</em>——可以访问 teacher 输出分布的情形。我们论证:对<em>以生成方式工作</em>的 LLM 而言,标准 KD 目标其实是次优的。设 teacher 分布为 $p(y|x)$,student 分布为参数化的 $q_\theta(y|x)$,标准 KD 目标(包括序列级若干变体)本质上是最小化二者之间(近似的)<em>前向 KL 散度</em> $\mathrm{KL}[p\,\|\,q_\theta]$,它强迫 $q_\theta$ 覆盖 $p$ 的<em>所有模式</em>。在文本分类任务上,$\mathrm{KL}[p\,\|\,q_\theta]$ 工作良好——因为输出空间是有限类别集合,$p$ 与 $q_\theta$ 都没几个模式。但开放式文本生成(也是 LLM 的常见场景)中,输出空间复杂得多,$p$ 的模式数远超 $q_\theta$ 容量所能表达。最小化前向 KLD 会让 $q_\theta$ 对 $p$ 的<em>空洞区域</em>(void regions)分配不合理的高概率,自由生成时大概率采到 $p$ 看来极不可能的样本。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Figure 2 (toy):</strong> we fit a Gaussian mixture distribution with a single Gaussian using forward KLD and reverse KLD. To alleviate this problem, we propose to minimize <em>reverse KLD</em>, $\mathrm{KL}[q_\theta\,\|\,p]$, widely used in computer vision and reinforcement learning. Compared to $\mathrm{KL}[p\,\|\,q_\theta]$, minimizing $\mathrm{KL}[q_\theta\,\|\,p]$ causes $q_\theta$ to seek the major modes of $p$, and assign low probabilities to $p$'s void regions. In text generation, this means that the student avoids learning too many long-tail variants in the teacher's distribution to focus on the generation correctness, which is critical in practical scenarios that require truthfulness and reliability.</p>
+            <div class="bi-eq">$$\mathcal{L}(\theta) = \mathrm{KL}[q_\theta\,\|\,p] = \mathbb{E}_{y\sim q_\theta}\!\left[\log\frac{q_\theta(y|x)}{p(y|x)}\right].$$</div>
+          </div>
+          <div class="zh">
+            <p><strong>图 2(玩具实验):</strong>用一个单高斯去拟合一个混合高斯分布,分别用 forward KLD 与 reverse KLD。直观上,forward KLD 让单高斯被"摊薄"以覆盖所有峰(<em>zero-avoiding</em>);reverse KLD 让它专注于<em>一个</em>主峰、并对小峰几乎给零(<em>mode-seeking / zero-forcing</em>)。为缓解前向 KLD 的过度估计问题,我们提出最小化<em>反向 KLD</em> $\mathrm{KL}[q_\theta\,\|\,p]$——它在计算机视觉与强化学习中被广泛使用。相比 $\mathrm{KL}[p\,\|\,q_\theta]$,最小化 $\mathrm{KL}[q_\theta\,\|\,p]$ 让 $q_\theta$ 去<em>抓住 $p$ 的主峰</em>,并给 $p$ 的空洞区域低概率。在文本生成里,这意味着 student 避免学太多 teacher 分布里的长尾变体,转而聚焦于<em>生成正确性</em>——对追求真实可靠的实际场景至关重要。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To optimize $\min_\theta \mathrm{KL}[q_\theta\,\|\,p]$, as shown in Section 2.2, we derive its gradient with Policy Gradient and adopt an on-policy training approach. To further stabilize and accelerate training, we propose (1) <em>single-step decomposition</em> to reduce variance, (2) <em>teacher-mixed sampling</em> to alleviate reward hacking, and (3) <em>length normalization</em> to eliminate the length bias. Finally, we introduce the overall KD algorithm in Section 2.3. Our student models are named MINILLM, indicating our method is suitable for compressing large (generative) language models. We apply our method to various generative language models with sizes ranging from 120M to 13B in the instruction-following setting that covers a large range of NLP tasks. We use 5 datasets with Rouge-L, the GPT-4 feedback, and human judgment for evaluation. Experiments show that MINILLM consistently outperforms standard KD baselines on all the datasets and scales up well from 120M to 13B models (see Figure 1). More analysis shows that MINILLM yields lower exposure bias, better calibration, and higher long response generation performance, with negligible loss of diversity.</p>
+          </div>
+          <div class="zh">
+            <p>为优化 $\min_\theta \mathrm{KL}[q_\theta\,\|\,p]$,我们在 §2.2 用 <em>Policy Gradient</em> 推导其梯度,并采用 <em>on-policy</em> 训练方式。为进一步稳定与加速训练,我们提出三个技巧:① <em>single-step decomposition</em> 降方差;② <em>teacher-mixed sampling</em> 缓解 reward hacking;③ <em>length normalization</em> 消除长度偏置。最后在 §2.3 给出整体 KD 算法。student 模型命名为 MINILLM,表示该方法适用于压缩大型(生成式)语言模型。我们在覆盖广泛 NLP 任务的<em>指令跟随</em>设定下,把方法应用到 120M 到 13B 的多种生成式 LM 上;用 5 个数据集、Rouge-L、GPT-4 反馈与人工评测来评估。实验显示 MINILLM 在所有数据集上都稳定超过标准 KD 基线,从 120M 到 13B 都 scaling 良好(见图 1)。进一步分析显示:exposure bias 更低、校准更好、长响应生成更强,且<em>几乎不损失多样性</em>。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3"></div>
+    </details>
+    
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§2 Method — Reverse KLD &amp; Gradient / 方法：反向 KL 与梯度<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">2 Method</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We consider conditional text generation where the model produces a response $y = \{y_t\}_{t=1}^T$ conditioning on a prompt $x$ sampled from the distribution $p_x$, which is typically how LLMs perform tasks. We formulate KD as an optimization problem to minimize the difference between a fixed teacher model distribution $p(y|x)$ and a student model distribution $q_\theta(y|x)$ parameterized by $\theta$. The standard KD methods approximately minimize the forward KLD:</p>
+            <div class="bi-eq">$$\mathrm{KL}[p\,\|\,q_\theta] = \mathbb{E}_{x\sim p_x,\, y\sim p'}\!\left[\log\frac{p(y|x)}{q_\theta(y|x)}\right],$$</div>
+            <p>where $p'$ can be the real data distribution (word-level KD) or the teacher distribution $p$ (sequence-level KD). Though widely used, $\mathrm{KL}[p\,\|\,q_\theta]$ tends to overestimate the void regions of $p$ in text generation tasks when $q_\theta$ is insufficiently expressive. KD for LLMs fits this case because LLMs perform tasks in a generative manner, such that the low-capacity student models cannot perfectly imitate the complex text generation distribution of the teacher models or humans.</p>
+          </div>
+          <div class="zh">
+            <p>我们考虑<em>条件文本生成</em>：模型在 prompt $x \sim p_x$ 条件下生成响应 $y = \{y_t\}_{t=1}^T$——这正是 LLM 执行任务的典型方式。把 KD 表述为一个优化问题：最小化固定 teacher 分布 $p(y|x)$ 与参数化 student 分布 $q_\theta(y|x)$ 之间的差异。标准 KD 方法近似最小化<em>前向 KLD</em>，其中 $p'$ 可以是真实数据分布（word-level KD）或 teacher 分布 $p$（sequence-level KD）。虽然广泛使用，在文本生成任务中，当 $q_\theta$ 表达能力不足时，$\mathrm{KL}[p\,\|\,q_\theta]$ 倾向于<em>过度估计 $p$ 的空洞区域</em>。LLM 的 KD 正属于这种情况，因为 LLM 以生成方式工作，而低容量 student 无法完美模仿 teacher 或人类那种复杂的文本生成分布。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Figure 3:</strong> Comparison between sequence-level KD (left) and MINILLM (right). Sequence-level KD samples $y \sim p$ (the teacher) and forces the student to memorize all samples generated by the teacher model — it minimizes forward KLD with $y$-expectation under $p$. MINILLM instead samples $y \sim q_\theta$ (the student) and uses the teacher's distribution as feedback to improve the student's own generations — it minimizes reverse KLD with $y$-expectation under $q_\theta$. The key change is which distribution we draw $y$ from.</p>
+          </div>
+          <div class="zh">
+            <p><strong>图 3：</strong>序列级 KD（左）与 MINILLM（右）的对比。序列级 KD 从 teacher 分布 $y \sim p$ 采样，强迫 student 把 teacher 生成的所有样本都记住——本质是最小化前向 KLD（期望放在 $p$ 下）。MINILLM 改为从 student 分布 $y \sim q_\theta$ 采样，并用 teacher 的分布作为反馈来改进 student 自己的生成——即最小化反向 KLD（期望放在 $q_\theta$ 下）。核心差别就是"从谁的分布下采样 $y$"。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">2.1 MINILLM: Knowledge Distillation with Reverse KLD</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We consider minimizing the reverse KLD between the student and teacher model distributions as the learning objective for MINILLM:</p>
+            <div class="bi-eq">$$\theta = \arg\min_\theta \mathcal{L}(\theta) = \arg\min_\theta \mathrm{KL}[q_\theta\,\|\,p] = \arg\min_\theta\Bigl\{-\,\mathbb{E}_{x\sim p_x,\, y\sim q_\theta}\!\left[\log\frac{p(y|x)}{q_\theta(y|x)}\right]\Bigr\}. \quad (1)$$</div>
+            <p>Minimizing reverse KLD has been shown to cause the <em>mode-seeking</em> behavior in generative modeling, where $q_\theta$ assigns high probabilities to $p$'s large modes and ignores the small ones (illustrated in a toy experiment in Figure 2). In this work, we first study this property for KD of LLMs in text generation. Minimizing forward KLD causes $q_\theta$ to place large probability masses on the zero-probability regions of $p$, corresponding to the generation of low-quality text in practice, while reverse KLD focuses on $p$'s major modes, which is crucial to ensure the correctness and faithfulness of text generation. As illustrated in Figure 3, unlike sequence-level KD that minimizes forward KLD, MINILLM that minimizes reverse KLD does not force $q_\theta$ to fit all $y$ sampled from the teacher distribution $p$. Instead, it encourages the student to generate samples preferred by the teacher within its own capacities, which is more possible to achieve. Interestingly, we also find another perspective of understanding MINILLM motivated by Inverse Reinforcement Learning. We present the related derivation in Appendix A.1.</p>
+          </div>
+          <div class="zh">
+            <p>我们以 student 与 teacher 之间的<em>反向 KLD</em> 作为 MINILLM 的学习目标——见公式 (1)。在生成式建模中，最小化反向 KLD 已被证明会带来 <em>mode-seeking</em> 行为：$q_\theta$ 把质量集中给 $p$ 的大模式，小模式则被忽略（图 2 的玩具实验已展示）。本文首次将该性质用于 LLM 文本生成的 KD。最小化前向 KLD 会让 $q_\theta$ 把大量质量放在 $p$ 的零概率区域——实际意味着生成低质文本；而反向 KLD 聚焦于 $p$ 的主模式——这对保证生成的正确性和忠实度至关重要。如图 3 所示，与最小化前向 KLD 的序列级 KD 不同，MINILLM 不强迫 $q_\theta$ 拟合 teacher 采出的所有 $y$，而是鼓励 student 在<em>自己能力范围内</em>生成被 teacher 偏好的样本——后者显然更可达。有趣的是，我们还发现一个从<em>逆强化学习</em>（IRL）出发理解 MINILLM 的视角，推导见附录 A.1。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">2.2 On-Policy Distillation</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Gradient Derivation.</strong> We notice that the gradient of the objective function $\mathcal{L}(\theta)$ in Equation (1) can be derived using the Policy Gradient Theorem for on-policy optimization:</p>
+            <div class="bi-eq">$$\nabla \mathcal{L}(\theta) = -\,\mathbb{E}_{x\sim p_x,\, y\sim q_\theta(\cdot|x)}\sum_{t=1}^{T}(R_t - 1)\,\nabla \log q_\theta(y_t | y_{<t}, x), \quad (2)$$</div>
+            <p>where $T = |y|$ and $R_t = \sum_{t'=t}^T \log \frac{p(y_{t'}|y_{<t'},x)}{q_\theta(y_{t'}|y_{<t'},x)}$ is the accumulation of $r_{t'} = \log\frac{p(y_{t'}|y_{<t'},x)}{q_\theta(y_{t'}|y_{<t'},x)}$ that measures the quality of each step's generation. Intuitively, the generated texts are supposed to have high probabilities under the teacher distribution by increasing $p(y_{t'}|y_{<t'},x)$, but simultaneously stay diverse by lowering $q_\theta(y_{t'}|y_{<t'},x)$. The expectation in Eq. 2 is computed by Monte-Carlo sampling. Full derivation can be found in Appendix A.2. However, policy gradient suffers from high variance and reward hacking, despite some subsequent solutions. Besides, we notice that $R_t$ favors short sentences, which causes the student model to output empty responses. Therefore, we propose three strategies to mitigate these problems.</p>
+          </div>
+          <div class="zh">
+            <p><strong>梯度推导。</strong>注意到公式 (1) 的目标 $\mathcal{L}(\theta)$ 可以通过 <em>Policy Gradient Theorem</em> 推出一个适用于 on-policy 优化的梯度——公式 (2)。其中 $T = |y|$，$R_t = \sum_{t'=t}^T r_{t'}$ 是单步生成质量 $r_{t'} = \log\frac{p(y_{t'}|y_{<t'},x)}{q_\theta(y_{t'}|y_{<t'},x)}$ 的累加——即 <em>log-density-ratio</em>，可解读为 "teacher 与 student 在该 token 上的对数似然比"。直观上，我们希望生成文本在 teacher 分布下概率高（抬 $p$），同时保持多样性（压 $q_\theta$）。公式 (2) 的期望用 Monte-Carlo 采样估计。完整推导见附录 A.2。然而 policy gradient 方差很大，且存在 reward hacking 问题（尽管已有不少缓解方案）；此外 $R_t$ 偏爱短句，会导致 student 输出空回复。为此，我们提出三个稳定化策略。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Single-Step Decomposition.</strong> Prior work has found that the single-step generation quality $r_t$ is critical to the training variance because the error in the front tokens accumulates along the whole sentence. To pay more attention to $r_t$, we re-write $\nabla \mathcal{L}(\theta)$ to decompose $r_t$ from $R_t$ and directly compute the gradient of $\mathbb{E}_{y_t\sim q_\theta(t)}[r_t]$ (see Appendix A.3 for the full derivation):</p>
+            <div class="bi-eq">$$\nabla \mathcal{L}(\theta) = \underbrace{\mathbb{E}_{x,y}\!\left[-\sum_{t=1}^T \nabla \mathbb{E}_{y_t \sim q_\theta(t)}[r_t]\right]}_{(\nabla\mathcal{L})_\text{Single}} + \underbrace{\mathbb{E}_{x,y}\!\left[-\sum_{t=1}^T R_{t+1}\,\nabla \log q_\theta(y_t|y_{<t},x)\right]}_{(\nabla\mathcal{L})_\text{Long}}, \quad (3)$$</div>
+            <p>where $q_\theta(t) = q_\theta(\cdot | y_{<t}, x)$. Note that $\mathbb{E}_{y_t \sim q_\theta(t)}[r_t]$ can be computed directly by summing over the vocabulary instead of using Monte-Carlo sampling and is derivable with respect to $\theta$. This decomposition gives a more precise and efficient estimation of the single-step generation quality, which reduces the variance during training and accelerates convergence.</p>
+          </div>
+          <div class="zh">
+            <p><strong>① Single-Step Decomposition.</strong>已有工作发现，单步生成质量 $r_t$ 对训练方差至关重要——因为前面 token 的误差会沿整句累积。为更专注于 $r_t$，我们把 $R_t = r_t + R_{t+1}$ 拆开，直接对 $\mathbb{E}_{y_t \sim q_\theta(t)}[r_t]$ 求梯度，得到公式 (3) 中的两部分：$(\nabla\mathcal{L})_\text{Single}$ 与 $(\nabla\mathcal{L})_\text{Long}$。关键之处：$\mathbb{E}_{y_t \sim q_\theta(t)}[r_t]$ 可<em>对词表求和精确计算</em>（无需 MC 采样），且对 $\theta$ 可微——这相当于把"单步信号"从高方差的 MC 估计中剥离出来，直接得到精确梯度，显著降低方差并加速收敛。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Teacher-Mixed Sampling.</strong> We observe reward hacking when training with Eq. 2 because $q_\theta$ sometimes produces degenerated sentences $y$ that receive high scores from the teacher (e.g., repeated phrases) during sampling, especially for small student models. To create a better sampling distribution, we mix the teacher and the student distribution at each time step:</p>
+            <div class="bi-eq">$$\tilde p(y_t|y_{<t}, x) = \alpha\,p(y_t|y_{<t}, x) + (1-\alpha)\,q_\theta(y_t|y_{<t}, x), \quad (4)$$</div>
+            <p>where $\alpha$ controls the strength of the teacher mix-in. Sampling from $\tilde p$ suppresses low-quality generation with the teacher's help and alleviates reward hacking. We re-write $(\nabla\mathcal{L})_\text{Single}$ and $(\nabla\mathcal{L})_\text{Long}$ with importance sampling to get an unbiased estimator of the gradient, with importance weight $w_t = \prod_{t'=1}^t \frac{q_\theta(y_{t'}|y_{<t'},x)}{\tilde p(y_{t'}|y_{<t'},x)}$. However, $w_t$ brings high variance in practice because it requires multiplying per-token importance weight over multiple time steps, and thus the variance of each step accumulates. Therefore, we approximately set $w_t \approx \frac{q_\theta(y_t|y_{<t},x)}{\tilde p(y_t|y_{<t},x)}$ to reduce the variance of the estimator.</p>
+          </div>
+          <div class="zh">
+            <p><strong>② Teacher-Mixed Sampling.</strong>用公式 (2) 直接训练时，我们观察到 <em>reward hacking</em>：$q_\theta$ 时不时产生退化句（如重复短语），却被 teacher 打高分——尤其是小 student 上更常见。为得到更好的采样分布，我们在每一步把 teacher 和 student 的分布做凸组合——公式 (4)，其中 $\alpha$ 控制 teacher 的混入强度。从 $\tilde p$ 采样，可借 teacher 之力压制低质生成，缓解 reward hacking。然后把 $(\nabla\mathcal{L})_\text{Single}$ 与 $(\nabla\mathcal{L})_\text{Long}$ 用<em>重要性采样</em>改写，得到无偏估计，重要性权重为 $w_t = \prod_{t'=1}^t \frac{q_\theta(y_{t'}|y_{<t'},x)}{\tilde p(y_{t'}|y_{<t'},x)}$。然而连乘 per-token IS-weight 会让每步方差累积、整体方差爆炸，因此实际近似取 $w_t \approx \frac{q_\theta(y_t|y_{<t},x)}{\tilde p(y_t|y_{<t},x)}$（单步比值）来降方差。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Length Normalization.</strong> We found that long sequences tend to have small $R_{t+1}$, which encourages the model to produce short responses. Therefore, we add length normalization to $R_{t+1}$ in Eq. 3:</p>
+            <div class="bi-eq">$$R^\text{Norm}_{t+1} = \frac{1}{T - t - 1}\sum_{t'=t+1}^T \log\frac{p(y_{t'}|y_{<t'},x)}{q_\theta(y_{t'}|y_{<t'},x)}. \quad (6)$$</div>
+            <p><strong>In Summary.</strong> Combining the strategies listed above, we have the final optimization gradient:</p>
+            <div class="bi-eq">$$\nabla \mathcal{L}(\theta) = -\,\mathbb{E}_{x\sim p_x,\, y\sim \tilde p(\cdot|x)}\sum_{t=1}^T w_t\!\left[\underbrace{\nabla \sum_{y'\in V} q_\theta(y'|y_{<t},x)\log\frac{p(y'|y_{<t},x)}{q_\theta(y'|y_{<t},x)}}_{(\nabla\mathcal{L})_\text{Single}} + \underbrace{R^\text{Norm}_{t+1}\,\frac{\nabla q_\theta(y_t|y_{<t},x)}{q_\theta(y_t|y_{<t},x)}}_{(\nabla\mathcal{L})^\text{Norm}_\text{Long}}\right]. \quad (7)$$</div>
+          </div>
+          <div class="zh">
+            <p><strong>③ Length Normalization.</strong>我们发现长序列的 $R_{t+1}$ 倾向偏小（累加项被压缩），这会鼓励模型输出短回复。于是在公式 (3) 的 $R_{t+1}$ 上做长度归一化——公式 (6) 把累加换成平均。<strong>汇总。</strong>把上面三大策略合起来，最终优化梯度形如公式 (7)：期望从 $\tilde p$（teacher-mixed）下取，样本带 IS-weight $w_t$，Single 部分是<em>对词表精确求和</em>的低方差项，Long 部分是<em>长度归一化</em>后的传统 PG 项，$V$ 是词表大小。这个组合形式同时具备：低方差 ✓、抗 reward hacking ✓、无长度偏置 ✓。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">2.3 Training Algorithm</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We start from a student model pre-trained on a large long-document corpus $\mathcal{D}_\text{PT}$. Algorithm 1 trains MINILLM by adapting the student model to a text generation task with dataset $\mathcal{D}$ and supervision from the teacher model, such as an LLM fine-tuned on $\mathcal{D}$ or one with good task-generalization. We first fine-tune the student model on $\mathcal{D}$ and pick the checkpoint with the lowest loss as an initialization for the following training. Then, we compute the gradients $(\nabla\mathcal{L})_\text{Single}$ and $(\nabla\mathcal{L})^\text{Norm}_\text{Long}$ based on Eqs. 5/6, with a PPO-style clipping strategy added to further improve stability. Same as InstructGPT, we include a language modeling loss $\mathcal{L}_\text{PT} = -\mathbb{E}_{d \sim \mathcal{D}_\text{PT}} \log q_\theta(d)$ to preserve the model performance on canonical NLP benchmarks. The student model is finally updated using a combination of gradients $(\nabla\mathcal{L})_\text{Single} + (\nabla\mathcal{L})^\text{Norm}_\text{Long} + \nabla\mathcal{L}_\text{PT}$. The whole on-policy training pipeline is similar to Reinforcement Learning from Human Feedback (RLHF).</p>
+          </div>
+          <div class="zh">
+            <p>训练从一个在长文档预训练语料 $\mathcal{D}_\text{PT}$ 上预训练的 student 出发。算法 1 在文本生成任务数据集 $\mathcal{D}$ 和 teacher 监督下蒸馏 student，teacher 可以是在 $\mathcal{D}$ 上微调过的 LLM，或具有良好任务泛化能力的 LLM。<strong>Phase 1</strong>：先在 $\mathcal{D}$ 上对 student 做 SFT，选验证损失最低的 ckpt 作为后续训练的起点。<strong>Phase 2</strong>：基于公式 (5)/(6) 计算 $(\nabla\mathcal{L})_\text{Single}$ 与 $(\nabla\mathcal{L})^\text{Norm}_\text{Long}$，并加一个 PPO 式的 ratio clipping（$\rho_t = q_\theta / \tilde p$，clip 到 $[1-\epsilon, 1+\epsilon]$）进一步稳定训练。同 InstructGPT，我们加入一个语言建模损失 $\mathcal{L}_\text{PT} = -\mathbb{E}_{d \sim \mathcal{D}_\text{PT}} \log q_\theta(d)$ 来保留模型在常规 NLP benchmark 上的能力。最终用三项梯度之和更新 student。整个 on-policy 训练流程<em>结构上等同 RLHF</em>（SFT → 采样 → PG + KL 正则 + PT loss），但"奖励"由 teacher 分布给出而非 reward model。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4"></div>
+    </details>
+    
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§3 Experimental Setup / 实验设置<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">3 Experiments</div>
+        <div class="bi-sub">3.1 Experimental Setup</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We take instruction-following as the conditional text generation task, where models are trained to generate responses according to the instructions. We fine-tune a large model on the dataset $\mathcal{D}$ consisting of instruction-response pairs as the teacher model. Then, we compare different KD methods on $\mathcal{D}$ by evaluating the student model's instruction-following performance.</p>
+            <p><strong>Base Models.</strong> Our student models come from three model families with various sizes: GPT-2 (120M, 340M, 760M), OPT (1.3B, 2.7B, 6.7B), and LLaMA (7B). For teacher models of each family we use GPT-2-1.5B, OPT-13B, and LLaMA-13B respectively. These teachers are fine-tuned on $\mathcal{D}$ in advance. Results with GPT-J as the teacher are presented in Appendix C.1.</p>
+          </div>
+          <div class="zh">
+            <p>我们把<em>指令跟随</em>(instruction-following)作为条件文本生成任务:训练模型根据指令生成响应。先在指令-响应对数据集 $\mathcal{D}$ 上微调一个大模型作为 teacher;然后在 $\mathcal{D}$ 上比较不同的 KD 方法,以 student 的指令跟随表现作为评估指标。</p>
+            <p><strong>基础模型。</strong>student 来自三个模型家族、覆盖多种尺寸:GPT-2(120M / 340M / 760M)、OPT(1.3B / 2.7B / 6.7B)、LLaMA(7B)。每个家族对应的 teacher 分别是 GPT-2-1.5B、OPT-13B、LLaMA-13B,均预先在 $\mathcal{D}$ 上微调。以 GPT-J 作为 teacher 的实验放在附录 C.1。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Training.</strong> We construct the training data from <em>databricks-dolly-15K</em>, consisting of 15K human-written instruction-response pairs. We filter out samples that exceed the context length, then randomly split 1K / 0.5K samples for validation / testing, leaving about 12.5K examples for training. For $\mathcal{D}_\text{PT}$ we use OpenWebText for the GPT-2 family and the RoBERTa training corpus for the others. We set the teacher-mix-in strength $\alpha = 0.2$ throughout the experiments in Eq. (4). We search hyper-parameters using validation Rouge-L because it aligns with human preference better than validation loss.</p>
+          </div>
+          <div class="zh">
+            <p><strong>训练。</strong>训练数据来自 <em>databricks-dolly-15K</em>(15K 条人写的指令-响应对)。过滤掉超过模型上下文长度的样本,随机切出 1K / 0.5K 作验证 / 测试,剩 ~12.5K 作训练。$\mathcal{D}_\text{PT}$ 在 GPT-2 家族用 OpenWebText,其它家族用 RoBERTa 训练语料。整套实验中,公式 (4) 的 teacher 混入强度固定为 $\alpha = 0.2$。超参数用<em>验证集 Rouge-L</em> 选(比 validation loss 更贴近人工偏好)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Evaluation Datasets.</strong> We evaluate on five instruction-following sets: ① <em>DollyEval</em> — the 500-sample test split from databricks-dolly-15k; ② <em>SelfInst</em> — a user-oriented set with 252 samples; ③ <em>VicunaEval</em> — the 80 challenging Vicuna questions; ④ <em>S-NI</em> — the SUPER-NATURALINSTRUCTIONS test set (9K samples across 119 tasks), split by ground-truth length into $[0,5]$, $[6,10]$, $[11,+\infty]$ subsets (we use $[11,+\infty]$ in §3.2 and analyze all subsets in §3.3); ⑤ <em>UnNI</em> — 10K samples from UNNATURALINSTRUCTIONS, evaluated with the same length-split protocol.</p>
+          </div>
+          <div class="zh">
+            <p><strong>评测数据集。</strong>五个指令跟随数据集:① <em>DollyEval</em>——从 databricks-dolly-15k 切出的 500 条测试集;② <em>SelfInst</em>——252 条用户向的指令集;③ <em>VicunaEval</em>——Vicuna 用的 80 条困难问题;④ <em>S-NI</em>——SUPER-NATURALINSTRUCTIONS 测试集(9K 样本、119 任务),按 ground-truth 长度切成 $[0,5]$、$[6,10]$、$[11,+\infty]$ 三段(§3.2 主结果用 $[11,+\infty]$,§3.3 分析全部三段);⑤ <em>UnNI</em>——从 UNNATURALINSTRUCTIONS 核心集随机抽 10K,沿用同样的长度切分协议。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Metrics.</strong> Three metrics: ① <em>R-L</em> — Rouge-L score, suitable for large-scale instruction-following evaluation; ② <em>GPT4</em> — GPT-4 feedback: ask GPT-4 to score model responses vs. ground-truth answers on a 1–10 scale and report the ratio of model-total to gold-total; ③ <em>Human Evaluation</em> — volunteers compare two responses on SelfInst and annotate Win / Tie / Loss. For all test sets we sample with $\text{temperature}=1$ and average over 5 generations per prompt (different random seeds).</p>
+            <p><strong>Baselines.</strong> Three baselines: <em>SFT w/o KD</em> directly fine-tunes the student on $\mathcal{D}$ with golden responses; <em>KD</em> (word-level) uses the teacher distribution as token-step supervision; <em>SeqKD</em> fine-tunes the student on teacher-generated data.</p>
+          </div>
+          <div class="zh">
+            <p><strong>指标。</strong>三套:① <em>R-L</em>——Rouge-L,适合大规模指令跟随评测;② <em>GPT4</em>——让 GPT-4 把模型回复和 ground-truth 答案各打 1–10 分,报告"模型总分 / 标答总分"的比值(仅用于 DollyEval / SelfInst / VicunaEval);③ <em>Human</em>——SelfInst 上的人评,志愿者比较两条回复并标注 Win / Tie / Loss。所有数据集都用 $\text{temperature}=1$ 采样,每条 prompt 跑 5 个不同 seed 取平均。</p>
+            <p><strong>基线。</strong>三个:① <em>SFT w/o KD</em>——直接用 ground-truth 在 $\mathcal{D}$ 上微调 student;② <em>KD</em>(word-level)——每个 token 用 teacher 分布做监督;③ <em>SeqKD</em>——在 teacher 生成的数据上微调 student。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="5"></div>
+    </details>
+    
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§3.2 Main Results / 主结果<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">3.2 Results</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We present the R-L and GPT-4 evaluation results in Table 1, from which we have three observations. <strong>First</strong>, by comparing the overall performance of MINILLM with the baselines, we observe that the model distilled by our KD method outperforms the baselines in almost all cases — across different base models, evaluation sets, and both Rouge-L and GPT-4 feedback. This verifies the good generalization and high overall performance of our KD method. We also find that MINILLM generally works much better than the baselines on datasets other than Dolly, indicating its good out-of-distribution generalization.</p>
+          </div>
+          <div class="zh">
+            <p>表 1 给出 R-L 与 GPT-4 评估结果,三点观察。<strong>① 整体性能。</strong>MINILLM 在<em>几乎所有</em>设置下(不同 base model、不同评测集、Rouge-L 与 GPT-4 两套指标)都优于基线,验证了方法的良好泛化与高整体性能。值得注意的是,在 Dolly 以外的数据集上,MINILLM 相对基线的提升更大——说明其<em>分布外(OOD)泛化</em>更好。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Second</strong>, the Rouge-L scores show that MINILLM produces the most precise responses that have high overlaps with the ground-truth responses. In some cases — especially on Vicuna, S-NI, and UnNI — student models reach even higher Rouge-L scores than the teacher. We conjecture that the standard teacher-forcing fine-tuning on $\mathcal{D}$ brings a training-inference discrepancy (i.e., <em>exposure bias</em>) to the teacher, while MINILLM is optimized with policy optimization that samples responses from the student itself during training, thereby alleviating exposure bias. Further analysis on exposure bias is in §3.3.</p>
+          </div>
+          <div class="zh">
+            <p><strong>② 精度。</strong>Rouge-L 显示 MINILLM 生成的响应与 ground-truth 重叠度最高;在某些情形下(尤其 Vicuna / S-NI / UnNI),student 的 Rouge-L 甚至<em>超过</em> teacher。我们的猜想:teacher 自己用 teacher-forcing 在 $\mathcal{D}$ 上微调,也带来训练-推理失配——即 <em>exposure bias</em>;而 MINILLM 的策略优化在训练时<em>从 student 自身</em>采样响应,从而缓解了这一偏差。§3.3 有更详细的 exposure bias 分析。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Third</strong>, comparing the results across model sizes and families, MINILLM's improvement is consistent when base model sizes range from 120M to 13B across three model families (also illustrated in Figure 1), showing excellent scalability and generalization in the era of LLMs. The human evaluation on SelfInst (LLaMA family) is shown in Figure 4: MINILLM obtains better human preference than all baselines, performing comparably to the teacher.</p>
+            <p><strong>Table 1 highlights.</strong> Best per-size scores boldfaced; an asterisk marks rows where the student beats its teacher. Selected numbers: GPT-2-1.5B → 120M MINILLM 44.7 (GPT4 on Dolly) vs. SeqKD 41.2 / KD 40.3; OPT-13B → 1.3B MINILLM 60.7 vs. SeqKD 51.0 / KD 52.7; LLaMA-13B → 7B MINILLM 76.4 vs. SeqKD 73.6 / KD 73.7.</p>
+          </div>
+          <div class="zh">
+            <p><strong>③ 可扩展性。</strong>从 120M 到 13B、横跨三个家族,MINILLM 的提升<em>稳定保持</em>(也见图 1),展示了在 LLM 时代的良好 scaling 与泛化。基于 LLaMA 家族的 SelfInst 人评结果见图 4:MINILLM 的人类偏好胜过所有基线,接近 teacher。</p>
+            <p><strong>表 1 数据要点。</strong>每一种尺寸最优值粗体;星号表示 student 超过 teacher。挑几组代表:GPT-2-1.5B → 120M 上 MINILLM 在 Dolly 的 GPT-4 分 44.7,显著高于 SeqKD 41.2 / KD 40.3;OPT-13B → 1.3B 上 MINILLM 60.7 vs. SeqKD 51.0;LLaMA-13B → 7B 上 MINILLM 76.4 vs. SeqKD 73.6。所有 13B teacher → 7B student 的设置中,MINILLM 在 S-NI / UnNI 上 R-L 都<em>超过 teacher</em>(20.7/40.2 vs. 19.4/38.5)。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+    
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§3.3-3.4 Analysis &amp; Ablation / 分析与消融<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">3.3 Analysis</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Scaling Law of Teacher.</strong> Although it is intuitive that we can distill better students from larger teachers, prior work has shown that increasing teacher size does not guarantee improvement, sometimes even harming distillation. We therefore compare MINILLM and SeqKD with a fixed student and varying teacher sizes. Figure 5 (GPT-2 family) and Appendix C.2 (OPT family) show that MINILLM consistently outperforms SeqKD, and student performance is positively correlated with teacher size — demonstrating the method's potential for compressing models with massive parameters.</p>
+          </div>
+          <div class="zh">
+            <p><strong>① teacher 的 scaling law。</strong>直觉上 teacher 越大 student 越好,但前人工作显示<em>放大 teacher 不一定带来 student 提升,有时反而变差</em>。我们固定 student、变化 teacher 大小做对比。图 5(GPT-2 家族)与附录 C.2(OPT 家族)显示:MINILLM 在所有 teacher 尺寸下都稳超 SeqKD,且 student 性能与 teacher 大小<em>正相关</em>——表明该方法在压缩大模型上有潜力。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Exposure Bias.</strong> Models trained with forward KLD suffer from exposure bias due to the mismatch between teacher-forcing training and free-run generation. MINILLM, which samples from the student during training, alleviates this mismatch. Figure 6 uses the ExAccErr metric (defined in Appendix B.5) to measure the excess accumulated error caused by exposure bias (GPT-2-125M as student, GPT-2-1.5B as teacher, Dolly test set, 10 samples per prompt). The ExAccErr of the baselines continuously grows with generation length, while MINILLM's ExAccErr is much lower and stops accumulating beyond ${\sim}150$ tokens.</p>
+          </div>
+          <div class="zh">
+            <p><strong>② Exposure Bias。</strong>用 forward KLD 训练的语言模型存在 exposure bias——teacher-forcing 训练与自由生成不一致。MINILLM 在训练时<em>从 student 自己采样</em>,缓解了这种失配。图 6 用 ExAccErr 指标(定义见附录 B.5)度量"超出"的累积误差(GPT-2-125M student、GPT-2-1.5B teacher、Dolly 测试集、每条 prompt 10 个样本)。基线的 ExAccErr 随生成长度<em>持续增长</em>;MINILLM 的 ExAccErr 明显更低,在 ${\sim}150$ tokens 之后<em>停止累积</em>——这正是 on-policy 优化在长序列上的关键收益。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Calibration.</strong> Prior work has shown that policy-optimization trained models tend to be poorly calibrated. We test calibration of MINILLM and KD baselines on SST2 and BoolQ (LLaMA-7B), using zero-shot classification prompts and label-word probabilities to compute ECE. Table 2 shows that KD and SeqKD are <em>much worse</em> calibrated than the teacher (ECE: Teacher 0.025 / 0.356; KD 0.191 / 0.682; SeqKD 0.243 / 0.681), potentially explaining their poor canonical-benchmark performance. We suspect forward KLD pushes high probabilities to void regions, causing large distribution gaps. MINILLM (ECE 0.099 / 0.502) focuses on the major modes and <em>narrows</em> the calibration gap to the teacher.</p>
+          </div>
+          <div class="zh">
+            <p><strong>③ 校准 (Calibration)。</strong>已有工作发现,经策略优化训练的模型容易校准差。我们用 SST2 / BoolQ 测试 MINILLM 与 KD 基线的校准(LLaMA-7B,zero-shot 分类 prompt,取 label-word 概率算 ECE)。表 2:KD 与 SeqKD 远比 teacher 校准差(ECE:teacher 0.025/0.356,KD 0.191/0.682,SeqKD 0.243/0.681)——这或许解释了它们在常规 benchmark 上的低分。我们怀疑 forward KLD 把高概率推到<em>空洞区域</em>,产生与 teacher 的大分布差;MINILLM(ECE 0.099/0.502)聚焦主模式,<em>显著缩小</em>与 teacher 的校准差距。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Performance on Different Response Length.</strong> Figure 7 plots the Rouge-L scores of distilled models against SFT on three S-NI subsets split by ground-truth length. For short responses (${\le}5$ tokens) all methods score low — most training responses are long sentences (training-evaluation distribution shift), and the output space is small enough that the student can cover most teacher modes (so forward / reverse KLD perform similarly). For longer responses (${\ge}6$ tokens), the teacher distribution has many more modes than the student, where MINILLM's advantage over forward-KLD methods becomes substantial. Similar results on UnNI are in Appendix C.3.</p>
+          </div>
+          <div class="zh">
+            <p><strong>④ 响应长度。</strong>图 7 给出 S-NI 三段长度子集上各 KD 方法相对 SFT 的 Rouge-L 提升。<em>短回复</em>(${\le}5$ tokens)上所有方法都低——一方面训练集多为长句导致分布偏移,另一方面输出空间小、student 容量足以覆盖 teacher 的大多数模式,所以 forward / reverse KLD 表现接近。<em>长回复</em>(${\ge}6$ tokens)上 teacher 模式远多于 student,MINILLM 相对 forward-KLD 基线<em>优势显著</em>——这正契合反向 KLD "mode-seeking"在容量受限场景下的设计初衷。UnNI 类似结果见附录 C.3。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Generation Diversity.</strong> Prior work argued that minimizing reverse KLD risks losing modes and hurting diversity. We discuss diversity along three axes: (i) producing multiple distinct responses to one prompt; (ii) producing linguistically complex responses; (iii) covering the real data distribution. For (i) we argue that for many practical NLP scenarios (those demanding truthfulness and reliability) <em>one</em> correct response suffices. For (ii) and (iii), Table 3 reports Distinct-4 and test-set LM-loss on the LLaMA family: Teacher 99.3 / 3.55; SFT 99.5 / 3.89; MINILLM 99.0 / 3.95 (DollyEval) — MINILLM <em>preserves</em> distinct-4 proportion and LM-loss, with negligible loss of diversity.</p>
+          </div>
+          <div class="zh">
+            <p><strong>⑤ 生成多样性。</strong>有人担心反向 KLD 会丢模式、伤多样性。我们从三个维度讨论:(i) 一条 prompt 多条不同回复;(ii) 语言上"复杂"的回复;(iii) 覆盖真实数据分布。对 (i) 我们认为很多 NLP 实际场景(强调真实性、可靠性)<em>一个对的答案就够了</em>。对 (ii)(iii),表 3 给出 LLaMA 家族在 DollyEval 上的 Distinct-4 与测试集 LM-loss:Teacher 99.3 / 3.55;SFT 99.5 / 3.89;MINILLM 99.0 / 3.95——MINILLM <em>几乎完整保持</em>了 distinct-4 比例与 LM-loss,多样性损失可忽略。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">3.4 Ablation Studies on Optimization Strategies</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We evaluate the three stabilization strategies in §2.2 by distilling GPT-2-125M from GPT-2-1.5B. Table 4 reports the best validation Rouge-L and corresponding test scores. Removing <em>Length Normalization</em> drops valid R-L from 27.4 → 17.4 (catastrophic) — the model collapses to empty responses. Removing <em>Teacher-Mixed Sampling</em> drops to 22.3 — the model exhibits classic reward hacking (repeating short / meaningless strings that teachers score high). Removing <em>Single-Step Decomposition</em> only drops to 27.0/23.7, but Figure 8 shows the training trajectory becomes much noisier (higher variance). Conclusion: <strong>all three are needed</strong> — teacher-mixed sampling and length-norm to <em>survive</em>, single-step decomposition to <em>converge faster</em>.</p>
+          </div>
+          <div class="zh">
+            <p>把 §2.2 三大稳定化策略逐一去掉,从 GPT-2-1.5B 蒸馏 GPT-2-125M。表 4 报告最优验证 R-L 与对应测试分。<strong>去掉 Length Normalization</strong>:Valid R-L 从 27.4 暴跌到 17.4——student 退化成<em>空回复</em>。<strong>去掉 Teacher-Mixed Sampling</strong>:跌到 22.3——出现典型 reward hacking,模型很快学会输出重复 / 短 / 无意义但 teacher 打高分的串(例子见附录 D)。<strong>去掉 Single-Step Decomposition</strong>:小跌到 27.0 / 23.7,但图 8 显示训练曲线方差<em>显著变大</em>(收敛慢、抖动多)。结论:<strong>三个都不能少</strong>——teacher-mixed + length-norm 决定"活不活",single-step 决定"收敛多快"。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="7"></div>
+    </details>
+    
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>§4 Related Work / 相关工作<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">4 Related Work</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Large Language Models.</strong> LLMs solve various NLP tasks generatively. Recent works apply <em>instruction tuning</em> or <em>learning from human feedback</em> to further align LLMs with humans and create general AI assistants. There are also efforts to build open-source LLMs (OPT, LLaMA, Pythia) to facilitate research and industry. However, LLMs' broad capacities emerge only at large parameter scales requiring massive compute — making model compression critical for practical deployment and further research.</p>
+          </div>
+          <div class="zh">
+            <p><strong>大语言模型。</strong>LLM 以生成方式解决各种 NLP 任务。近期工作通过<em>指令微调</em>或<em>从人类反馈学习</em>(RLHF)进一步对齐 LLM 与人类、做出通用 AI 助手。也有不少团队构建开源 LLM(OPT、LLaMA、Pythia)推动研究与产业。但 LLM 广泛能力需要<em>非常大的参数规模</em>,带来巨大算力开销——因此模型压缩对实际部署与后续研究至关重要,这是本文的应用背景。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Knowledge Distillation.</strong> KD is a widely used compression technique, training a student under a teacher's guidance. In NLP, KD has been applied to text classification by mimicking the teacher's output distribution, hidden states, or attention scores. For text generation, the standard KD recipe is to approximately minimize the forward KLD — either using the teacher's per-token output as supervision (word-level KD) or directly training on teacher-generated texts (SeqKD). In this paper we instead minimize the <em>reverse KLD</em>, which is more suitable for LLMs when the teacher distribution is available. Concurrent works (GKD; f-divergence KD) also explore alternative distribution discrepancy metrics for KD.</p>
+          </div>
+          <div class="zh">
+            <p><strong>知识蒸馏。</strong>KD 是常用的压缩技术——student 在 teacher 指导下训练。NLP 社区里,文本分类的 KD 主要是模仿 teacher 的输出分布、隐藏态或 attention 分数。文本生成的标准 KD 套路是近似最小化 <em>forward KLD</em>:或者用 teacher 每个 token 的输出做监督(word-level KD),或者直接在 teacher 生成的文本上训练(SeqKD)。本文转而最小化 <em>reverse KLD</em>——当 teacher 分布可用时,这对 LLM 更合适。同期工作(GKD、f-divergence KD)也在探索 KD 的多种分布差异度量。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Distribution Discrepancy Metrics in Text Generation.</strong> Discrepancy metrics play a major role in training text generators. Forward KLD is widely used because it reduces to MLE. However, minimizing forward KLD induces <em>zero-forcing</em> (more precisely, <em>zero-avoiding</em>) behavior — models try to cover all modes and sacrifice accuracy on major modes. Prior remedies include reverse KLD, Total Variation Distance, and Optimal Transport. This paper tackles the problem specifically under the KD-for-LLMs scenario.</p>
+          </div>
+          <div class="zh">
+            <p><strong>文本生成中的分布差异度量。</strong>差异度量对训练生成模型起决定性作用。forward KLD 因为退化成 MLE 而被广泛使用。但已有工作指出,最小化 forward KLD 会带来"覆盖所有模式"的<em>zero-avoiding</em> 行为,牺牲主模式的准确性。此前的补救方案包括 reverse KLD、Total Variation 距离、Optimal Transport 等。本文专门在 <em>LLM 蒸馏</em>这个场景下解决该问题——把"主模式准确"这一目标落实到了实用的 on-policy 训练流水线上。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="8"></div>
+    </details>
+    
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>§5 Conclusion / 结论<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">5 Conclusion</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we investigate the problem of distilling the knowledge of LLMs into small language models. We find that the standard distillation objective of minimizing the forward KLD is sub-optimal in language generation scenarios because the teacher's output distribution contains many more modes than the student's, and forward KLD forces the student distribution to <em>overestimate the low-probability regions</em> of the teacher distribution. Therefore, we propose MINILLM, which minimizes the <em>reverse KLD</em> between teacher and student distributions and designs an on-policy algorithm to optimize this objective. Extensive experiments show that MINILLM produces more precise responses with higher overall quality than standard KD models. We further find that MINILLM has <em>lower exposure bias</em>, <em>better calibration</em>, and <em>higher long-response performance</em>, while preserving generation diversity.</p>
+          </div>
+          <div class="zh">
+            <p>本文研究把 LLM 的知识蒸馏到小语言模型这一问题。我们发现:标准的最小化前向 KLD 在语言生成场景下是次优的——teacher 的输出分布模式远多于 student,前向 KLD 强迫 student 对 teacher 的<em>低概率区域过度估计</em>。因此我们提出 MINILLM:最小化 teacher 与 student 之间的<em>反向 KLD</em>,并设计了一个 on-policy 算法来优化该目标。大量实验表明,MINILLM 生成的响应比标准 KD 更精确、整体质量更高;进一步分析显示其 <em>exposure bias 更低、校准更好、长响应生成更强</em>,同时保留生成多样性——把"反向 KL + on-policy + 三大稳定化技巧"这一组合作为 LLM 白盒蒸馏的新基线。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="9"></div>
+    </details>
+    
+    <details class="sec" id="sec-10">
+      <summary>
+        <span>References<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content">
+        <p><em>References section omitted in this bilingual reading copy. See the original PDF (arXiv:2306.08543) for the full bibliography. Key references the paper builds on:</em></p>
+        <ul style="font-family: var(--mono); font-size: 12.5px; color: var(--text-dim); margin-left: 22px;">
+          <li>Hinton, Vinyals, Dean 2015 — original KD framework</li>
+          <li>Kim &amp; Rush 2016 — Sequence-level KD (SeqKD) baseline</li>
+          <li>Sanh et al. 2019 — DistilBERT, word-level KD baseline</li>
+          <li>Sutton et al. 1999 — Policy Gradient Theorem (used in §2.2)</li>
+          <li>Schulman et al. 2017 — PPO (clipping used in Algorithm 1)</li>
+          <li>Ouyang et al. 2022 — InstructGPT / RLHF (pipeline analog)</li>
+          <li>Pang &amp; He 2021 — text generation by learning from demonstrations (exposure bias / on-policy)</li>
+          <li>Hao, Liu, Mou 2022 — teacher forcing recovers reward functions (IRL view, Appx A.1)</li>
+          <li>Ziebart et al. 2008 — MaxEnt IRL framework</li>
+          <li>Agarwal et al. 2023 (GKD) &amp; Wen et al. 2023 (f-divergence KD) — concurrent work</li>
+          <li>Skalse et al. 2022 — reward hacking definition</li>
+          <li>Arora et al. 2022 — ExAccErr metric (Appx B.5)</li>
+          <li>Nixon et al. 2019 — ECE metric (calibration analysis)</li>
+        </ul>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="10"></div>
+    </details>
+    
+    <details class="sec" id="sec-11">
+      <summary>
+        <span>Appendix(IRL 视角 / 实验细节 / 案例)<span class="sec-page">p.16</span></span>
+      </summary>
+      <div class="sec-content">
+        <p><em>Appendix omitted in this bilingual reading copy. See the original PDF for full details. Quick map of what is in the appendix:</em></p>
+        <ul style="font-family: var(--sans); font-size: 14px; color: var(--text-dim); margin-left: 22px;">
+          <li><strong>A.1 IRL Perspective</strong> — treats token generation as MDP, parameterizes the soft-$Q$ as teacher logits $f$, recovers reward $r_t = f(y_t,\cdot) - \log\sum_{y'} \exp f(y',\cdot) = \log p(y_t|\cdot)$ via soft Bellman; under MaxEnt RL, $\max J(\theta) \approx -\mathrm{KL}[q_\theta\|p] = -\mathcal{L}(\theta)$, proving Eq.&nbsp;(10) ≈ Eq.&nbsp;(1).</li>
+          <li><strong>A.2 Derivation of Eq.&nbsp;(2)</strong> — full Policy-Gradient derivation from $\nabla\mathcal{L} = -\nabla \mathbb{E}_{y\sim q_\theta}[\log p/q_\theta]$ to the per-token form with $R_t = \sum_{t'=t}^T \log(p/q_\theta)$ and the $-1$ baseline.</li>
+          <li><strong>A.3 Derivation of Eq.&nbsp;(3)</strong> — splitting $R_t = r_t + R_{t+1}$ and showing $\mathbb{E}[r_t]$ summed over vocabulary equals $(\nabla\mathcal{L})_\text{Single}$.</li>
+          <li><strong>B.1 Training Details</strong> — baseline LR sweeps in $\{5\mathrm{e}{-}4, 1\mathrm{e}{-}4, 5\mathrm{e}{-}5\}$ (small) / $\{5\mathrm{e}{-}5, 1\mathrm{e}{-}5, 5\mathrm{e}{-}6\}$ (large), batch sizes 32/64, KD-loss mixed with LM-loss at ratio 0.5. MINILLM Phase 1 = 3 SFT epochs (lowest-loss ckpt); Phase 2 = 5000 PG steps at LR 5e-6, batch 64, 256 sentences/iter, 4 inner epochs, clip $\epsilon=0.2$, max-len 512, temp 1. LLaMA-7B from 13B takes &lt;10 hours on 16×V100-32G.</li>
+          <li><strong>B.2 / B.3 Eval Prompts</strong> — Alpaca-style instruction wrapper; GPT-4 judge prompt (1–10 scale, asks helpfulness/relevance/accuracy/detail); zero-shot SST2 / BoolQ classification templates; SelfInst pairwise UI for 50-sample human eval.</li>
+          <li><strong>B.4 Diversity Metrics</strong> — Dist-4 = (distinct 4-grams)/(total 4-grams), LM-loss = $-\mathbb{E}_{x,y\sim\mathcal{D}_\text{test}}\log q_\theta(y|x)$ (forward KL to data).</li>
+          <li><strong>B.5 Exposure-Bias Formula</strong> — $\text{ExAccErr}(l) = \frac{R(l) - l\epsilon(l)}{l\epsilon(l)}\times 100\%$ where $R(l)$ is regret with self-generated prefix and $l\epsilon(l)$ is regret with oracle prefix; isolates the error caused purely by exposure bias.</li>
+          <li><strong>C.1 GPT-J Teacher</strong> — Table 6: MINILLM beats baselines in most cases when GPT-J-6B is teacher (students: GPT-2-760M / 1.5B / GPT-Neo-2.7B).</li>
+          <li><strong>C.2 OPT Scaling</strong> — Figure 14: OPT 1.3B student with teachers 2.7B/6.7B/13B — MINILLM keeps improving with bigger teachers.</li>
+          <li><strong>C.3 UnNI Length Split</strong> — Figure 15: same pattern as S-NI (Figure 7); MINILLM advantage grows with response length.</li>
+          <li><strong>C.4 More Ablations</strong> — (a) Figure 16: $\alpha=0.2$ is the sweet spot for teacher-mix-in across families; larger students more robust to $\alpha$. (b) Table 7: removing $\mathcal{L}_\text{PT}$ drops classification accuracy 4–5 pts but leaves instruction-following nearly unchanged — confirms InstructGPT-style PT-loss role.</li>
+          <li><strong>D Cases</strong> — Table 8: SelfInst qualitative examples; MINILLM gives more detailed/accurate replies; without teacher-mixed sampling the student emits very short replies or echoes the input — visual evidence of reward-hacking.</li>
+        </ul>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="11"></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

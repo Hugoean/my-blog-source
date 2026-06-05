@@ -1,0 +1,28 @@
+{
+  "slug": "datacomp-lm",
+  "title": "DataComp-LM: In Search of the Next Generation of Training Sets",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2406.11794_fig_1.png",
+      "exists": true,
+      "bytes": 113543,
+      "dimensions": [
+        2044,
+        511
+      ]
+    },
+    {
+      "src": "../figures/2406.11794_fig_2.png",
+      "exists": true,
+      "bytes": 124133,
+      "dimensions": [
+        1011,
+        934
+      ]
+    }
+  ],
+  "sentence_count": 248
+}

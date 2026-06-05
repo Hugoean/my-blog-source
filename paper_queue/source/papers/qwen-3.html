@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2025-05-15 · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2505.09388 · 35 页 · 2 张图</div>
+    <h1>2025-05-15</h1>
+    <div class="meta-bar">
+      <span class="track-B">轨道 B</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W10</span>
+      <span>Tech Report</span><span>Thinking Mode</span>
+      <span><a href="https://arxiv.org/abs/2505.09388" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2505.09388.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>Qwen3 把 <strong>thinking mode 与 non-thinking mode 融合进同一个模型</strong>(用 <code>/think</code>、<code>/no think</code> 与空 <code>&lt;think&gt;&lt;/think&gt;</code> 块作开关,并支持 <em>thinking budget</em> 截断),用 36T tokens 多语种(119 种)三阶段预训练,加上四阶段后训(long-CoT cold start → reasoning RL → thinking mode fusion → general RL),并以 strong-to-weak distillation 把 Qwen3-32B/235B 的能力蒸馏到 0.6B~14B 小模型,旗舰 Qwen3-235B-A22B(MoE,激活 22B)。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li><strong>Thinking mode 实现机制</strong>:用 chat template + 特殊 flag(<code>/think</code>、<code>/no think</code>)在同一模型里切两套行为;非思考模式仍保留<em>空的</em> <code>&lt;think&gt;&lt;/think&gt;</code> 块以维持格式一致性。<em>Thinking budget</em> 是把思考长度截断到用户指定阈值后,强制插入 “Considering the limited time by the user, I have to give the solution based on the thinking directly now.\n&lt;/think&gt;” 提示让模型立即给最终答案——这种"基于不完整思考作答"的能力<strong>不是显式训练</strong>,而是 mode fusion 后自然涌现。</li>
+        <li><strong>MoE 架构(Qwen3-235B-A22B / 30B-A3B)</strong>:总参 235B / 激活 22B(或 30B/3B),<strong>128 个专家、每 token 激活 8 个</strong>,采用 fine-grained expert segmentation 但<em>去掉 shared expert</em>(与 Qwen2.5-MoE 不同);用 global-batch load balancing loss 促进专家分化。结合 GQA(Q/KV 头 64/4)、SwiGLU、RoPE、RMSNorm pre-norm,attention 去掉 QKV-bias 改加 QK-Norm 以稳训。</li>
+        <li><strong>36T 数据组成</strong>:相对 Qwen2.5 数据量 ×2、语言数 29→119;用 Qwen2.5-VL OCR 海量 PDF + Qwen2.5 精炼;Qwen2.5-Math、Qwen2.5-Coder 合成数学/代码/教科书/QA 数据;在 30T+ token 上做<em>多维度细粒度标注</em>(教育价值、领域、安全),并在 <strong>instance-level</strong>(而非 source/domain-level)优化数据混合比例。</li>
+        <li><strong>三阶段预训练 + 长上下文扩展</strong>:S1 通用 30T tokens / seq 4K;S2 加 5T STEM+code+reasoning 高质量数据并加速 lr decay;S3 长上下文 hundreds of B tokens / seq 32K(75% 落在 16–32K)。长上下文用 <strong>ABF</strong> 把 RoPE base 从 $10{,}000$ 提到 $1{,}000{,}000$,推理阶段再叠加 <strong>YARN + Dual Chunk Attention(DCA)</strong> 实现 4× 序列长度扩展(到 128K)。</li>
+        <li><strong>与 Qwen2.5 的对比</strong>:Qwen3 dense 模型在<em>小一档</em>就能追平 Qwen2.5 大一档(1.7B/4B/8B/14B/32B 分别 ≈ Qwen2.5-3B/7B/14B/32B/72B);MoE 用 1/5 激活参数追平同代 dense,用 1/10 Qwen2.5 dense 激活量就能持平——预训练数据扩 2× + 架构改进(QK-Norm、global-batch LB、fine-grained MoE)是主要原因。</li>
+        <li><strong>与 DeepSeek-R1 的对照</strong>:R1 是<em>专用</em>推理模型(纯 long-CoT + GRPO RL),Qwen3 把推理与对话<em>融合</em>到一个模型并加 budget 控制;两者都用 GRPO 做 Reasoning RL,但 Qwen3 后续还有 Thinking Mode Fusion(继续 SFT 把两模式拼起来)和 General RL(20+ 任务、3 类 reward:rule-based / model-based with ref / model-based no-ref)。Qwen3-32B Thinking 在 17/23 个 benchmark 上超过 QwQ-32B、并与 OpenAI o3-mini medium 接近。</li>
+        <li><strong>Strong-to-Weak Distillation 细节</strong>:小模型(0.6B~14B + 30B-A3B MoE)<em>不</em>独立跑四阶段后训,而是分两步——① <em>off-policy</em>:把 teacher(Qwen3-32B / 235B-A22B)在 <code>/think</code> 与 <code>/no think</code> 两种 mode 下生成的输出做 response 蒸馏;② <em>on-policy</em>:student 自己生成、对齐 teacher logits 做 KL 散度最小化。结果:与直接做 RL 相比,蒸馏在 Qwen3-8B 上 AIME'24 60.3 vs 52.9、且 GPU hours 仅 1/10(1,800 vs 17,920),并能<em>提升</em> Pass@64(扩大探索空间),而 RL 不提。</li>
+        <li><strong>Thinking budget 的 scaling 现象</strong>:在 AIME'24/'25、LiveCodeBench、GPQA 上,Qwen3-235B-A22B 性能随<em>分配给思考的 token 数</em>单调平滑上升,呈现明显的 inference-time scaling——这是论文最重要的 selling point 之一。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      最新一代,thinking mode 设计
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-4">§2 Architecture / 模型架构</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-5a">§3.1 Pre-training Data / 预训练数据</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-5b">§3.2 Pre-training Stage / 三阶段预训练</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-5c">§3.3 Pre-training Evaluation / 基础模型评测</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-6a">§4.1 Long-CoT Cold Start / 长 CoT 冷启动</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-6b">§4.2 Reasoning RL / 推理强化学习</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-6c">§4.3 Thinking Mode Fusion / 思考模式融合</a><span class="toc-page">p.11</span></li>
+
+      <li><a href="#sec-6d">§4.4 General RL / 通用强化学习</a><span class="toc-page">p.11</span></li>
+
+      <li><a href="#sec-6e">§4.5 Strong-to-Weak Distillation / 强弱蒸馏</a><span class="toc-page">p.12</span></li>
+
+      <li><a href="#sec-7a">§4.6 Post-training Evaluation / 后训练评测</a><span class="toc-page">p.12</span></li>
+
+      <li><a href="#sec-8">§5/6 Discussion &amp; Conclusion / 讨论与结论</a><span class="toc-page">p.20</span></li>
+
+      <li><a href="#sec-9">Appendix · Long-Context &amp; Multilingual</a><span class="toc-page">p.23</span></li>
+
+      <li><span style="color:var(--text-faint);">References(略)</span><span class="toc-page">p.31</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (2 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2505.09388_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.1 · 550×346 · <em>(① 解析残片)</em></div>
+          <div class="fig-caption">Figure 1: Post-training pipeline of the Qwen3 series models.</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>PDF 解析得到的<em>低分辨率残片</em>,并非原论文 Figure 1。原论文 Figure 1 是 Qwen3 系列模型的<strong>后训练四阶段管线图</strong>。</p>
+          <p><strong>② 真实 Figure 1 的内容(据正文 §4):</strong>顶部"旗舰路线"对 Qwen3-235B-A22B 和 Qwen3-32B 依次走<em>Stage 1 Long-CoT Cold Start → Stage 2 Reasoning RL → Stage 3 Thinking Mode Fusion → Stage 4 General RL</em>;底部"轻量路线"对 Qwen3-30B-A3B / 14B / 8B / 4B / 1.7B / 0.6B 走 <em>Strong-to-Weak Distillation</em>(off-policy + on-policy)。两条路线都从 Base Models 出发,但小模型<em>跳过</em>四阶段而以蒸馏代替。</p>
+          <p><strong>③ 启示:</strong>这张图是论文的方法学骨架——thinking 与 non-thinking 能力的"分→合"靠 Stage 1+2 先训出 thinking、再 Stage 3 用 chat-template 把 non-thinking 拼回来;小模型只用蒸馏(GPU hours ≈ 1/10)就拿到等同甚至更强的 Pass@1 与更大的 Pass@64,印证了"强教师好过自己跑 RL"。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2505.09388_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.1 · 2000×1027 · <em>(② Qwen logo,非数据图)</em></div>
+          <div class="fig-caption">Qwen 团队 Logo(arxiv 解析误把封面 logo 抓为 Figure)</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>这是 Qwen 团队的<em>品牌 logo</em>,被 PDF 解析当作图像抓取;并非论文里真正的 Figure 2。</p>
+          <p><strong>② 真实 Figure 2 的内容(据 §5.1 Discussion):</strong>展示 Qwen3-235B-A22B 在 AIME'24/'25、LiveCodeBench、GPQA-Diamond 等 benchmark 上,<em>性能随 thinking budget 单调平滑上升</em>的 scaling 曲线。论文称把 output 长度超过 32K 后性能预计仍会继续提升。</p>
+          <p><strong>③ 启示:</strong>这条 scaling 曲线是 thinking mode 的"价值证明"——只要把推理 token 预算开大,模型分数可以连续爬升,等价于一种<strong>用户可控的 inference-time scaling</strong>。它把 OpenAI o1/o3 那种"内部不可见的思考延迟"暴露成显式可调的 budget,为线上工程提供了延迟/效果的旋钮。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>2025-05-15 Qwen3 Technical Report Qwen Team https://huggingface.co/Qwen https://modelscope.cn/organization/qwen https://github.com/QwenLM/Qwen3</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>In this work, we present Qwen3, the latest version of the Qwen model family. Qwen3 comprises a series of large language models (LLMs) designed to advance performance, efficiency, and multilingual capabilities. The Qwen3 series includes models of both dense and Mixture-of-Expert (MoE) architectures, with parameter scales ranging from 0.6 to 235 billion. A key innovation in Qwen3 is the integration of thinking mode (for complex, multi-step reasoning) and non-thinking mode (for rapid, context-driven responses) into a unified framework. This eliminates the need to switch between different models—–such as chat-optimized models (e.g., GPT-4o) and dedicated reasoning models (e.g., QwQ32B)—–and enables dynamic mode switching based on user queries or chat templates. Meanwhile, Qwen3 introduces a thinking budget mechanism, allowing users to allocate computational resources adaptively during inference, thereby balancing latency and performance based on task complexity. Moreover, by leveraging the knowledge from the flagship models, we significantly reduce the computational resources required to build smaller-scale models, while ensuring their highly competitive performance. Empirical evaluations demonstrate that Qwen3 achieves state-of-the-art results across diverse benchmarks, including tasks in code generation, mathematical reasoning, agent tasks, etc., competitive against larger MoE models and proprietary models. Compared to its predecessor Qwen2.5, Qwen3 expands multilingual support from 29 to 119 languages and dialects, enhancing global accessibility through improved cross-lingual understanding and generation capabilities. To facilitate reproducibility and community-driven research and development, all Qwen3 models are publicly accessible under Apache 2.0. 1 arXiv:2505.09388v1  [cs.CL]  14 May 2025 1</p></div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details><details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The pursuit of AGI / ASI has long motivated humanity, and recent advances in large foundation models—GPT-4o, Claude 3.7, Gemini 2.5, DeepSeek-V3, Llama-4, and Qwen2.5—have shown significant progress. These models are trained on vast datasets across trillions of tokens, effectively distilling human knowledge into parameters. Recent reasoning models optimized through reinforcement learning (e.g., o3, DeepSeek-R1) further highlight the potential of inference-time scaling. While most state-of-the-art models remain proprietary, the open-source community has dramatically narrowed the gap, with an increasing number of top-tier models being released openly.</p>
+          </div>
+          <div class="zh">
+            <p>对通用人工智能(AGI)与超级人工智能(ASI)的追求长久以来一直驱动着人类,近期一批大型基础模型——GPT-4o、Claude 3.7、Gemini 2.5、DeepSeek-V3、Llama-4 和 Qwen2.5——展示了显著进展。这些模型在跨数万亿 token 的海量语料上训练,有效地把人类知识蒸馏进参数。近期通过强化学习优化的推理模型(如 o3、DeepSeek-R1)进一步凸显了<em>推理时扩展</em>(inference-time scaling)的潜力。虽然大多数 SOTA 模型仍是闭源,开源社区已大幅缩小差距,越来越多顶级模型被开源发布。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work we introduce Qwen3, the latest series in our Qwen foundation-model family. We release both dense and Mixture-of-Experts (MoE) models ranging from 0.6B to 235B parameters; the flagship Qwen3-235B-A22B is an MoE model with 235B total parameters and 22B activated per token. Qwen3 integrates two operating modes—thinking mode and non-thinking mode—into a single model, eliminating the need to switch between separate models like Qwen2.5 and QwQ. It further introduces thinking budgets, allowing fine-grained user control over reasoning effort. Qwen3 is pre-trained on 36 trillion tokens covering up to 119 languages and dialects, dramatically expanding multilingual capability.</p>
+          </div>
+          <div class="zh">
+            <p>本工作我们推出 Qwen3——Qwen 基础模型家族的最新系列。我们同时发布 dense 模型与 Mixture-of-Experts(MoE)模型,参数规模从 0.6B 到 235B;旗舰 Qwen3-235B-A22B 是一个总参 235B、每 token 激活 22B 的 MoE。Qwen3 把两种运行模式——thinking mode 与 non-thinking mode——融合进<em>同一个</em>模型,从而不必再在 Qwen2.5 与 QwQ 等不同模型之间切换。它还引入 <em>thinking budgets</em>,让用户能对推理深度做细粒度控制。Qwen3 在 36 万亿 token 上预训练,覆盖 119 种语言和方言,大幅扩展了多语种能力。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Pre-training of Qwen3 follows a three-stage strategy on the 36T-token corpus. Stage 1 trains on about 30T tokens to build a strong general-knowledge foundation. Stage 2 further trains on knowledge-intensive data emphasizing STEM and coding to strengthen reasoning. Stage 3 extends context length from 4,096 to 32,768 tokens using long-context corpora. To efficiently expand the data, the team fine-tunes Qwen2.5-VL to extract text from large PDF collections, and uses Qwen2.5-Math and Qwen2.5-Coder to synthesize trillions of math and code tokens.</p>
+          </div>
+          <div class="zh">
+            <p>Qwen3 的预训练在 36T token 语料上采用三阶段策略。第一阶段约用 30T tokens 训练以打下牢固的通用知识基础。第二阶段在<em>知识密集型</em>数据上继续训练,加大 STEM 与代码占比以增强推理。第三阶段在长上下文语料上训练,把最大上下文长度从 4,096 扩到 32,768 tokens。为高效扩充数据,团队把 Qwen2.5-VL 微调用于从海量 PDF 文档中提取文本,并用 Qwen2.5-Math 与 Qwen2.5-Coder 合成数万亿条数学与代码 token。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>For post-training, Qwen3 uses a multi-stage approach that empowers both thinking (reasoning) and non-thinking modes. The first two stages develop strong reasoning via long-CoT cold-start fine-tuning followed by RL focused on math and code. The next two stages merge data with and without reasoning paths and then apply general-domain RL to broaden capabilities. For smaller models the team adopts strong-to-weak distillation, combining off-policy and on-policy knowledge transfer from larger teachers, which significantly outperforms direct RL in both quality and training efficiency.</p>
+          </div>
+          <div class="zh">
+            <p>后训练采用<em>多阶段</em>方法,同时赋予模型 thinking(推理)与 non-thinking 两种模式。前两阶段通过长链思维(long-CoT)冷启动微调,再叠加聚焦数学与代码的 RL,以发展强推理能力。后两阶段把带与不带推理过程的数据合并训练,然后做通用领域 RL,以拓宽各类下游能力。对较小的模型,团队采用<em>强弱蒸馏</em>(strong-to-weak distillation),把更大教师的知识以 off-policy + on-policy 两种方式迁移过来——这<em>显著</em>优于让小模型自己跑 RL,无论在效果还是训练效率上。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Evaluation across a broad benchmark suite shows that Qwen3 base models achieve state-of-the-art performance, while post-trained models—in either mode—compete with leading proprietary and large MoE models such as o1, o3-mini, and DeepSeek-V3. The flagship Qwen3-235B-A22B reaches 85.7 on AIME'24, 81.5 on AIME'25, 70.7 on LiveCodeBench v5, 2,056 on CodeForces, and 70.8 on BFCL v3. Other Qwen3 models also show strong performance relative to size. Crucially, increasing the thinking budget yields consistent improvements across tasks, demonstrating user-controllable inference-time scaling.</p>
+          </div>
+          <div class="zh">
+            <p>跨广泛 benchmark 的评测显示:Qwen3 base 模型取得 SOTA;后训练模型在两种模式下都能与领先的闭源模型及大型 MoE 模型(如 o1、o3-mini、DeepSeek-V3)<em>正面竞争</em>。旗舰 Qwen3-235B-A22B 在 AIME'24 上 85.7、AIME'25 81.5、LiveCodeBench v5 70.7、CodeForces 2,056、BFCL v3 70.8。Qwen3 其它较小尺寸模型也在同档位呈现出有竞争力的表现。关键的是,<em>增加 thinking budget</em> 在各任务上都带来一致提升——这是一种用户可控的推理时扩展。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§2 Architecture / 模型架构<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The Qwen3 series includes 6 dense models—Qwen3-0.6B / 1.7B / 4B / 8B / 14B / 32B—and 2 MoE models—Qwen3-30B-A3B and the flagship Qwen3-235B-A22B (235B total, 22B activated per token). The dense architecture is similar to Qwen2.5, using Grouped Query Attention (GQA), SwiGLU, Rotary Positional Embeddings (RoPE), and RMSNorm with pre-normalization. We remove the QKV-bias used in Qwen2 and introduce QK-Norm into the attention mechanism to ensure stable training. Key dense-model configurations (layers, Q/KV heads, tie-embedding, context length) appear in Table 1.</p>
+          </div>
+          <div class="zh">
+            <p>Qwen3 系列包括 6 个 dense 模型——Qwen3-0.6B / 1.7B / 4B / 8B / 14B / 32B——与 2 个 MoE 模型——Qwen3-30B-A3B 和旗舰 Qwen3-235B-A22B(总参 235B、每 token 激活 22B)。dense 部分整体架构与 Qwen2.5 类似,使用 Grouped Query Attention(GQA)、SwiGLU、Rotary Positional Embeddings(RoPE)以及带<em>前置归一化</em>的 RMSNorm。我们去掉了 Qwen2 中的 QKV-bias,并在 attention 里引入 QK-Norm,以保证训练稳定。Dense 模型的关键配置(层数、Q/KV 头数、是否共享词表、上下文长度)见 Table 1。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The Qwen3 MoE models share the same fundamental architecture as the dense models. Following Qwen2.5-MoE, we use fine-grained expert segmentation, with 128 total experts and 8 activated per token. Unlike Qwen2.5-MoE, Qwen3-MoE excludes shared experts. We further adopt a global-batch load balancing loss to encourage expert specialization. These architectural and training innovations yield substantial performance gains on downstream tasks. Qwen3 reuses Qwen's byte-level BPE (BBPE) tokenizer with vocabulary size 151,669.</p>
+          </div>
+          <div class="zh">
+            <p>Qwen3 的 MoE 模型与 dense 共享相同的基础架构。沿用 Qwen2.5-MoE,我们采用<em>细粒度专家分割</em>(fine-grained expert segmentation),总计 128 个专家、每 token 激活 8 个。与 Qwen2.5-MoE 不同,Qwen3-MoE <em>去掉</em>了 shared experts。我们进一步采用 <em>global-batch load balancing loss</em> 来鼓励专家分化。这些架构与训练上的创新在下游任务上带来显著性能提升。Qwen3 沿用 Qwen 的 byte-level BPE(BBPE)分词器,词表大小 151,669。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Dense model configurations (Table 1):</strong> Qwen3-0.6B / 1.7B use 28 layers, 16/8 Q/KV heads, tied embeddings, 32K context; Qwen3-4B uses 36 layers, 32/8 heads, tied, 128K context; Qwen3-8B uses 36 layers, 32/8 heads, untied, 128K; Qwen3-14B has 40 layers, 40/8 heads, untied, 128K; Qwen3-32B has 64 layers, 64/8 heads, untied, 128K. <strong>MoE configurations (Table 2):</strong> Qwen3-30B-A3B: 48 layers, 32/4 Q/KV heads, 128/8 experts, 128K; Qwen3-235B-A22B: 94 layers, 64/4 Q/KV heads, 128/8 experts, 128K.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Dense 模型配置(表 1):</strong>Qwen3-0.6B / 1.7B 为 28 层、16/8 Q/KV 头、共享 embedding、32K 上下文;Qwen3-4B 36 层、32/8 头、共享、128K;Qwen3-8B 36 层、32/8 头、<em>不</em>共享、128K;Qwen3-14B 40 层、40/8 头、不共享、128K;Qwen3-32B 64 层、64/8 头、不共享、128K。<strong>MoE 配置(表 2):</strong>Qwen3-30B-A3B 48 层、32/4 Q/KV 头、128/8 专家、128K;Qwen3-235B-A22B 94 层、64/4 Q/KV 头、128/8 专家、128K。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5a">
+      <summary>
+        <span>§3.1 Pre-training Data / 预训练数据<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Compared with Qwen2.5, we significantly expanded the scale and diversity of training data—collecting twice as many pre-training tokens covering three times more languages. All Qwen3 models are trained on a dataset spanning 119 languages and dialects with 36 trillion tokens in total. The data includes high-quality content across coding, STEM, reasoning tasks, books, multilingual texts, and synthetic data. To expand the corpus, we use Qwen2.5-VL to OCR a large volume of PDF documents and then refine the recognized text with Qwen2.5, yielding trillions of additional high-quality tokens.</p>
+          </div>
+          <div class="zh">
+            <p>相比 Qwen2.5,我们显著扩充了训练数据的规模与多样性——预训练 token 数 ×2、语言数 ×3。所有 Qwen3 模型都在覆盖 119 种语言和方言、总量 36 万亿 token 的语料上训练。数据涵盖代码、STEM、推理任务、书籍、多语种文本和合成数据等高质量内容。为扩充语料,我们用 Qwen2.5-VL 对大量 PDF 文档做文本识别(OCR),再用 Qwen2.5 精炼识别结果,从而获得数万亿条额外的高质量 token。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We also employ Qwen2.5, Qwen2.5-Math, and Qwen2.5-Coder to synthesize trillions of tokens in diverse formats—textbooks, question answering, instructions, and code snippets—covering dozens of domains. We further enlarge the corpus by adding multilingual data and increasing supported languages from 29 to 119, sharply improving cross-lingual capability. A multilingual data-annotation system was developed to enhance quality and diversity, annotating over 30T tokens along dimensions such as educational value, fields, domains, and safety. Unlike prior work that optimizes data mixtures at source or domain level, we optimize at the <em>instance level</em> through ablation experiments on small proxy models with these fine-grained labels.</p>
+          </div>
+          <div class="zh">
+            <p>我们还用 Qwen2.5、Qwen2.5-Math、Qwen2.5-Coder 合成数万亿条多种形式的 token——教科书、问答、指令、代码片段——覆盖数十个领域。我们再以多语种数据进一步扩充语料,并把支持语言数从 29 提升到 119,大幅提升跨语言能力。我们开发了一个多语种数据标注系统以提升数据质量与多样性,对超过 30T tokens 在<em>教育价值、领域、行业、安全</em>等多维度做标注。与以往在 source 或 domain 层面优化数据混合不同,我们以这些细粒度标签,在<em>实例级</em>通过小代理模型的大量消融实验来优化数据混合。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5b">
+      <summary>
+        <span>§3.2 Pre-training Stage / 三阶段预训练<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Qwen3 is pre-trained in three stages. <strong>(1) General Stage (S1):</strong> all Qwen3 models are trained on over 30T tokens at a sequence length of 4,096; the data covers 119 languages and dialects, building broad language proficiency and world knowledge. <strong>(2) Reasoning Stage (S2):</strong> we increase the proportion of STEM, coding, reasoning, and synthetic data, and further pre-train with about 5T higher-quality tokens at sequence length 4,096, accelerating learning-rate decay during this stage. <strong>(3) Long Context Stage:</strong> we collect high-quality long-context corpora and pre-train on hundreds of billions of tokens at sequence length 32,768—75% of which is text between 16,384 and 32,768 tokens long, the remaining 25% between 4,096 and 16,384.</p>
+          </div>
+          <div class="zh">
+            <p>Qwen3 的预训练分三阶段。<strong>① 通用阶段(S1):</strong>所有 Qwen3 模型在 30T+ tokens、序列长度 4,096 下训练;数据覆盖 119 种语言和方言,以打牢语言能力与世界知识。<strong>② 推理阶段(S2):</strong>提高 STEM、代码、推理与合成数据的占比,在 4,096 序列长度下继续以约 5T 更高质量 tokens 训练,并加速本阶段的学习率衰减。<strong>③ 长上下文阶段:</strong>收集高质量长上下文语料,在 32,768 序列长度下以 hundreds of billions 级 tokens 继续训练——其中 75% 是长度在 16,384–32,768 之间的文本,余下 25% 在 4,096–16,384 之间。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Following Qwen2.5, we raise the RoPE base frequency from $10{,}000$ to $1{,}000{,}000$ using the ABF technique. At inference we further introduce YARN and Dual Chunk Attention (DCA), giving a four-fold increase in sequence-length capacity. Similar to Qwen2.5, we develop scaling laws to predict optimal hyper-parameters (learning rate schedule, batch size) across the three stages. Through extensive experiments we systematically study how model architecture, training data, training stage, and optimal training hyper-parameters interact, then set predicted optima for each dense or MoE model.</p>
+          </div>
+          <div class="zh">
+            <p>沿用 Qwen2.5,我们用 ABF 技术把 RoPE 的基频从 $10{,}000$ 提升到 $1{,}000{,}000$。在推理阶段我们再引入 YARN 与 Dual Chunk Attention(DCA),从而把序列长度容量再放大 4 倍。和 Qwen2.5 一样,我们在三阶段上各自拟合 scaling laws,用以预测最优超参(学习率调度、batch size)。通过大量实验,我们系统研究了模型架构、训练数据、训练阶段与最优超参之间的关系,并按预测的最优策略为每个 dense 或 MoE 模型设定 lr 与 batch size。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5c">
+      <summary>
+        <span>§3.3 Pre-training Evaluation / 基础模型评测<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We comprehensively evaluate Qwen3 base models on 15 benchmarks covering general (MMLU / MMLU-Pro / MMLU-Redux / BBH / SuperGPQA), math &amp; STEM (GPQA / GSM8K / MATH), coding (EvalPlus, MultiPL-E, MBPP-3shot, CRUX-O), and multilingual tasks (MGSM, MMMLU, INCLUDE). Baselines include Qwen2.5 base, DeepSeek-V3 Base, Gemma-3, Llama-3, and Llama-4 series. Three key findings: (i) Qwen3-235B-A22B-Base outperforms previous open-source SOTA dense and MoE models on most tasks with significantly fewer total or activated parameters; (ii) Qwen3 MoE base models match Qwen3 dense base with only 1/5 activated parameters; (iii) Qwen3 dense base models match Qwen2.5 at higher parameter scales (e.g., Qwen3-1.7B/4B/8B/14B/32B-Base match Qwen2.5-3B/7B/14B/32B/72B-Base respectively).</p>
+          </div>
+          <div class="zh">
+            <p>我们在 15 个 benchmark 上对 Qwen3 base 模型做全面评测,涵盖通用(MMLU / MMLU-Pro / MMLU-Redux / BBH / SuperGPQA)、数学与 STEM(GPQA / GSM8K / MATH)、代码(EvalPlus、MultiPL-E、MBPP-3shot、CRUX-O)与多语种(MGSM、MMMLU、INCLUDE)任务。Baseline 包含 Qwen2.5 base、DeepSeek-V3 Base、Gemma-3、Llama-3 与 Llama-4 系列。三条核心结论:① Qwen3-235B-A22B-Base 以显著更少的总参或激活参数,在多数任务上超过先前开源 SOTA dense 与 MoE 模型;② Qwen3 MoE base 仅用 1/5 激活参数就能追平 Qwen3 dense base;③ Qwen3 dense base 在<em>更小一档</em>的参数量上就能持平 Qwen2.5——例如 Qwen3-1.7B/4B/8B/14B/32B-Base 分别对应 Qwen2.5-3B/7B/14B/32B/72B-Base。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Specifically, Qwen3-235B-A22B-Base achieves the highest scores on most evaluated benchmarks. Versus Llama-4-Maverick-Base (about 2× the parameters), Qwen3-235B-A22B-Base still wins on most benchmarks. Versus DeepSeek-V3-Base, Qwen3-235B-A22B-Base wins 14 of 15 benchmarks with only ~1/3 total parameters and 2/3 activated parameters. Versus the previous flagship Qwen2.5-72B-Base, Qwen3-235B-A22B-Base surpasses it on every benchmark. Especially in STEM, coding, and reasoning, Qwen3 dense base models exceed Qwen2.5 base models at higher parameter scales—evidence of the gains from more data and architectural improvements (QK-Norm, global-batch LB, fine-grained MoE).</p>
+          </div>
+          <div class="zh">
+            <p>具体而言,Qwen3-235B-A22B-Base 在大多数 benchmark 上取得最高分。相比参数量近 2 倍的 Llama-4-Maverick-Base,Qwen3-235B-A22B-Base 在多数 benchmark 上仍胜出;相比 DeepSeek-V3-Base,它在 15 个 benchmark 中赢了 14 个,且总参仅 ~1/3、激活参数仅 2/3。相比上一代旗舰 Qwen2.5-72B-Base,新旗舰在所有 benchmark 上都超越前者。尤其在 STEM、代码与推理上,Qwen3 dense base 在更小一档参数量上就胜过 Qwen2.5——这印证了数据扩充与架构改进(QK-Norm、global-batch LB、细粒度 MoE)带来的提升。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6a">
+      <summary>
+        <span>§4.1 Long-CoT Cold Start / 长 CoT 冷启动<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The post-training pipeline pursues two objectives: <strong>Thinking Control</strong>—merging non-thinking and thinking modes in one model with user-controllable token budgets—and <strong>Strong-to-Weak Distillation</strong>—reducing the compute and effort to build small models by leveraging large teachers. Flagship Qwen3-235B-A22B and Qwen3-32B undergo a sophisticated four-stage process: Stage 1 Long-CoT Cold Start, Stage 2 Reasoning RL, Stage 3 Thinking Mode Fusion, Stage 4 General RL. Lightweight models bypass the four stages and are produced by distillation. We find that directly distilling teacher logits into lightweight students improves Pass@1 and Pass@64 while using only ~1/10 of the GPU hours of the four-stage method.</p>
+          </div>
+          <div class="zh">
+            <p>后训练流水线追求两大目标:<strong>Thinking Control</strong>——把 non-thinking 与 thinking 两种模式融合到同一个模型并支持用户控制思考 token 预算;<strong>Strong-to-Weak Distillation</strong>——通过<em>大教师</em>降低小模型的计算开销与开发成本。旗舰 Qwen3-235B-A22B 与 Qwen3-32B 走完整四阶段:Stage 1 长 CoT 冷启动 → Stage 2 推理 RL → Stage 3 思考模式融合 → Stage 4 通用 RL。轻量模型<em>跳过</em>四阶段,直接走蒸馏。我们发现:把 teacher logits 蒸馏到 student,既能提升 Pass@1 也能提升 Pass@64,所需 GPU hours 仅为四阶段方法的 ~1/10。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>For Stage 1, we curate a dataset spanning math, code, logical reasoning, and general STEM problems, each paired with verified reference answers or code-based test cases. Query filtering uses Qwen2.5-72B-Instruct to remove queries that are hard to verify, include multiple sub-questions, ask for free-form generation, or can be answered correctly without CoT. After reserving a validation set, we generate N candidates per remaining query with QwQ-32B; when QwQ-32B consistently fails, human annotators check accuracy. We then strictly filter out responses with wrong final answers, heavy repetition, evident guessing without reasoning, inconsistency between thinking and summary, inappropriate language mixing, or suspicious similarity to validation items.</p>
+          </div>
+          <div class="zh">
+            <p>第 1 阶段,我们整理一个覆盖数学、代码、逻辑推理与通用 STEM 问题的数据集,每条都配有<em>已验证的</em>参考答案或基于代码的测试用例。query 过滤用 Qwen2.5-72B-Instruct 删除难以验证、含多个子问题、要求自由生成或<em>不靠 CoT 即可答对</em>的查询。预留验证集后,我们用 QwQ-32B 对每条剩余 query 生成 N 个候选;若 QwQ-32B 一直答不对,则由人工评判正确性。随后严格过滤掉以下响应:最终答案错误、严重重复、不带推理的明显猜测、思考与摘要不一致、不当语言混用,以及疑似与验证集过于相似的样本。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>A carefully chosen subset of the refined data is used for the initial cold-start training of reasoning patterns. The objective at this stage is to instill foundational reasoning patterns rather than to maximize immediate reasoning performance—so the model's potential is not capped and remains flexible for later RL. To realize this we deliberately keep both the number of training samples and the number of training steps small in this preparatory phase.</p>
+          </div>
+          <div class="zh">
+            <p>我们从精炼数据集中挑选一个<em>精心筛选</em>的子集,用于推理模式的初次冷启动训练。本阶段的目标是<em>注入基础推理模式</em>,而不是把推理表现立刻拉满——这样模型的潜力不会被锁死,后续 RL 仍有充足的提升空间。为此,我们在该准备阶段刻意把<em>训练样本数</em>与<em>训练步数</em>都保持得较小。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6b">
+      <summary>
+        <span>§4.2 Reasoning RL / 推理强化学习<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The query-verifier pairs used in Reasoning RL must satisfy four criteria: (1) not used in cold-start; (2) learnable for the cold-start model; (3) as challenging as possible; (4) covering broad sub-domains. We ultimately collect 3,995 query-verifier pairs and employ <strong>GRPO</strong> to update the model. We find that a large batch size and a high number of rollouts per query, combined with off-policy training for sample efficiency, are beneficial. We also address exploration–exploitation balance by controlling the model's entropy to increase steadily or remain stable, which is crucial for stable training.</p>
+          </div>
+          <div class="zh">
+            <p>Reasoning RL 阶段使用的 query–verifier 对必须满足四个准则:① 未在冷启动中使用;② 对冷启动模型<em>可学</em>;③ 尽量有挑战;④ 覆盖广泛子领域。最终我们收集了 3,995 对 query–verifier,采用 <strong>GRPO</strong> 更新模型。我们发现<em>大 batch + 高 rollout 数 + off-policy 训练</em>三者结合,有助于训练。我们还通过控制模型熵<em>稳步增加或保持稳定</em>来平衡探索与利用,这对训练稳定性至关重要。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>As a result, training reward and validation performance improve consistently over a single RL run without any manual hyperparameter intervention. For example, the AIME'24 score of Qwen3-235B-A22B rises from 70.1 to 85.1 over 170 RL training steps. This stable monotonic improvement is in part what enables Qwen3 to push reasoning benchmarks substantially without the typical mid-training tuning loops seen in RLHF.</p>
+          </div>
+          <div class="zh">
+            <p>结果是:在<em>一次</em>完整 RL 运行中,训练 reward 与验证集表现都能<em>持续</em>提升,无需任何人工超参干预。例如,Qwen3-235B-A22B 的 AIME'24 分数在 170 个 RL 训练步内从 70.1 上升到 85.1。这种稳定的单调提升,正是 Qwen3 能把推理 benchmark 推得很高、又免去 RLHF 常见的"训练中途人工调参"循环的关键。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6c">
+      <summary>
+        <span>§4.3 Thinking Mode Fusion / 思考模式融合<span class="sec-page">p.11</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Thinking Mode Fusion integrates the "non-thinking" capability into the previously trained "thinking" model so a single model can serve both modes. We do continual SFT on the Reasoning RL model and design a chat template to fuse the two modes. The SFT dataset combines "thinking" and "non-thinking" data: thinking data is generated via rejection sampling on Stage 1 queries using the Stage 2 model itself (so Stage 2 performance is not compromised); non-thinking data is curated to cover coding, math, instruction following, multilingual tasks, creative writing, QA, and role-playing, with automatically generated checklists for quality and a higher proportion of translation tasks to boost low-resource languages.</p>
+          </div>
+          <div class="zh">
+            <p>Thinking Mode Fusion 把"non-thinking"能力<em>融合</em>回前面训出的"thinking"模型,使同一个模型同时具备两种模式。我们在 Reasoning RL 模型上继续做 SFT,并设计 chat template 把两种模式合在一起。SFT 数据集同时包含"thinking"与"non-thinking"两类:thinking 数据由 Stage 2 模型自己在 Stage 1 查询上做<em>拒绝采样</em>得到(这样不会损害 Stage 2 性能);non-thinking 数据则精心整理以覆盖代码、数学、指令跟随、多语种、创意写作、问答与角色扮演等任务,并用自动生成的 checklist 评估质量,同时提高翻译任务占比以增强低资源语言。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>For chat-template design, we introduce <code>/think</code> and <code>/no think</code> flags in user queries or system messages so the model selects the appropriate mode. For non-thinking samples we keep an <em>empty</em> <code>&lt;think&gt;&lt;/think&gt;</code> block in the assistant's response to enforce internal format consistency; developers can also prepend an empty think block to prevent thinking. By default the model is in thinking mode; we add training samples in which user queries omit any flag. In complex multi-turn dialogs we randomly insert multiple <code>/think</code> and <code>/no think</code> flags, and the model's response adheres to the last flag encountered.</p>
+          </div>
+          <div class="zh">
+            <p>chat template 上,我们在用户 query 或 system 消息中引入 <code>/think</code> 和 <code>/no think</code> 两类 flag,让模型按 flag 选择适当模式。对于 non-thinking 样本,assistant 的回复中仍<em>保留一个空的</em> <code>&lt;think&gt;&lt;/think&gt;</code> 块,以保证模型内部格式一致;开发者也可以通过预置一个空 think 块来强制不思考。默认情况下模型处于 thinking 模式;我们额外加入一些用户查询不带任何 flag 的 thinking 样本。在复杂多轮对话里,我们随机插入多个 <code>/think</code> 和 <code>/no think</code> flag,模型的回复以<em>最后</em>遇到的那个 flag 为准。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Thinking Budget.</strong> Once the model learns to respond in both modes, it naturally handles intermediate cases—responding based on incomplete thinking. This lays the foundation for budget control: when the thinking length reaches a user-defined threshold, we manually halt thinking and insert the stop-thinking instruction "Considering the limited time by the user, I have to give the solution based on the thinking directly now.
+&lt;/think&gt;.
+
+". After this insertion the model generates a final response based on its accumulated reasoning so far. <strong>This ability is not explicitly trained—it emerges naturally as a result of Thinking Mode Fusion.</strong></p>
+          </div>
+          <div class="zh">
+            <p><strong>Thinking Budget(思考预算)。</strong>一旦模型掌握两种模式,它自然就能处理<em>中间情形</em>——在思考<em>不完整</em>的状态下作答。这为预算控制奠定基础:当思考长度触达用户阈值时,我们<em>手动</em>停止思考,并插入终止指令 "Considering the limited time by the user, I have to give the solution based on the thinking directly now.
+&lt;/think&gt;.
+
+"。插入后,模型根据此刻累积的推理继续给出最终回答。<strong>这种能力没有被显式训练——它是 Thinking Mode Fusion 之后自然涌现的副产品。</strong></p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6d">
+      <summary>
+        <span>§4.4 General RL / 通用强化学习<span class="sec-page">p.11</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The General RL stage broadly enhances the models' capabilities and stability across diverse scenarios. We establish a sophisticated reward system covering 20+ distinct tasks, each with customized scoring criteria. Target capabilities include: <strong>Instruction Following</strong> (content, format, length, structured output); <strong>Format Following</strong> (respond to <code>/think</code> and <code>/no think</code> flags, consistently use <code>&lt;think&gt;</code>/<code>&lt;/think&gt;</code> tokens); <strong>Preference Alignment</strong> (helpfulness, engagement, style on open-ended queries); <strong>Agent Ability</strong> (tool invocation through designated interfaces with real-environment feedback during multi-turn rollouts); and <strong>Specialized Scenarios</strong> such as RAG (rewards guiding accurate, contextually appropriate responses to minimize hallucination).</p>
+          </div>
+          <div class="zh">
+            <p>General RL 阶段在多种场景下广泛提升模型的能力与稳定性。我们建立了一个覆盖 20+ 任务的奖励体系,每种任务都有定制的评分标准。重点能力包括:<strong>指令跟随</strong>(内容、格式、长度、结构化输出);<strong>格式跟随</strong>(响应 <code>/think</code> / <code>/no think</code>,始终使用 <code>&lt;think&gt;</code>/<code>&lt;/think&gt;</code> 标记分隔思考与最终回复);<strong>偏好对齐</strong>(开放式查询的有用性、参与度、风格);<strong>Agent 能力</strong>(通过指定接口调用工具,在多轮 rollout 中接受真实环境反馈);以及 <strong>RAG 等专门场景</strong>(用 reward 引导生成准确且上下文恰当的回答,减少幻觉)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We use three reward types: <strong>(1) Rule-based reward</strong>—widely used in Reasoning RL and also useful for instruction/format adherence; well-designed rule rewards assess correctness precisely and prevent reward hacking. <strong>(2) Model-based reward with reference answer</strong>—we provide a reference and prompt Qwen2.5-72B-Instruct to score the response; this handles diverse tasks flexibly without strict formatting and avoids false negatives common to purely rule-based rewards. <strong>(3) Model-based reward without reference</strong>—using human preference data, we train a reward model to assign scalar scores; this covers a broader range of queries and effectively boosts engagement and helpfulness.</p>
+          </div>
+          <div class="zh">
+            <p>我们采用三类 reward:<strong>① 基于规则的 reward</strong>——在 Reasoning RL 中广泛使用,对指令/格式跟随同样有效;设计良好的规则 reward 可以高精度判定正确性、防止 reward hacking。<strong>② 带参考答案的模型 reward</strong>——为每个 query 提供参考,然后让 Qwen2.5-72B-Instruct 据此打分;这样能灵活处理多样任务、不强制特定格式,并避免纯规则 reward 常见的<em>误判为错</em>问题。<strong>③ 无参考答案的模型 reward</strong>——用人类偏好数据训练一个奖励模型给出标量分数;这种方式覆盖更广,能有效提升模型的参与度与有用性。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6e">
+      <summary>
+        <span>§4.5 Strong-to-Weak Distillation / 强弱蒸馏<span class="sec-page">p.12</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The Strong-to-Weak Distillation pipeline is specifically designed for lightweight models—five dense (Qwen3-0.6B, 1.7B, 4B, 8B, 14B) and one MoE (Qwen3-30B-A3B). It enhances performance while transferring robust mode-switching capabilities. The pipeline has two phases. <strong>(1) Off-policy Distillation:</strong> we combine teacher outputs generated in <code>/think</code> and <code>/no think</code> modes for response distillation, helping the student develop basic reasoning and mode-switching abilities. <strong>(2) On-policy Distillation:</strong> the student generates on-policy sequences in either mode, and is fine-tuned by aligning its logits with those of the teacher (Qwen3-32B or Qwen3-235B-A22B) to minimize the KL divergence.</p>
+          </div>
+          <div class="zh">
+            <p>Strong-to-Weak Distillation 专为轻量模型设计——包括 5 个 dense 模型(Qwen3-0.6B、1.7B、4B、8B、14B)和 1 个 MoE 模型(Qwen3-30B-A3B)。它在提升性能的同时,稳定地把模式切换能力迁移过去。分两步进行:<strong>① Off-policy 蒸馏:</strong>把 teacher 分别在 <code>/think</code> 与 <code>/no think</code> 两种模式下的输出合并做 response 蒸馏,让 student 建立基本的推理与模式切换能力。<strong>② On-policy 蒸馏:</strong>student 自行采样、在任一模式下生成 on-policy 序列,然后通过把它的 logits 对齐到 teacher(Qwen3-32B 或 Qwen3-235B-A22B)的 logits 来最小化 KL 散度。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7a">
+      <summary>
+        <span>§4.6 Post-training Evaluation / 后训练评测<span class="sec-page">p.12</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We evaluate instruction-tuned models in both thinking and non-thinking modes across several dimensions. <strong>General Tasks:</strong> MMLU-Redux, GPQA-Diamond (sample 10× and average), C-Eval, LiveBench (2024-11-25). <strong>Alignment Tasks:</strong> IFEval strict-prompt accuracy, Arena-Hard, AlignBench v1.1, plus Creative Writing V3 and WritingBench for writing. <strong>Math &amp; Text Reasoning:</strong> MATH-500, AIME'24, AIME'25 (sample 64× and average per question), ZebraLogic, AutoLogi. <strong>Agent &amp; Coding:</strong> BFCL v3 (FC format with YARN-extended 64K context for multi-turn), LiveCodeBench v5, and CodeForces ratings via CodeElo.</p>
+          </div>
+          <div class="zh">
+            <p>我们从多个维度评测 instruction-tuned 模型在 thinking 与 non-thinking 两种模式下的表现。<strong>通用任务:</strong>MMLU-Redux、GPQA-Diamond(每条采样 10 次取均值)、C-Eval、LiveBench(2024-11-25)。<strong>对齐任务:</strong>IFEval strict-prompt 准确率、Arena-Hard、AlignBench v1.1,以及写作类的 Creative Writing V3 与 WritingBench。<strong>数学与文本推理:</strong>MATH-500、AIME'24、AIME'25(每题采样 64 次取均值)、ZebraLogic、AutoLogi。<strong>Agent 与代码:</strong>BFCL v3(用 FC 格式 + YARN 扩到 64K 多轮上下文)、LiveCodeBench v5,以及来自 CodeElo 的 CodeForces 评级。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Key findings: <strong>Qwen3-32B (Thinking)</strong> outperforms QwQ-32B on 17 of 23 benchmarks, making it the new SOTA reasoning model at the 32B "sweet spot"; it competes with closed-source OpenAI o3-mini (medium) with better alignment and multilingual performance. <strong>Qwen3-32B (Non-thinking)</strong> beats all non-thinking baselines on most benchmarks and exceeds the previous Qwen2.5-32B-Instruct with significantly fewer activated / total parameters. For 8B / 4B / 1.7B / 0.6B, Qwen3 models in <em>thinking mode</em> compete with DeepSeek-R1-Distill-Qwen-14B / 32B; in <em>non-thinking</em> mode they compete with Qwen2.5-7B-Instruct / 14B-Instruct, LLaMA-3.1-8B-Instruct and Gemma-3-12B-IT—often surpassing them at their respective sizes.</p>
+          </div>
+          <div class="zh">
+            <p>核心发现:<strong>Qwen3-32B(Thinking)</strong>在 23 个 benchmark 中赢下 17 个,超越 QwQ-32B,成为 32B "甜点尺寸"上的新 SOTA 推理模型;它与闭源 OpenAI o3-mini(medium)正面竞争,且在对齐与多语种上更强。<strong>Qwen3-32B(Non-thinking)</strong>在多数 benchmark 上击败所有 non-thinking baseline,以显著更少的激活/总参数量超越上一代 Qwen2.5-32B-Instruct。对于 8B / 4B / 1.7B / 0.6B,thinking 模式下与 DeepSeek-R1-Distill-Qwen-14B / 32B 竞争;non-thinking 模式下与 Qwen2.5-7B-Instruct / 14B-Instruct、LLaMA-3.1-8B-Instruct 和 Gemma-3-12B-IT 竞争,且在同尺寸档上常常胜出。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>§5/6 Discussion &amp; Conclusion / 讨论与结论<span class="sec-page">p.20</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>The Effectiveness of Thinking Budget.</strong> To verify that Qwen3 can enhance its intelligence by leveraging an increased thinking budget, we adjust the allocated thinking budget on four benchmarks across Mathematics, Coding, and STEM. The resulting scaling curves (Figure 2) show that Qwen3 exhibits scalable and smooth performance improvement correlated with the allocated thinking budget. Moreover, if we extend the output length beyond 32K, the model's performance is expected to improve further; we leave this exploration as future work.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Thinking Budget 的有效性。</strong>为验证 Qwen3 能通过增加思考预算提升智能水平,我们在数学、代码、STEM 四个 benchmark 上调整分配给思考的 token 预算。所得 scaling 曲线(Figure 2)显示:Qwen3 性能随分配预算<em>平滑可扩展地</em>提升。此外,若把 output 长度扩展到 32K 之外,模型表现预期还会继续提升;这部分留作未来工作。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>The Effectiveness and Efficiency of On-Policy Distillation.</strong> Starting from the same off-policy distilled 8B checkpoint, we compare on-policy distillation against direct RL on math/code queries (Table 21). Distillation achieves significantly better performance while requiring only ~1/10 of the GPU hours of RL. Moreover, distillation from teacher logits expands the student's exploration space and improves Pass@64 on AIME'24/'25, while RL does not improve Pass@64. Concretely, on Qwen3-8B: AIME'24 jumps from 67.6 (RL) to 74.4 (on-policy distill); AIME'25 from 55.5 to 65.5; MATH500 from 94.8 to 97.0; LiveCodeBench v5 from 52.9 to 60.3—at 1,800 vs. 17,920 GPU hours.</p>
+          </div>
+          <div class="zh">
+            <p><strong>On-Policy 蒸馏的有效性与效率。</strong>从同一个 off-policy 蒸馏过的 8B checkpoint 出发,我们在数学/代码 query 上对比 on-policy 蒸馏与直接 RL(Table 21)。蒸馏不仅效果显著更好,所需 GPU hours 也只有 RL 的 ~1/10。更重要的是,从 teacher logits 蒸馏会<em>扩大</em> student 的探索空间——AIME'24/'25 的 Pass@64 都被推高,而 RL 不改善 Pass@64。具体到 Qwen3-8B:AIME'24 从 67.6(RL)→ 74.4(on-policy 蒸馏);AIME'25 从 55.5 → 65.5;MATH500 从 94.8 → 97.0;LiveCodeBench v5 从 52.9 → 60.3——而 GPU hours 仅 1,800 vs. 17,920。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>The Effects of Thinking Mode Fusion and General RL.</strong> To evaluate Stages 3 and 4, we evaluate Qwen3-32B at Stage 2 (Reasoning RL), Stage 3 (Thinking Mode Fusion), and Stage 4 (General RL) using extra in-house benchmarks: <strong>CounterFactQA</strong> (anti-hallucination on counterfactual queries), <strong>LengthCtrl</strong> (length-controlled creative writing), <strong>ThinkFollow</strong> (multi-turn dialogs with random <code>/think</code> and <code>/no think</code> flag switches to test mode-switch correctness), and <strong>ToolUse</strong> (single-/multi-turn tool calling stability, scoring intent recognition, format and parameter accuracy).</p>
+          </div>
+          <div class="zh">
+            <p><strong>Thinking Mode Fusion 与 General RL 的效果。</strong>为评估 Stage 3 与 Stage 4,我们对 Qwen3-32B 在 Stage 2(Reasoning RL)、Stage 3(Thinking Mode Fusion)与 Stage 4(General RL)三个 checkpoint 上做评测,并引入若干内部 benchmark:<strong>CounterFactQA</strong>(在反事实问题上测试抗幻觉)、<strong>LengthCtrl</strong>(带长度约束的创意写作)、<strong>ThinkFollow</strong>(多轮对话中随机插入 <code>/think</code>、<code>/no think</code> flag 测试模式切换正确性)、以及 <strong>ToolUse</strong>(单轮/多轮工具调用稳定性,综合评估意图识别、格式、参数准确率)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Conclusion.</strong> Qwen3 features both thinking and non-thinking modes, letting users dynamically manage the number of tokens used for complex thinking. It is pre-trained on 36 trillion tokens, understands and generates 119 languages and dialects, and achieves strong performance across standard pre- and post-training benchmarks for code, math, reasoning and agents. In the near future, we plan to scale up pretraining with higher-quality and more diverse data; improve architecture and training for efficient compression and extremely long contexts; and invest more compute in RL—especially agent-based RL systems that learn from environmental feedback—to build agents capable of complex tasks requiring inference-time scaling.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论。</strong>Qwen3 同时支持 thinking 与 non-thinking 模式,让用户动态管理复杂思考所用的 token 数。它在 36 万亿 token 上预训练,能理解与生成 119 种语言和方言,在代码、数学、推理与 agent 等标准 pre-/post-training benchmark 上都有强表现。短期未来,我们计划:① 用更高质量、更多样的数据继续扩规模;② 改进架构与训练方法,以实现高效压缩与极长上下文;③ 在 RL 上投入更多算力,尤其是从环境反馈中学习的 <em>agent-based RL</em> 系统——以构建能处理需要推理时扩展的复杂任务的 agent。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>Appendix · Long-Context &amp; Multilingual<span class="sec-page">p.23</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>A.1.1 Long-Context Ability (RULER).</strong> To enable length extrapolation we use <strong>YARN</strong> with a scaling factor = 4. In thinking mode we set the thinking budget to 8,192 tokens to mitigate overly verbose reasoning on extremely long inputs. Results: (1) in non-thinking mode, Qwen3 outperforms similarly sized Qwen2.5 models on long-context tasks; (2) in thinking mode, performance slightly degrades, because thinking content does not provide significant benefits for retrieval tasks and may instead interfere with retrieval. We plan to enhance long-context thinking-mode capability in future versions.</p>
+          </div>
+          <div class="zh">
+            <p><strong>A.1.1 长上下文能力(RULER)。</strong>为实现长度外推,我们使用 <strong>YARN</strong>,scaling factor = 4。在 thinking 模式下,我们把 thinking budget 设为 8,192 tokens,以缓解模型在极长输入上推理<em>过于啰嗦</em>的问题。结果:① 在 non-thinking 模式下,Qwen3 在长上下文任务上优于同规模的 Qwen2.5;② 在 thinking 模式下,性能略有下降——我们认为<em>思考内容对纯检索任务并无显著帮助,反而可能干扰检索过程</em>。我们计划在未来版本中增强长上下文 thinking 模式的能力。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>A.1.2 Multilingual Ability.</strong> Tables 24-35 detail benchmark scores across many languages including Spanish, French, Portuguese, Italian, Arabic, Japanese, Korean, Indonesian and more. Multilingual benchmarks span <strong>Multi-IF</strong> (8 langs), <strong>INCLUDE</strong> (44 langs), <strong>MMMLU</strong> (14 langs), <strong>MT-AIME2024</strong> (55 langs), <strong>PolyMath</strong> (18 langs), and <strong>MLogiQA</strong> (10 langs). Combined with 119-language pre-training and a high translation-task proportion during Thinking Mode Fusion, this yields broad cross-lingual capability—especially on low-resource languages where translation-mix during SFT directly improves downstream scores.</p>
+          </div>
+          <div class="zh">
+            <p><strong>A.1.2 多语种能力。</strong>表 24-35 给出多语言 benchmark 的详细分数,涵盖西班牙语、法语、葡萄牙语、意大利语、阿拉伯语、日语、韩语、印尼语等。多语种 benchmark 包括 <strong>Multi-IF</strong>(8 语言)、<strong>INCLUDE</strong>(44 语言)、<strong>MMMLU</strong>(14 语言)、<strong>MT-AIME2024</strong>(55 语言)、<strong>PolyMath</strong>(18 语言)与 <strong>MLogiQA</strong>(10 语言)。结合 119 语种预训练,以及 Thinking Mode Fusion 阶段刻意提高翻译任务占比,Qwen3 获得广泛的跨语言能力——尤其在低资源语言上,SFT 阶段引入的<em>翻译数据混合</em>直接带来下游分数的提升。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

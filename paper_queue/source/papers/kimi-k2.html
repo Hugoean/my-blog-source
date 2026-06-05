@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimi K2: Open Agentic Intelligence · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2507.20534 · 32 页 · 1 张图</div>
+    <h1>Kimi K2: Open Agentic Intelligence</h1>
+    <div class="meta-bar">
+      <span class="track-B">轨道 B</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W7</span>
+      <span>Tech Report</span><span>Muon</span>
+      <span><a href="https://arxiv.org/abs/2507.20534" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2507.20534.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>Kimi K2 是一款 1T 总参 / 32B 激活的开源 MoE 大模型,主打 agentic 与 tool use 能力——预训练侧首次把 Muon 优化器规模化到万亿级别(用 QK-Clip 解决 attention logits 爆炸),后训练侧用大规模 agentic 数据合成 + verifiable rewards / self-critic RL,在 SWE-bench、Tau2、AceBench 等代理类任务上达到开源 SOTA。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li><strong>Muon vs AdamW</strong>:Muon 用 Newton–Schulz 对动量矩阵 $M_t$ 做正交化再更新——$W_t = W_{t-1} - \eta\,(\mathrm{NS}(M_t)\cdot\sqrt{\max(n,m)}\cdot 0.2 + \lambda W_{t-1})$,在同算力下 token 效率显著优于 AdamW;但仅对 2D 权重矩阵生效,embedding/LayerNorm 仍走 AdamW。</li>
+        <li><strong>1T MoE 架构选型</strong>:DeepSeek-V3 同款骨架,但 sparsity 拉到 48(384 选 8,V3 是 256 选 8),attention heads 砍半到 64——以 0.5–1.2% 的 loss 代价,把 128k 推理 FLOPs 降 83%,体现"长上下文 agent 场景 inference 优先"取舍。</li>
+        <li><strong>Muon stability tricks(QK-Clip)</strong>:Muon 训练易出现 attention logits 爆炸(超 1000),论文提出"训后按头重缩放 $W_q, W_k$":若 $S^h_{\max} = \tfrac{1}{\sqrt d}\max QK^\top > \tau$(取 $\tau=100$),则按 $\gamma^h = \tau / S^h_{\max}$ 在前/后向之外rescale 权重——15.5T tokens 零 loss spike。</li>
+        <li><strong>Tool-calling 训练数据怎么造</strong>:三段式合成 pipeline——① 3000+ 真实 MCP 工具 + 20000+ LLM 进化合成工具;② 每个 toolset 生成 agent + 带 rubric 的 task;③ LLM 模拟 user / tool-env / judge 多轮交互,合格轨迹入 SFT。Coding/SWE 任务则用 K8s 沙箱跑真实代码 + 单元测试做 ground truth。</li>
+        <li><strong>RL 目标函数</strong>:在 K1.5 基础上做 group-relative 优势 + KL 正则:$\mathcal{L}_{\mathrm{RL}}(\theta) = \mathbb{E}_{x\sim\mathcal{D}}\Big[\tfrac{1}{K}\sum_i \big(r(x,y_i) - \bar r(x) - \tau \log\tfrac{\pi_\theta(y_i|x)}{\pi_{\mathrm{old}}(y_i|x)}\big)^2\Big]$;扩展了 budget control(截断 + 罚)、PTX loss(防遗忘)、温度退火(探索→利用)。</li>
+        <li><strong>Self-Critique Rubric Reward</strong>:对无 verifiable reward 的开放式任务(写作、问答),让 K2 自己当 critic 做 pairwise 比较;critic 用 RLVR 的可验证 on-policy rollout 不断校准,把客观信号"蒸馏"进主观评分。</li>
+        <li><strong>Agentic benchmark 对比</strong>:SWE-bench Verified 65.8(多次 71.6,逼近 Claude 4 Sonnet 72.7),SWE-bench Multilingual 47.3,Tau2 micro 66.1,AceBench(en) 76.5——非 thinking 设定下开源 SOTA、整体跻身 Claude 4 Opus / Sonnet 之列。</li>
+        <li><strong>对工业训练的启示</strong>:① token efficiency 是新的 scaling 系数,Muon + 改写式合成数据(WRAP 风格 + 长文 chunk-wise 改写)联合提升 per-token 信号;② 训推一体(colocated RL)+ checkpoint engine 让 1T 模型 30s 内完成参数同步,这是 agentic 长 rollout 能跑起来的关键工程支撑。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      Muon 优化器(面试热点!) + agentic intelligence
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-4a">§2.1 MuonClip / Muon 优化器</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-4b">§2.2 Pre-training Data / 预训练数据</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-4c">§2.3 Architecture / 1T MoE 架构</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-4d">§2.4–2.5 Infra &amp; Recipe / 基础设施与训练菜单</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-5a">§3.1 SFT &amp; Agentic Data / SFT 与 agentic 数据合成</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-5b">§3.2 Reinforcement Learning / 强化学习</a><span class="toc-page">p.11</span></li>
+
+      <li><a href="#sec-5c">§3.3 RL Infrastructure / RL 基础设施</a><span class="toc-page">p.13</span></li>
+
+      <li><a href="#sec-6">§4 Evaluations / 评测</a><span class="toc-page">p.15</span></li>
+
+      <li><a href="#sec-7">§5–6 Limitations &amp; Conclusions / 局限与结论</a><span class="toc-page">p.20</span></li>
+
+      <li><a href="#sec-8">References &amp; Appendix(略)</a><span class="toc-page">p.21</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (1 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2507.20534_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.1 · 1024×1024</div>
+          <div class="fig-caption">Figure 1: Kimi K2 main results.2</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>这张 1024×1024 的图实际上是 <strong>Kimi K2 的品牌 logo</strong>——黑色背景上的一颗四角星(类似 Gemini 风格的"sparkle"),四个尖角分别为<em>红</em>(上)、<em>蓝</em>(右)、<em>绿</em>(下)、<em>黄</em>(左),内部呈柔和径向渐变。JSON 解析器给的 caption 是 <code>Figure 1: Kimi K2 main results</code>(并带一个尾巴 ".2",疑似页脚噪声),但 PDF 抽取阶段只保留了页 1 顶部的 logo 像素,真正的"主结果条形图"以纯文本数字形式留在 §1 正文里——见下面 ② 中的数字。</p>
+          <p><strong>② 关键数据(来自论文 §4 评测,与 logo 旁边的条形图对应):</strong>在<em>非 thinking</em> 设定下,Kimi-K2-Instruct 对照 DeepSeek-V3-0324 / Qwen3-235B-A22B / GPT-4.1 / Claude 4 Opus 与 Sonnet / Gemini 2.5 Flash,三大赛道成绩为——<strong>Agentic &amp; Coding</strong>:SWE-bench Verified <code>65.8</code>(多次 71.6) / SWE-bench Multilingual <code>47.3</code> / LiveCodeBench v6 <code>53.7</code> / OJBench <code>27.1</code>;<strong>Tool Use</strong>:τ2-Bench micro <code>66.1</code> / AceBench(en) <code>76.5</code>;<strong>Math &amp; STEM</strong>:AIME 2025 <code>49.5</code> / GPQA-Diamond <code>75.1</code> / MATH-500、HMMT、PolyMath 等均开源领先。</p>
+          <p><strong>③ 启示:</strong>① 从工程角度,这张图"是一颗星"也很说明问题——技术报告页 1 的视觉锚点是品牌 logo,把数字结果留给正文表格;② 从论文定位角度,Kimi K2 立的"人设"很明确:开源世界第一个把 <em>agentic</em>(工具调用 + SWE)做到逼近闭源前沿的 base model;③ 所有数字都是 non-thinking 取得,意味着分数不靠 CoT 长推理,而是源自 1T MoE 容量 + Muon 的 token 效率 + 大规模合成 tool-use 轨迹 + RL 的复合产物。它不和 R1 / o3 / Claude-thinking 抢推理王座,而是抢"工程上能跑 agent"的事实标准。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>KIMI K2: OPEN AGENTIC INTELLIGENCE.</p>
+            <p>TECHNICAL REPORT OF KIMI K2.</p>
+            <p>Kimi Team.</p>
+            <p>(Published as a technical report; arXiv:2507.20534; July 2025.)</p>
+            <p>(Open weights and post-trained checkpoints released to facilitate future research and applications of agentic intelligence.)</p>
+          </div>
+          <div class="zh">
+            <p>《Kimi K2:开源 Agentic Intelligence》。</p>
+            <p>Kimi K2 技术报告。</p>
+            <p>Kimi 团队。</p>
+            <p>(作为技术报告发布;arXiv:2507.20534;2025 年 7 月。)</p>
+            <p>(开放权重与后训练 checkpoint,以推动未来 agentic intelligence 方向的研究与应用。)</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We introduce Kimi K2, a Mixture-of-Experts (MoE) large language model with 32 billion activated parameters and 1 trillion total parameters. We propose the MuonClip optimizer, which improves upon Muon with a novel QK-clip technique to address training instability while enjoying the advanced token efficiency of Muon. Based on MuonClip, K2 was pre-trained on 15.5 trillion tokens with zero loss spike. During post-training, K2 undergoes a multi-stage post-training process, highlighted by a large-scale agentic data synthesis pipeline and a joint reinforcement learning (RL) stage, where the model improves its capabilities through interactions with real and synthetic environments.</p>
+            <p>Kimi K2 achieves state-of-the-art performance among open-source non-thinking models, with strengths in agentic capabilities. Notably, K2 obtains 66.1 on Tau2-Bench, 76.5 on ACEBench (En), 65.8 on SWE-Bench Verified, and 47.3 on SWE-Bench Multilingual — surpassing most open and closed-sourced baselines in non-thinking settings. It also exhibits strong capabilities in coding, mathematics, and reasoning tasks, with a score of 53.7 on LiveCodeBench v6, 49.5 on AIME 2025, 75.1 on GPQA-Diamond, and 27.1 on OJBench, all without extended thinking. These results position Kimi K2 as one of the most capable open-source large language models to date, particularly in software engineering and agentic tasks. We release our base and post-trained model checkpoints to facilitate future research and applications of agentic intelligence.</p>
+          </div>
+          <div class="zh">
+            <p>我们介绍 Kimi K2:一款 Mixture-of-Experts(MoE)大型语言模型,激活参数 320 亿、总参数 1 万亿。我们提出 MuonClip 优化器——通过一种新颖的 QK-clip 技术对 Muon 加以改进,在保留 Muon 优越 token 效率的同时,解决其训练不稳定问题。基于 MuonClip,K2 在 15.5 万亿 tokens 上完成了<em>零 loss spike</em> 的预训练。在后训练阶段,K2 经历了一套多阶段流程,其中最关键的两点是:一条大规模 agentic 数据合成 pipeline,以及一个联合强化学习(RL)阶段——模型通过与真实与合成环境的交互来提升能力。</p>
+            <p>Kimi K2 在开源非 thinking 模型中达到 SOTA,尤其以 agentic 能力见长。值得指出:K2 在 Tau2-Bench 上得 66.1,在 ACEBench(En)上 76.5,在 SWE-Bench Verified 上 65.8,在 SWE-Bench Multilingual 上 47.3——在非 thinking 设定下超过绝大多数开源与闭源基线。它在编程、数学与推理任务上同样表现强劲:LiveCodeBench v6 得 53.7、AIME 2025 得 49.5、GPQA-Diamond 得 75.1、OJBench 得 27.1,且全部都<em>不使用</em>扩展思考。这些结果把 Kimi K2 推上目前最强开源大模型之一的位置,尤其是在软件工程与 agentic 任务上。我们开源 base 与 post-trained 模型 checkpoint,以促进未来的 agentic intelligence 研究与应用。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The development of Large Language Models (LLMs) is undergoing a profound paradigm shift towards Agentic Intelligence — the capabilities for models to autonomously perceive, plan, reason, and act within complex and dynamic environments. This transition marks a departure from static imitation learning towards models that actively learn through interactions, acquire new skills beyond their training distribution, and adapt behavior through experiences. It is believed that this approach allows an AI agent to go beyond the limitation of static human-generated data, and acquire superhuman capabilities through its own exploration and exploitation. Agentic intelligence is thus rapidly emerging as a defining capability for the next generation of foundation models, with wide-ranging implications across tool use, software development, and real-world autonomy.</p>
+            <p>Achieving agentic intelligence introduces challenges in both pre-training and post-training. Pre-training must endow models with broad general-purpose priors under constraints of limited high-quality data, elevating token efficiency — learning signal per token — as a critical scaling coefficient. Post-training must transform those priors into actionable behaviors, yet agentic capabilities such as multi-step reasoning, long-term planning, and tool use are rare in natural data and costly to scale. Scalable synthesis of structured, high-quality agentic trajectories, combined with general reinforcement learning (RL) techniques that incorporate preferences and self-critique, are essential to bridge this gap.</p>
+          </div>
+          <div class="zh">
+            <p>大型语言模型(LLM)的发展正经历一次深刻的范式迁移,迈向 Agentic Intelligence——也就是模型在复杂且动态环境中自主感知、规划、推理并行动的能力。这一转变意味着从静态的模仿学习走向"通过交互主动学习、获得训练分布之外的新技能、并通过经验调整行为"的模型范式。人们相信这一路线能让 AI agent 跳出"静态人类数据"的限制,通过自身的探索与利用获得超越人类的能力。因此,agentic intelligence 正迅速成为下一代 foundation model 的核心特征,在 tool use、软件开发、真实世界自动化等方向产生广泛影响。</p>
+            <p>实现 agentic intelligence 同时给预训练与后训练带来挑战。预训练必须在高质量数据有限的约束下,赋予模型广泛的通用先验,使"<em>token 效率</em>——每个 token 所产生的学习信号"上升为一个关键的 scaling 系数。后训练则要把这些先验转化为可执行的行为;然而 agentic 能力(如多步推理、长程规划、tool use)在自然数据中很稀缺,规模化又昂贵。可规模化合成结构化、高质量的 agentic 轨迹,再叠加结合偏好与 self-critique 的通用强化学习(RL),是弥合这一鸿沟的关键。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we introduce Kimi K2, a 1.04 trillion-parameter Mixture-of-Experts (MoE) LLM with 32 billion activated parameters, purposefully designed to address the core challenges and push the boundaries of agentic capability. Our contributions span both the pre-training and post-training frontiers: (i) We present MuonClip, a novel optimizer that integrates the token-efficient Muon algorithm with a stability-enhancing mechanism called QK-Clip. Using MuonClip, we successfully pre-trained Kimi K2 on 15.5 trillion tokens without a single loss spike. (ii) We introduce a large-scale agentic data synthesis pipeline that systematically generates tool-use demonstrations via simulated and real-world environments. This system constructs diverse tools, agents, tasks, and trajectories to create high-fidelity, verifiably correct agentic interactions at scale. (iii) We design a general reinforcement learning framework that combines verifiable rewards (RLVR) with a self-critique rubric reward mechanism. The model learns not only from externally defined tasks but also from evaluating its own outputs, extending alignment from static into open-ended domains.</p>
+            <p>Kimi K2 demonstrates strong performance across a broad spectrum of agentic and frontier benchmarks. It achieves scores of 66.1 on Tau2-bench, 76.5 on ACEBench (en), 65.8 on SWE-bench Verified, and 47.3 on SWE-bench Multilingual, outperforming most open- and closed-weight baselines under non-thinking evaluation settings, closing the gap with Claude 4 Opus and Sonnet. In coding, mathematics, and broader STEM domains, Kimi K2 achieves 53.7 on LiveCodeBench v6, 27.1 on OJBench, 49.5 on AIME 2025, and 75.1 on GPQA-Diamond. On the LMSYS Arena leaderboard (July 17, 2025), Kimi K2 ranks as the top-1 open-source model and 5th overall based on over 3,000 user votes.</p>
+          </div>
+          <div class="zh">
+            <p>本工作介绍 Kimi K2——一个 1.04 万亿参数的 Mixture-of-Experts(MoE)LLM,激活参数 320 亿,专门为应对上述核心挑战、推开 agentic 能力的边界而设计。我们的贡献横跨预训练与后训练两条前线:① 我们提出 MuonClip,这是一种把 token-efficient 的 Muon 算法与稳定性增强机制 QK-Clip 整合在一起的新优化器。借助 MuonClip,我们在 15.5 万亿 tokens 上成功预训练 Kimi K2,且整个过程<em>没有一次 loss spike</em>;② 我们提出大规模 agentic 数据合成 pipeline,通过仿真与真实环境系统性生成 tool-use 示范——构造多样的工具、agent、任务与轨迹,大规模产出高保真、可验证正确的 agentic 交互;③ 我们设计了一套通用 RL 框架,将 verifiable rewards(RLVR)与 self-critique rubric 奖励机制结合起来:模型不仅从外部定义的任务学习,也通过评估自身输出来学习,从而把对齐从静态扩展到开放式领域。</p>
+            <p>Kimi K2 在广泛的 agentic 与前沿 benchmark 上表现强劲:在 Tau2-bench 上 66.1,ACEBench(en)76.5,SWE-bench Verified 65.8,SWE-bench Multilingual 47.3——在非 thinking 评测设定下超过大多数开源与闭源基线,逼近 Claude 4 Opus 与 Sonnet。在编程、数学及更广义 STEM 领域,Kimi K2 取得 LiveCodeBench v6 53.7、OJBench 27.1、AIME 2025 49.5、GPQA-Diamond 75.1。在 2025 年 7 月 17 日的 LMSYS Arena 排行榜上,基于 3000+ 真实用户投票,Kimi K2 是开源第一、综合排名第 5。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4a">
+      <summary>
+        <span>§2.1 MuonClip / Muon 优化器与 QK-Clip<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We train Kimi K2 using the token-efficient Muon optimizer, incorporating weight decay and consistent update RMS scaling. Experiments in our previous work Moonlight show that, under the same compute budget and model size — and therefore the same amount of training data — Muon substantially outperforms AdamW, making it an effective choice for improving token efficiency in large language model training. Despite its efficiency, scaling up Muon training reveals a challenge: training instability due to exploding attention logits, an issue that occurs more frequently with Muon but less with AdamW in our experiments. Existing mitigation strategies are insufficient: logit soft-cap directly clips the attention logits, but the dot products between queries and keys can still grow excessively before capping; Query-Key Normalization (QK-Norm) is not applicable to multi-head latent attention (MLA), because its Key matrices are not fully materialized during inference.</p>
+            <p>The Muon update for a 2D weight matrix $W \in \mathbb{R}^{n\times m}$ at step $t$ can be written as:</p>
+            <div class="bi-eq">$$M_t = \mu\,M_{t-1} + G_t, \qquad O_t = \mathrm{NewtonSchulz}(M_t)\cdot\sqrt{\max(n,m)}\cdot 0.2, \qquad W_t = W_{t-1} - \eta\,\bigl(O_t + \lambda\,W_{t-1}\bigr),$$</div>
+            <p>where $G_t$ is the gradient of $W_t$, $\mu$ is momentum, $\eta$ is learning rate, and $\lambda$ is weight decay. The Newton–Schulz step orthogonalizes the momentum matrix, and the factor $\sqrt{\max(n,m)}\cdot 0.2$ rescales the update so that its RMS matches the Adam-style update.</p>
+          </div>
+          <div class="zh">
+            <p>我们用 token-efficient 的 Muon 优化器训练 Kimi K2,并加入 weight decay 与一致的 update RMS scaling。我们此前工作 Moonlight 的实验表明:在同等算力预算与模型规模下(因此训练数据量也相同),Muon 显著优于 AdamW,是提升大语言模型训练 token 效率的有效选择。但 Muon 在<em>放大</em>训练规模时暴露出一个挑战——attention logits 爆炸引发训练不稳定,这一问题在我们的实验中 Muon 比 AdamW 更频繁。已有的缓解手段并不充分:logit soft-cap 直接对 attention logits 截断,但 query 与 key 的点积在被 cap 之前就可能膨胀得过大;Query-Key Normalization(QK-Norm)对 multi-head latent attention(MLA)又不适用,因为 MLA 的 Key 矩阵在推理时并不<em>完全物化</em>。</p>
+            <p>对一个二维权重矩阵 $W\in\mathbb{R}^{n\times m}$,Muon 在第 $t$ 步的更新可以写为上式:$G_t$ 为 $W_t$ 的梯度,$\mu$ 为动量,$\eta$ 为学习率,$\lambda$ 为权重衰减。Newton–Schulz 步将动量矩阵正交化,$\sqrt{\max(n,m)}\cdot 0.2$ 因子则把更新重新缩放,使其 RMS 与 Adam 风格的更新匹配。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Taming Muon with QK-Clip.</strong> To address attention-logit explosion, we propose QK-Clip, a weight-clipping mechanism that explicitly constrains attention logits by rescaling the query and key projection weights <em>post-update</em>. For each head $h$ in attention layer, let $Q^h = X W_q^h, K^h = X W_k^h, V^h = X W_v^h$ and $O^h = \mathrm{softmax}\bigl(\tfrac{1}{\sqrt d} Q^h {K^h}^\top\bigr) V^h$. We define the per-head max logit on the current batch $\mathcal{B}$ as $S^h_{\max} = \tfrac{1}{\sqrt d}\max_{X\in\mathcal{B}}\max_{i,j} Q^h_i {K^h_j}^\top$. The core idea of QK-Clip is to rescale $W_q^h$ and $W_k^h$ whenever $S^h_{\max}$ exceeds a target threshold $\tau$; this operation does <em>not</em> alter the current step's forward/backward computation, merely uses the max logit as a signal to control weight growth.</p>
+            <div class="bi-eq">$$\gamma^h = \min\!\left(1,\;\frac{\tau}{S^h_{\max}}\right), \qquad W_q^h \leftarrow (\gamma^h)^{\alpha}\,W_q^h, \qquad W_k^h \leftarrow (\gamma^h)^{1-\alpha}\,W_k^h, \quad \alpha=0.5.$$</div>
+            <p>Naively this can be applied with a global $\gamma = \min(1,\tau/S_{\max})$, but in practice only a small subset of heads exhibit exploding logits, so we apply <em>per-head</em> clipping to minimize intervention. For MLA we clip only the unshared components: $q^C, k^C$ each scaled by $\sqrt{\gamma^h}$; the head-specific rotary $q^R$ scaled by $\gamma^h$; the shared rotary $k^R$ left untouched to avoid cross-head effects.</p>
+            <p>We integrate Muon (with weight decay, consistent RMS matching) and QK-Clip into a single optimizer called <strong>MuonClip</strong> (Algorithm 1). In a 9B-activated / 53B-total MoE control run, vanilla Muon's max attention logits quickly exceed 1000 (Figure 2 left), causing instability. For Kimi K2 trained with MuonClip and $\tau=100$, max logits are capped at 100, gradually decay back to a typical operating range after about 30% of steps, and the training loss is smooth and spike-free across the entire 15.5T-token run (Figure 3).</p>
+          </div>
+          <div class="zh">
+            <p><strong>用 QK-Clip 驯服 Muon。</strong>为解决 attention-logit 爆炸,我们提出 QK-Clip——一种权重裁剪机制:在<em>更新之后</em>,通过重缩放 query 和 key 投影权重来显式约束 attention logits。对注意力层中每个头 $h$,设 $Q^h = X W_q^h,\,K^h = X W_k^h,\,V^h = X W_v^h$,以及 $O^h = \mathrm{softmax}\bigl(\tfrac{1}{\sqrt d}Q^h {K^h}^\top\bigr) V^h$。定义当前 batch $\mathcal{B}$ 上的<em>每头最大 logit</em>:$S^h_{\max} = \tfrac{1}{\sqrt d}\max_{X\in\mathcal{B}}\max_{i,j} Q^h_i {K^h_j}^\top$。QK-Clip 的核心想法是:每当 $S^h_{\max}$ 超过目标阈值 $\tau$,就重缩放 $W_q^h$ 与 $W_k^h$。这一步不改变本步前/反向计算,只是用 max logit 作为"控制权重增长"的指引信号——见上式,默认 $\alpha=0.5$,即对 query 与 key 各分一半。</p>
+            <p>朴素做法是用一个全局 $\gamma=\min(1,\tau/S_{\max})$;但实践中只有少数几个头会出现 logit 爆炸,因此我们采用<em>逐头</em>裁剪以最小化对训练的干预。对于 MLA,只裁剪非共享分量:$q^C, k^C$ 各乘 $\sqrt{\gamma^h}$;头特异的 rotary $q^R$ 乘 $\gamma^h$;共享的 rotary $k^R$ 保持不动,避免跨头副作用。</p>
+            <p>我们把 Muon(加 weight decay、一致 RMS 匹配)与 QK-Clip 合并成一个统一优化器,称为 <strong>MuonClip</strong>(算法 1)。在 9B 激活 / 53B 总参的 MoE 对照实验中,vanilla Muon 的 max attention logit 很快冲过 1000(图 2 左),导致不稳定。Kimi K2 用 $\tau=100$ 的 MuonClip 训练时,max logit 先被 cap 在 100,经过约 30% 的训练步逐渐衰减回正常范围,且整个 15.5T tokens 的训练 loss 平滑、无 spike(图 3)。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4b">
+      <summary>
+        <span>§2.2 Pre-training Data / 预训练数据:改写式增强<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Token efficiency in pre-training refers to how much performance improvement is achieved for each token consumed during training. Increasing token utility — the effective learning signal each token contributes — enhances the per-token impact on model updates, thereby directly improving token efficiency. This is particularly important when the supply of high-quality tokens is limited and must be maximally leveraged. A naive approach is repeated exposure to the same tokens, which can lead to overfitting and reduced generalization. A key advancement of Kimi K2's pre-training data over Kimi K1.5 is the introduction of a synthetic data generation strategy to increase token utility: a carefully designed rephrasing pipeline amplifies the volume of high-quality tokens without inducing significant overfitting. We describe two domain-specialized rephrasing techniques for the Knowledge and Mathematics domains.</p>
+            <p><strong>Knowledge Data Rephrasing.</strong> Pre-training on natural, knowledge-intensive text presents a trade-off: a single epoch is insufficient for comprehensive knowledge absorption, while multi-epoch repetition yields diminishing returns and increases the risk of overfitting. To improve token utility, we propose a synthetic rephrasing framework with three components: (i) <em>style- and perspective-diverse prompting</em>, inspired by WRAP, that uses carefully engineered prompts to guide an LLM to faithfully rephrase original texts in varied styles and perspectives; (ii) <em>chunk-wise autoregressive generation</em>, where long documents are split into segments, rephrased individually, then stitched back, mitigating implicit output-length limits of LLMs; (iii) <em>fidelity verification</em>, comparing semantic alignment between rephrased and source passages.</p>
+            <p>We compare data rephrasing with multi-epoch repetition on SimpleQA using an early checkpoint of K2: (1) repeating raw data for 10 epochs gives 23.76% accuracy; (2) rephrasing once then training for 10 epochs gives 27.39%; (3) rephrasing 10 times with a single pass gives 28.94%. We extend this method to other large knowledge corpora; each corpus is rephrased at most twice. For mathematics, we rewrite high-quality math documents into a "learning-note" style following SwallowMath, and translate non-English high-quality math materials into English to diversify.</p>
+            <p><strong>Pre-training Data Overall.</strong> The Kimi K2 corpus comprises 15.5 trillion tokens of curated, high-quality data spanning four primary domains: Web Text, Code, Mathematics, and Knowledge. Most data processing pipelines follow the methodologies outlined in Kimi K1.5; for each domain we performed rigorous correctness and quality validation and designed targeted data experiments to ensure both diversity and effectiveness.</p>
+          </div>
+          <div class="zh">
+            <p>预训练中的 token 效率,指每消耗一个 token 所获得的性能提升幅度。提高 <em>token 效用</em>——每个 token 所贡献的有效学习信号——能放大每个 token 对模型更新的影响,从而直接改善 token 效率。当高质量 token 供给受限、必须榨干价值时,这一点尤其重要。朴素的"重复曝光相同 token"会导致过拟合、泛化下降。Kimi K2 在预训练数据上相对 Kimi K1.5 的一个关键进步,是引入合成数据生成策略来提升 token 效用:一条精心设计的<em>改写</em> pipeline,在不引发显著过拟合的前提下放大高质量 token 的量。下面介绍两种针对 Knowledge 与 Mathematics 领域的专门改写技术。</p>
+            <p><strong>知识数据改写。</strong>在自然的、知识密集的文本上预训练有 trade-off:一个 epoch 不足以充分吸收知识,多 epoch 重复又收益递减且过拟合风险上升。为提升 token 效用,我们提出一个三件套合成改写框架:① <em>风格与视角多样化的 prompting</em>——借鉴 WRAP,用一组精心设计的 prompt 引导大模型在不同风格、不同视角下对原文做<em>忠实</em>改写;② <em>chunk-wise 自回归生成</em>——长文本被切成小段分别改写,再拼回,以规避 LLM 隐式的输出长度限制;③ <em>保真度校验</em>——对比改写段与源文的语义一致性,做初步质量控制。</p>
+            <p>我们用 SimpleQA 把"改写"和"多 epoch 重复"做对照实验,基于 K2 的早期 checkpoint:(1)原始数据重复 10 epoch:准确率 23.76%;(2)改写一次后训 10 epoch:27.39%;(3)改写 10 次但只过一遍:28.94%。我们把这一方法推广到其它大规模知识语料,每个语料最多改写 2 次。数学方面,我们参照 SwallowMath 把高质量数学文档改写为"学习笔记"风格,同时把其它语言的高质量数学材料翻译成英文,增加多样性。</p>
+            <p><strong>预训练数据总览。</strong>Kimi K2 的预训练语料包含 15.5 万亿精挑高质量 tokens,覆盖 Web 文本、代码、数学、知识四大领域。多数数据处理流程沿用 Kimi K1.5;对每个领域我们做了严格的正确性与质量校验,并设计有针对性的数据实验来确保多样性与有效性兼具。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4c">
+      <summary>
+        <span>§2.3 Model Architecture / 1T MoE 架构与 sparsity scaling<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Kimi K2 is a 1.04 trillion-parameter Mixture-of-Experts (MoE) transformer with 32 billion activated parameters. The architecture follows DeepSeek-V3, employing Multi-head Latent Attention (MLA) with hidden dimension 7168 and MoE expert hidden dimension 2048. Our scaling law analysis reveals that increasing sparsity yields substantial gains, motivating us to use 384 experts (up from 256 in DeepSeek-V3). To reduce inference overhead we cut attention heads to 64 (down from 128 in DeepSeek-V3). Compared with DeepSeek-V3: layers 61 (=), total params 1.04T (+54%), activated params 32.6B (−13%), experts total 384 (+50%), experts active per token 8 (=), shared experts 1 (=), attention heads 64 (−50%), dense layers 1 (−67%), no expert grouping.</p>
+            <p><strong>Sparsity Scaling Law.</strong> We develop a sparsity scaling law for the MoE family using Muon, where sparsity is the ratio of total to activated experts. Under a fixed number of activated parameters (constant FLOPs), increasing the total experts (i.e., increasing sparsity) consistently lowers both training and validation loss. Concretely, to reach validation loss 1.5, sparsity 48 reduces FLOPs by $1.69\times, 1.39\times, 1.15\times$ over sparsities 8, 16, 32 respectively. Increasing sparsity, however, raises infrastructure complexity. To balance performance and cost we choose sparsity 48 for K2 — activating 8 of 384 experts per forward pass.</p>
+            <p><strong>Number of Attention Heads.</strong> DeepSeek-V3 sets attention heads to roughly twice the number of layers to better utilize memory bandwidth. But as context length grows, doubled attention heads incur significant inference overhead — at 128k sequence length, going from 64 to 128 heads (with 384 total experts) increases inference FLOPs by 83%. This is a major limitation for agentic applications where efficient long-context processing is essential. Controlled experiments show doubling heads gives only 0.5%–1.2% validation-loss improvement across compute budgets. Given sparsity 48 already delivers strong performance, the marginal gain does not justify the inference cost, so we choose 64 attention heads.</p>
+          </div>
+          <div class="zh">
+            <p>Kimi K2 是一个 1.04 万亿参数的 MoE Transformer 模型,激活参数 320 亿。架构沿用 DeepSeek-V3:注意力机制用 Multi-head Latent Attention(MLA),hidden dim 7168,MoE 专家 hidden dim 2048。我们的 scaling law 分析表明,继续提升 sparsity 仍有可观增益,因此我们把专家数从 V3 的 256 提到 384;为降低推理开销,attention heads 从 V3 的 128 砍到 64。相对 DeepSeek-V3 的差异:层数 61(持平)、总参 1.04T(+54%)、激活参 32.6B(−13%)、总专家数 384(+50%)、每 token 激活专家 8(持平)、共享专家 1(持平)、attention heads 64(−50%)、稠密层数 1(−67%)、不再使用 expert grouping。</p>
+            <p><strong>Sparsity Scaling Law。</strong>我们针对用 Muon 训练的 MoE 家族建立了一条 sparsity scaling 律——sparsity 定义为总专家数与激活专家数之比。在激活参数固定(即 FLOPs 恒定)下,增加总专家数(即提高 sparsity)能稳定降低训练和验证 loss。具体而言,要达到 1.5 的验证 loss,sparsity 48 相比 sparsity 8、16、32 分别节省 $1.69\times、1.39\times、1.15\times$ 的 FLOPs。但提高 sparsity 会增加基础设施复杂度,综合权衡后我们为 K2 选定 sparsity 48——每次前向从 384 个专家里激活 8 个。</p>
+            <p><strong>注意力头数。</strong>DeepSeek-V3 把 attention heads 设为约层数的两倍,以更好利用显存带宽。但随着上下文变长,翻倍的 heads 引入显著推理开销——在序列长 128k 时,从 64 头增到 128 头(384 专家不变)会使推理 FLOPs 增加 83%。对长上下文 agentic 应用这是主要瓶颈。对照实验显示在不同算力预算下,翻倍 heads 只带来 0.5%–1.2% 的验证 loss 改进。鉴于 sparsity 48 已经提供了强劲性能,这点边际收益不值得增加那么多推理代价,因此我们选择 64 attention heads。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4d">
+      <summary>
+        <span>§2.4–2.5 Training Infrastructure &amp; Recipe / 基础设施与训练菜单<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Compute Cluster &amp; Parallelism.</strong> Kimi K2 was trained on a cluster of NVIDIA H800 GPUs; each node has 2 TB RAM and 8 GPUs connected via NVLink/NVSwitch, and 8×400 Gbps RoCE between nodes. Rather than optimizing one parallelism strategy tied to a specific node count, we pursue a flexible strategy allowing K2 to be trained on any multiple of 32 nodes. We combine 16-way Pipeline Parallelism (PP) with virtual stages, 16-way Expert Parallelism (EP), and ZeRO-1 Data Parallelism. Storing BF16 parameters and FP32 gradient accumulation needs ~6 TB of GPU memory, distributed over a model-parallel group of 256 GPUs; each GPU holds ~30 GB of all states, leaving the rest for activations.</p>
+            <p><strong>EP overlap with interleaved 1F1B; smaller EP size.</strong> By increasing warm-up micro-batches, we overlap EP all-to-all with computation under standard interleaved 1F1B. We did <em>not</em> adopt DualPipe because it doubles parameter/gradient memory, prohibitive at trillion scale. Interleaved 1F1B introduces PP-communication overhead; we mitigate this by decoupling weight-gradient computation from each micro-batch's backward and running it in parallel with the corresponding PP communication. To ensure full computation-communication overlap during 1F1B given K2's reduced attention compute (64 heads vs V3's 128), we use the smallest feasible EP (=16), which also relaxes expert-balance constraints.</p>
+            <p><strong>Activation Reduction.</strong> Selective recomputation is applied to inexpensive, high-footprint stages (LayerNorm, SwiGLU, MLA up-projections, MoE down-projections). MoE up-projection and SwiGLU <em>inputs</em> are stored as FP8-E4M3 in $1\times 128$ tiles with FP32 scales — small-scale experiments show no measurable loss increase, though we do <em>not</em> apply FP8 in compute. All remaining activations are offloaded to CPU RAM via a copy engine that overlaps with compute/communication kernels: during 1F1B we offload the previous micro-batch's forward activations while prefetching the next backward, with EP communication remaining fully overlapped.</p>
+            <p><strong>Training Recipe.</strong> We pre-trained K2 with a 4096-token context window using MuonClip and the WSD learning rate schedule, processing 15.5T tokens total. The first 10T tokens used constant LR 2e-4 after a 500-step warm-up; the remaining 5.5T tokens used cosine decay from 2e-4 to 2e-5. Weight decay was 0.1; global batch size 67M tokens. An annealing phase followed: at 67M batch size LR decayed from 2e-5 to 7e-6 across 400B tokens at 4k seq-len, then 60B tokens at 32k seq-len. Context window was extended to 128k via YaRN.</p>
+          </div>
+          <div class="zh">
+            <p><strong>算力集群与并行。</strong>Kimi K2 在 NVIDIA H800 GPU 集群上训练;每个节点 2 TB RAM、8 GPU 通过 NVLink/NVSwitch 互联,节点间用 8×400 Gbps RoCE。与"只针对特定节点数优化一种并行策略"不同,我们追求灵活策略,使 K2 能在任意 32 的倍数节点上训练。我们组合:16-way Pipeline Parallelism(PP,带 virtual stages)、16-way Expert Parallelism(EP)、ZeRO-1 Data Parallelism。BF16 参数 + FP32 梯度累积约需 6 TB 显存,分布在 256 GPU 的模型并行组上;每 GPU 持有约 30 GB 状态,剩余显存留给激活。</p>
+            <p><strong>EP 通信与 interleaved 1F1B 重叠;更小的 EP 规模。</strong>通过增加 warm-up 微批数,我们在标准 interleaved 1F1B 下让 EP all-to-all 与计算重叠。我们没有采用 DualPipe——它会把参数和梯度显存翻倍,在万亿规模下不可承受。Interleaved 1F1B 会引入 PP 通信开销,为此我们把每个微批反向中的 weight-gradient 计算从主反向中解耦,与对应的 PP 通信并行执行,从而几乎全部 PP 通信都能被掩盖,仅 warm-up 阶段例外。考虑 K2 的注意力计算更轻(64 vs V3 的 128 头),为保证 1F1B 阶段计算-通信完全重叠,我们采用尽可能小的 EP 规模 EP=16,同时这也放宽了专家均衡的约束。</p>
+            <p><strong>激活内存优化。</strong>对廉价但占用大的环节做选择性重算:LayerNorm、SwiGLU、MLA up-projection,以及 MoE down-projection 也在训练中重算。MoE up-projection 和 SwiGLU 的<em>输入</em>用 FP8-E4M3 + $1\times 128$ tile + FP32 scale 存储,小规模实验显示 loss 无可测增加,但出于稳健性,FP8 不进入计算。剩余激活全部 offload 到 CPU RAM;一个 copy engine 负责流式 offload/onload,与计算/通信内核重叠:1F1B 阶段我们一边 offload 上一个微批的前向激活,一边预取下一个的反向激活,EP 通信仍能被完全掩盖。</p>
+            <p><strong>训练菜单。</strong>我们在 4096-token 上下文下,用 MuonClip 与 WSD 学习率,共训了 15.5T tokens。前 10T tokens 在 500 步 warm-up 后用恒定 LR 2e-4;之后 5.5T tokens 用 cosine 从 2e-4 衰减到 2e-5。weight decay 恒为 0.1;全局 batch size 6700 万 tokens。预训练末段做了 annealing:batch size 不变,LR 从 2e-5 衰减到 7e-6,先用 4k 序列长跑 400B tokens,再用 32k 序列长跑 60B tokens。最后用 YaRN 把上下文窗口扩展到 128k。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5a">
+      <summary>
+        <span>§3.1 SFT &amp; Agentic Data Synthesis / SFT 与 agentic 数据合成<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Supervised Fine-Tuning.</strong> We employ the Muon optimizer in post-training and recommend it for fine-tuning with K2: a Muon-pre-trained checkpoint yields the best performance when fine-tuned with Muon. We construct a large-scale instruction-tuning dataset across diverse domains under two principles: maximizing prompt diversity and ensuring response quality. We build a suite of data-generation pipelines per task domain, combining human annotation, prompt engineering, and verification. K1.5 and other in-house domain-specialized expert models generate candidate responses; LLM- or human-based judges perform automated quality evaluation and filtering. For agentic data, we create a dedicated data-synthesis pipeline to teach tool-use through multi-step, interactive reasoning.</p>
+            <p><strong>Large-Scale Agentic Data Synthesis for Tool Use.</strong> A critical LLM-agent capability is autonomously using unfamiliar tools, interacting with external environments, and iteratively refining actions through reasoning, execution, and error correction. Real environments provide rich signals but are hard to scale due to cost, complexity, privacy, and accessibility. Inspired by ACEBench's data-synthesis framework, we build a pipeline that simulates real tool-use scenarios at scale, generating tens of thousands of diverse, high-quality training examples. The pipeline has three stages: (i) <em>Tool spec generation</em>: construct a large repository of tool specs from real-world tools and LLM-synthetic tools; (ii) <em>Agent and task generation</em>: for each toolset sampled from the repository, generate an agent that uses the toolset and corresponding tasks; (iii) <em>Trajectory generation</em>: for each agent+task, generate trajectories where the agent completes the task by invoking tools.</p>
+            <p><strong>Domain Evolution and Tool Generation.</strong> We build the tool repository two ways. First, we directly fetch 3000+ real MCP (Model Context Protocol) tools from GitHub. Second, we systematically evolve synthetic tools through a hierarchical domain process: start from key categories (e.g., financial trading, software apps, robot control), evolve specific application domains within each, then synthesize specialized tools per domain with clear interfaces, descriptions, and semantics — over 20,000 synthetic tools in total. t-SNE shows MCP and synthetic tools cover complementary regions of the tool space.</p>
+          </div>
+          <div class="zh">
+            <p><strong>监督微调(SFT)。</strong>后训练阶段我们采用 Muon 优化器,并推荐在 K2 上做 fine-tuning 时也用 Muon:Muon 预训的 checkpoint 配上 Muon 微调能给出最好效果。我们构建了一个覆盖多领域的大规模指令微调数据集,坚持两条核心原则:最大化 prompt 多样性、保证响应质量。为此我们针对不同任务领域设计了一整套数据生成 pipeline,组合人工标注、prompt 工程与验证流程。我们用 K1.5 以及其它内部领域专家模型生成候选答案,再由 LLM 或人类裁判做自动质量评估与过滤。对 agentic 数据,我们专门构建一条数据合成 pipeline,通过多步交互推理教会模型 tool use。</p>
+            <p><strong>大规模 agentic 数据合成。</strong>现代 LLM agent 的关键能力,是自主使用不熟悉的工具、与外部环境交互、并通过推理-执行-纠错迭代调整动作。真实环境信号丰富但因成本、复杂度、隐私、可达性难以规模化。受 ACEBench 数据合成框架启发,我们构建了一条<em>大规模仿真</em>真实 tool-use 场景的 pipeline,生成数万条多样、高质量训练样例。Pipeline 分三阶段:① <em>tool spec 生成</em>——从真实工具与 LLM 合成工具构造一个大型 tool spec 仓库;② <em>agent 与任务生成</em>——对从仓库采样的每个工具集合,生成一个使用该工具集的 agent 与对应任务;③ <em>轨迹生成</em>——对每个 agent+task,生成 agent 调用工具完成任务的交互轨迹。</p>
+            <p><strong>领域演化与工具生成。</strong>我们用两条互补路线构建工具库。其一,直接从 GitHub 拉取 3000+ 个真实 MCP(Model Context Protocol)工具;其二,通过层级化的领域演化合成工具:先定义关键大类(金融交易、软件应用、机器人控制等),在每个大类下进化出多个具体应用域,再为每个域合成具备清晰接口、描述与语义的专门工具——合计 20000+ 个合成工具。t-SNE 可视化显示 MCP 工具与合成工具覆盖了工具空间的互补区域。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Agent Diversification &amp; Rubric Tasks.</strong> We synthesize thousands of agents by combining various system prompts with different tool combinations, ensuring broad capability/expertise/behavior coverage. For each agent we generate tasks ranging from simple to complex, each paired with an explicit <em>rubric</em> specifying success criteria, expected tool-use patterns, and evaluation checkpoints — enabling consistent, objective evaluation.</p>
+            <p><strong>Multi-turn Trajectories &amp; Filtering.</strong> We simulate realistic scenarios with (i) <em>user simulation</em> — LLM-generated personas with distinct styles engaging in multi-turn dialogue with agents; (ii) a <em>tool execution environment</em> (functionally a world model) that executes calls, maintains state, and injects controlled stochasticity for varied outcomes including partial failures and edge cases. An LLM-based judge evaluates each trajectory against rubrics; only trajectories meeting success criteria are kept.</p>
+            <p><strong>Hybrid with Real Sandboxes.</strong> Simulation provides scale; for authenticity (coding/SWE), we complement with real execution sandboxes — running real code, using genuine dev environments, returning ground-truth feedback via test pass rates. The hybrid pipeline implements large-scale rejection sampling through quality filtering, and the resulting synthetic data, used in SFT, substantially improves tool-use across real-world applications.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Agent 多样化与 rubric 任务。</strong>我们通过组合不同 system prompt 与不同工具子集,合成出数千个 agent,确保能力/专长/行为模式都覆盖广。对每个 agent,我们生成从简单到复杂的任务,每个任务配一份显式 <em>rubric</em>(成功标准、期望 tool-use 模式、评估 checkpoint),从而保证评估的一致性与客观性。</p>
+            <p><strong>多轮轨迹生成与过滤。</strong>我们用以下组件模拟真实场景:① <em>user 仿真</em>——LLM 生成风格各异的 user persona,与 agent 进行多轮对话;② <em>tool 执行环境</em>(功能上等价于一个 world model)——执行工具调用、维护状态、注入受控随机性,产出包括成功/部分失败/边缘案例在内的多样结果。LLM judge 按 rubric 评估每条轨迹,只保留达标轨迹。</p>
+            <p><strong>仿真 + 真实沙箱的混合方案。</strong>仿真擅长规模化,但对真实性敏感的场景(编程 / SWE)我们辅以真实执行沙箱——跑真实代码、对接真实开发环境、用测试通过率作 ground-truth 反馈。这种混合 pipeline 通过质量过滤实质上实现了大规模 rejection sampling;生成的高质合成数据用于 SFT 后,显著提升了模型在各类真实应用中的 tool-use 能力。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5b">
+      <summary>
+        <span>§3.2 Reinforcement Learning / 强化学习<span class="sec-page">p.11</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Reinforcement learning (RL) is believed to have better token efficiency and generalization than SFT. Building on K1.5, we continue to scale RL in both task diversity and training FLOPs. We develop a Gym-like extensible framework facilitating RL across a wide range of scenarios, extending it with many <em>verifiable-reward</em> tasks. For tasks that rely on subjective preferences (creative writing, open-ended QA), we introduce a <em>self-critic</em> reward in which the model performs pairwise comparisons of its own outputs. This allows tasks from all domains to benefit from the RL paradigm.</p>
+            <p><strong>Verifiable Rewards Gym.</strong> For math/STEM/logical reasoning, we follow two principles: <em>diverse coverage</em> (expert annotations + internal QA extraction + open datasets; a tagging system intentionally raises coverage of under-covered domains; logic tasks include multi-hop tabular reasoning, cross-table aggregation, the 24-game, Sudoku, cryptarithms, Morse-code decoding) and <em>moderate difficulty</em> (assess each problem's difficulty via the SFT model's pass@k; keep only moderate-difficulty problems). For <em>complex instruction following</em>, we combine code-interpreter-based deterministic evaluation (length/style constraints) with LLM-as-judge, and a <em>hack-check</em> layer that detects deceptive claims of fulfillment. Instructions come from expert-crafted prompts/rubrics, AutoIF-style agentic augmentation, and a fine-tuned model specialized in probing failure modes. For <em>faithfulness</em>, we train a sentence-level faithfulness judge model (FACTS-Grounding-style) that flags claims lacking in-context evidence, serving as a reward model. For <em>coding/SWE</em>, we use open-source datasets, synthetic problems with human-written unit tests, and a Kubernetes-powered sandbox supporting 10k+ concurrent instances. For <em>safety</em>, an attack model iteratively generates adversarial prompts, a target model responds, and a judge model decides bypass success.</p>
+          </div>
+          <div class="zh">
+            <p>RL 被认为在 token 效率与泛化上都优于 SFT。在 K1.5 基础上,我们在 K2 中继续扩展 RL 的任务多样性与训练 FLOPs。我们开发了一个 Gym-like 的可扩展框架来支撑广泛场景下的 RL,并向其中加入大量带 <em>verifiable reward</em> 的任务。对依赖主观偏好的任务(写作、开放式 QA),我们引入 <em>self-critic</em> 奖励——让模型对自己的输出做 pairwise 比较。这样各领域任务都能享受 RL 范式的好处。</p>
+            <p><strong>Verifiable Rewards Gym。</strong>对数学 / STEM / 逻辑推理任务,我们坚持两条原则:① <em>覆盖多样</em>(专家标注 + 内部 QA 抽取 + 公开数据集;用一套打标系统主动提升欠覆盖领域的占比;逻辑任务覆盖多跳表格推理、跨表聚合、24 点、数独、字谜、Morse 码解码等);② <em>难度适中</em>(以 SFT 模型的 pass@k 评估每道题的难度,只保留中等难度题)。对 <em>复杂指令跟随</em>,我们组合两种验证:对有可验证输出的指令(长度、风格约束)用 code interpreter 做确定性评估;对需要细致理解约束的指令用 LLM-as-judge;并加一层 <em>hack-check</em> 专门识别"自称完成了实际没完成"的欺骗性回答。指令来源:专家手写的复杂条件 prompt 与 rubric、AutoIF 风格的 agentic 指令增强、以及一个专门擅长生成"探测失效模式"指令的微调模型。<em>忠实性</em>方面,我们仿照 FACTS Grounding,训练一个句子级 faithfulness judge,标出"没有上下文证据支持"的断言,作为奖励模型。<em>编程 / SWE</em> 方面,我们用开源数据集、配高质量人工单测的合成题、以及 Kubernetes 驱动、支持 1 万+并发实例的稳定沙箱。<em>安全</em>方面,attack 模型迭代生成对抗 prompt,target 模型回答,judge 模型判定是否绕过安全机制。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Beyond Verification: Self-Critique Rubric Reward.</strong> To align beyond verifiable-reward tasks, we introduce general RL from <em>self-critic feedback</em>. The K2 actor generates responses for general prompts; the K2 critic ranks them via pairwise evaluation against a mix of <em>core rubrics</em> (fundamental values), <em>prescriptive rubrics</em> (anti-reward-hacking), and <em>human-annotated rubrics</em>. Some rubrics can be designated mandatory, while K2 retains flexibility to weigh them against internal priors — enabling dynamic, continuous alignment with evolving on-policy behavior. Critically, during RL training the critic is continuously refined using <em>verifiable signals</em>: on-policy rollouts from verifiable-reward prompts update the critic, distilling objective performance gains from RLVR into the evaluator, and grounding subjective judgment in verifiable data.</p>
+            <p><strong>RL Algorithm.</strong> We adopt the K1.5 policy optimization algorithm. For each problem $x$ we sample $K$ responses $\{y_1,\dots,y_K\}$ from the previous policy $\pi_{\mathrm{old}}$ and optimize $\pi_\theta$ against the following objective:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\mathrm{RL}}(\theta) = \mathbb{E}_{x\sim\mathcal{D}}\!\left[\frac{1}{K}\sum_{i=1}^{K}\!\left(r(x,y_i)-\bar r(x)-\tau\,\log\frac{\pi_\theta(y_i\mid x)}{\pi_{\mathrm{old}}(y_i\mid x)}\right)^{\!2}\,\right],\quad \bar r(x)=\frac{1}{K}\sum_{i=1}^{K}r(x,y_i),\;\;\tau>0.$$</div>
+            <p>Like SFT we use Muon to minimize it. We add three components: (i) <strong>Budget Control</strong> — per-sample max-token budget by task type; over-budget responses are truncated and penalized, encouraging concise solutions. (ii) <strong>PTX Loss</strong> — to prevent forgetting, integrate a hand-curated high-quality dataset via an auxiliary PTX loss. (iii) <strong>Temperature Decay</strong> — start with high temperature to encourage exploration, decay over training to favor exploitation; ensures stable, reliable final outputs.</p>
+          </div>
+          <div class="zh">
+            <p><strong>超越 verification:Self-Critique Rubric Reward。</strong>为了把对齐扩展到 verifiable-reward 之外,我们引入"从 <em>self-critic 反馈</em>学习"的通用 RL 框架。K2 actor 对一般 prompt 生成回答;K2 critic 用 pairwise 评估对照一组 rubric 打分:其中包括 <em>core rubrics</em>(代表 Kimi 视为根基的 AI 助手价值观)、<em>prescriptive rubrics</em>(防止 reward hacking)、以及数据团队针对具体指令场景手写的 <em>human-annotated rubrics</em>。部分 rubric 可被设为强制,但 K2 仍有自由度在它们与自身内部先验间权衡——这让对齐能跟上不断演化的 on-policy 行为,既保住核心身份又能适配具体指令。RL 训练中,critic 还会用 <em>verifiable 信号</em>持续校准:从 verifiable-reward prompts 上的 on-policy rollout 反向更新 critic,把 RLVR 的客观信号"蒸馏"进评估器,让主观判断扎根于可验证数据。</p>
+            <p><strong>RL 算法。</strong>我们沿用 K1.5 的策略优化算法。对每道题 $x$,我们从上一代策略 $\pi_{\mathrm{old}}$ 采 $K$ 个回答 $\{y_1,\dots,y_K\}$,然后对 $\pi_\theta$ 优化上式:其中 $\bar r(x) = \tfrac{1}{K}\sum_i r(x,y_i)$ 是组内平均奖励,$\tau>0$ 是促进稳定学习的正则系数。和 SFT 一样,我们用 Muon 来最小化它。我们额外加了三个组件:① <strong>Budget Control</strong>——按任务类型给每个样本设最大 token 预算,超预算回答被截断并罚分,鼓励简洁解;② <strong>PTX Loss</strong>——为防止遗忘,把一份手工挑选的高质量数据通过辅助 PTX loss 集成进 RL 目标;③ <strong>Temperature Decay</strong>——初期用高温度鼓励探索,训练中温度逐步衰减偏向利用,确保最终输出稳定可靠。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5c">
+      <summary>
+        <span>§3.3 RL Infrastructure / RL 基础设施<span class="sec-page">p.13</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Colocated Architecture.</strong> Like K1.5, we adopt a hybrid colocated architecture for synchronized RL: training and inference engines live on the same workers, and when one is active the other releases/offloads GPU resources. Each iteration: a centralized controller calls inference engine to generate new data, then trains on it, then sends updated parameters to inference for the next iteration. Each engine is heavily throughput-optimized; at K2's scale, engine-switching latency and failure recovery become significant — we describe our system design for both.</p>
+            <p><strong>Efficient Engine Switching.</strong> During rollout, training-engine parameters are offloaded to DRAM, so bringing it up is just an H2D transfer. Bringing up the inference engine is harder: it must obtain updated parameters from the training engine with a <em>different</em> sharding paradigm. At K2's scale, using a network file system for resharding/broadcast is impractical (aggregate bandwidth needed reaches several PB/s). We built a distributed <em>checkpoint engine</em> co-located on training nodes: each worker obtains a local copy of parameters from training, broadcasts the full parameter set across all checkpoint workers, then inference retrieves only the shard it needs. For a 1T model, updates are pipelined parameter-by-parameter to minimize memory footprint. We broadcast the full parameter set rather than transfer-what-you-need, trading minor overhead for fully decoupled engines. The system completes a full K2 parameter update in &lt;30s — negligible for typical RL iteration. The checkpoint-engine source is on GitHub.</p>
+            <p><strong>Efficient System Startup &amp; Agentic Rollout.</strong> To minimize disk IO at startup, each training worker selectively reads part of the parameters and broadcasts to peers — collectively reading the checkpoint exactly once. Inference replicas reuse the checkpoint engine for startup, avoiding cross-replica sync barriers and making the system robust to single-point failures. For long-horizon multi-turn <em>agentic rollouts</em>: (i) heavy environments are deployed as dedicated scalable services; (ii) we use many concurrent rollouts to amortize expensive interaction latency. Individual trajectories can be extremely long; to prevent long-tails blocking the rollout, we use <em>partial rollout</em> — pause long-tail unfinished tasks and resume in the next RL iteration. A unified Gym-inspired interface streamlines new-environment integration.</p>
+          </div>
+          <div class="zh">
+            <p><strong>训推一体(Colocated)架构。</strong>与 K1.5 一致,我们用混合 colocated 架构做同步 RL:训练引擎与推理引擎部署在同一组 worker 上,谁工作就让另一方释放或 offload GPU 资源。每次 RL 迭代:中央控制器先让推理引擎生成新数据,然后通知训练引擎在新数据上训,接着把更新后的参数下发给推理引擎,开始下一轮。两边引擎都重度针对吞吐量优化;到 K2 这个量级,引擎切换延迟与失败恢复变得非常关键——下面分别介绍。</p>
+            <p><strong>高效引擎切换。</strong>Rollout 期间训练引擎的参数被 offload 到 DRAM,因此把训练引擎"叫醒"只是一次 H2D 拷贝。把推理引擎叫醒更难——它必须用<em>不同</em>的 sharding 方式从训练引擎拿到最新参数。在 K2 这种规模下,用网络文件系统做 resharding+广播完全不现实(为不显著拉慢训练,聚合带宽要达 PB/s 级)。我们构建了一个分布式 <em>checkpoint engine</em>,与训练节点 colocated:每个 worker 从训练引擎本地拷一份参数,先在所有 checkpoint engine worker 间广播完整参数集,然后推理引擎只取自己需要的 shard。对 1T 模型,参数更新按"逐参数 pipeline"方式做,以最小化内存占用。我们之所以选择广播完整参数集而非"按需传输",是因为这样设计极简、对训练/推理引擎侵入小,我们愿意用这点开销换全完全解耦。系统能在 <strong>30 秒</strong>内完成 K2 的一轮完整参数更新——对 RL 迭代而言可忽略不计。checkpoint engine 已在 GitHub 开源。</p>
+            <p><strong>高效系统启动 &amp; Agentic Rollout。</strong>为最小化启动期的磁盘 IO,每个训练 worker 只选择性地读部分参数,然后广播给同伴——所有 worker 合起来对 checkpoint 只读一次。推理副本启动则复用 checkpoint engine,避免引入跨副本同步壁垒;这也让单点故障不会传染——一个推理副本能独立重启。对长程多轮 <em>agentic rollout</em>,我们做了两点优化:① 把重型环境部署为可独立扩展的专用服务;② 同时跑大量并发 rollout,以摊销昂贵交互的延迟。单条轨迹可能极长;为防止长尾阻塞整个 rollout,我们采用 <em>partial rollout</em> 技术——把长尾未完成任务挂起,留到下一轮 RL 迭代继续。我们还设计了一个 Gym 风格的统一接口,简化新环境接入。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§4 Evaluations / 评测<span class="sec-page">p.15</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Evaluation Settings.</strong> We assess Kimi-K2-Instruct across many areas. <em>Coding</em>: LiveCodeBench v6 (Aug 2024 – May 2025), OJBench, MultiPL-E, SWE-bench Verified, TerminalBench, Multi-SWE-bench, SWE-Lancer, PaperBench, Aider-Polyglot. <em>Tool use</em>: τ2-Bench, AceBench (emphasize multi-turn tool calling). <em>Reasoning</em>: AIME 2024/2025, MATH-500, HMMT 2025, CNMO 2024, PolyMath-en, ZebraLogic, AutoLogi, GPQA-Diamond, SuperGPQA, Humanity's Last Exam (Text-Only). <em>Long context</em>: MRCR, DROP, FRAMES, LongBench v2. <em>Factuality</em>: FACTS Grounding, Vectara Hallucination Leaderboard, FaithJudge. <em>General</em>: MMLU, MMLU-Redux, MMLU-Pro, IFEval, Multi-Challenge, SimpleQA, LiveBench. Baselines (all in non-thinking mode): DeepSeek-V3-0324, Qwen3-235B-A22B (vendor-recommended no-thinking), Claude Sonnet 4, Claude Opus 4, GPT-4.1, Gemini 2.5 Flash Preview (2025-05-20). Output cap 8192 tokens (16384 for SWE-bench Verified Agentless); 128k context for long-context tasks; SWE-bench Verified is evaluated agentless (single patch w/o test) and agentic (single attempt + multi-attempt best-of-N with internal verifier); SWE-bench Multilingual: single-attempt agentic only.</p>
+            <p><strong>Key Post-training Results.</strong> <em>Agentic and competitive coding</em>: Kimi-K2-Instruct is open-source SOTA on real SWE: SWE-bench Verified 65.8% (71.6% multi-attempt), SWE-bench Multilingual 47.3%, SWE-lancer 39.1% — significantly closing the gap to Claude 4 Opus/Sonnet. On competitive coding: LiveCodeBench v6 53.7%, OJBench 27.1% — leading across all models. <em>Agentic tool use</em>: K2 sets new SOTA at τ2-Bench 66.1 Pass@1 and ACEBench 76.5, substantially outperforming all baselines. <em>General</em>: strong, balanced — SimpleQA 31.0%, MMLU 89.5%, MMLU-Redux 92.7%, IFEval 89.8%, Multi-Challenge 54.1%, AIME 2024 69.6%, GPQA-Diamond 75.1%, DROP 93.5%, MRCR 55.0%. <em>Open-ended</em>: LMSYS Arena (July 17, 2025) — top-1 open-source, 5th overall (3000+ votes).</p>
+          </div>
+          <div class="zh">
+            <p><strong>评测设定。</strong>我们从多个维度评估 Kimi-K2-Instruct。<em>编程</em>:LiveCodeBench v6(2024.8–2025.5)、OJBench、MultiPL-E、SWE-bench Verified、TerminalBench、Multi-SWE-bench、SWE-Lancer、PaperBench、Aider-Polyglot。<em>Tool use</em>:τ2-Bench、AceBench(两者重点考察多轮工具调用)。<em>推理</em>:AIME 2024/2025、MATH-500、HMMT 2025、CNMO 2024、PolyMath-en、ZebraLogic、AutoLogi、GPQA-Diamond、SuperGPQA、Humanity's Last Exam(纯文本)。<em>长上下文</em>:MRCR、DROP、FRAMES、LongBench v2。<em>事实性</em>:FACTS Grounding、Vectara 幻觉榜、FaithJudge。<em>通用</em>:MMLU、MMLU-Redux、MMLU-Pro、IFEval、Multi-Challenge、SimpleQA、LiveBench。基线全部在<em>非 thinking</em> 模式下评测:DeepSeek-V3-0324、Qwen3-235B-A22B(厂商推荐的 no-thinking 配置)、Claude Sonnet 4、Claude Opus 4、GPT-4.1、Gemini 2.5 Flash Preview(2025-05-20)。输出长度 cap 在 8192 tokens(SWE-bench Verified Agentless 调到 16384);长上下文任务用 128k context;SWE-bench Verified 分 agentless(单 patch 无测)与 agentic(单次 + multi-attempt best-of-N + 内置 verifier)两种;SWE-bench Multilingual 仅 single-attempt agentic。</p>
+            <p><strong>关键后训练结果。</strong><em>Agentic 与竞赛编程</em>:Kimi-K2-Instruct 在真实 SWE 任务上开源 SOTA——SWE-bench Verified 65.8%(多次尝试 71.6%)、SWE-bench Multilingual 47.3%、SWE-lancer 39.1%,与 Claude 4 Opus/Sonnet 差距显著缩小;竞赛编程上 LiveCodeBench v6 53.7%、OJBench 27.1%,全榜领先。<em>Agentic tool use</em>:τ2-Bench 66.1 Pass@1、ACEBench 76.5,全面超基线,树立新 SOTA。<em>通用</em>:综合强且均衡——SimpleQA 31.0%、MMLU 89.5%、MMLU-Redux 92.7%、IFEval 89.8%、Multi-Challenge 54.1%、AIME 2024 69.6%、GPQA-Diamond 75.1%、DROP 93.5%、MRCR 55.0%。<em>开放式评测</em>:2025 年 7 月 17 日 LMSYS Arena,基于 3000+ 投票排开源第 1、综合第 5。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Pre-training Evaluations (Kimi-K2-Base).</strong> Against DeepSeek-V3-Base, Qwen2.5-72B-Base, Llama 4-Maverick. Kimi-K2-Base achieves SOTA on 10/12 English benchmarks: MMLU 87.79%, MMLU-Pro 69.17%, MMLU-Redux 90.17%, SuperGPQA 44.67%, SimpleQA 35.25%. Coding SOTA across all metrics: CRUXEval-I-cot 74.00%, CRUXEval-O-cot 83.50%, LiveCodeBench v6 26.29%, EvalPlus 80.33%. Math leads 3/4: MATH 70.22%, GSM8K 92.12%, GSM8K-Platinum 94.21%, narrowly behind on CMATH (90.26% vs V3 90.53%). Chinese SOTA across the board: C-Eval 92.50%, CMMLU 90.90%, CSimpleQA 77.57%.</p>
+            <p><strong>Safety Evaluation.</strong> Red-team with Promptfoo across Harmful/Criminal/Misinformation/Privacy/Security plugins paired with Basic/Prompt Injection/Iterative Jailbreak/Crescendo strategies, vs DeepSeek-V3/R1 and Qwen3. Without targeted optimization, K2 holds its own on most basic and Base64 cases (≥90% passing), while complex strategies like Crescendo lower pass rates across all models (effective adversarial). Base64 transformation has minimal impact, suggesting basic robustness to encoding shifts.</p>
+          </div>
+          <div class="zh">
+            <p><strong>预训练评测(Kimi-K2-Base)。</strong>对照 DeepSeek-V3-Base、Qwen2.5-72B-Base、Llama 4-Maverick。Kimi-K2-Base 在 12 个英文 benchmark 中 10 个 SOTA:MMLU 87.79%、MMLU-Pro 69.17%、MMLU-Redux 90.17%、SuperGPQA 44.67%、SimpleQA 35.25%。编程上全指标 SOTA:CRUXEval-I-cot 74.00%、CRUXEval-O-cot 83.50%、LiveCodeBench v6 26.29%、EvalPlus 80.33%。数学 4 中 3:MATH 70.22%、GSM8K 92.12%、GSM8K-Platinum 94.21%,CMATH 90.26% 略逊 V3 的 90.53%。中文全面 SOTA:C-Eval 92.50%、CMMLU 90.90%、CSimpleQA 77.57%。</p>
+            <p><strong>安全评测。</strong>用 Promptfoo 做红队评测,覆盖 Harmful / Criminal / Misinformation / Privacy / Security 五大插件,与 Basic / Prompt Injection / Iterative Jailbreak / Crescendo 四种策略两两组合,对比 DeepSeek-V3 / R1 与 Qwen3。在没有针对评测做专门优化的情况下,K2 在多数 basic 与 Base64 测例上保持 ≥90% 通过率;复杂策略如 Crescendo 会拉低所有模型的通过率(对抗有效),Base64 编码扰动几乎不影响,说明基本鲁棒性 OK。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5–6 Limitations &amp; Conclusions / 局限与结论<span class="sec-page">p.20</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Limitations.</strong> In internal tests we identified several limitations. On hard reasoning tasks or with unclear tool definitions, K2 may generate excessive tokens, occasionally leading to truncated outputs or incomplete tool calls. Performance can decline on some tasks if tool use is unnecessarily enabled. For building complete software projects, the one-shot prompting success rate is lower than using K2 within an agentic coding framework. We are working to address these in future releases and welcome feedback.</p>
+            <p><strong>Conclusions.</strong> We introduced Kimi K2, a 1T-parameter open-weight MoE model built for agentic intelligence. Leveraging the token-efficient MuonClip optimizer and a 15.5T-token high-quality dataset, Kimi K2 achieves stable, scalable pre-training. Post-training combines large-scale synthetic tool-use data with a unified RL framework using both verifiable rewards and self-critic feedbacks. Kimi K2 sets new state-of-the-art on agentic and reasoning benchmarks, establishing itself as the most capable open-weight LLM to date.</p>
+          </div>
+          <div class="zh">
+            <p><strong>局限。</strong>在内部测试中我们发现若干局限。在硬推理任务、或工具定义不清晰时,K2 可能生成过多 token,偶尔导致输出被截断或工具调用不完整。在某些任务上,如果不必要地开启 tool use,性能反而会下降。要构建完整的软件项目,单次 one-shot prompt 的成功率不如把 K2 放进一个 agentic coding 框架里使用。我们正在后续版本中解决这些问题,也欢迎社区反馈。</p>
+            <p><strong>结论。</strong>我们提出 Kimi K2——一个 1T 参数、面向 agentic intelligence 的开源 MoE 大模型。借助 token-efficient 的 MuonClip 优化器与 15.5T tokens 高质量数据,K2 实现了稳定、可规模化的预训练;后训练把大规模合成的 tool-use 数据与统一的 RL 框架(verifiable rewards + self-critic 反馈)结合起来。Kimi K2 在 agentic 与推理 benchmark 上刷出新 SOTA,确立其为迄今最强的开源大模型之一。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>References &amp; Appendix<span class="sec-page">p.21</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Appendix A — Contributions: the listing of authors is in alphabetical order based on their last names.</p>
+            <p>Appendix D — MuonClip ablation experiments: comparisons of vanilla Muon vs. Muon + QK-Clip across multiple control runs, including max-logit trajectories and per-head clipping ratios over training.</p>
+            <p>Appendix F — Self-Critique core and prescriptive rubrics: the full lists of rubrics used for the Self-Critique Rubric Reward, including the values-grounded "core" rubrics and the anti-reward-hacking "prescriptive" rubrics.</p>
+            <p>Appendix G — RL parameter-update pipeline: detailed diagrams of the checkpoint engine's pipelined per-parameter broadcast, including the &lt;30s end-to-end 1T-parameter sync timeline.</p>
+            <p>(References / Appendix content omitted from this offline view — please refer to the original PDF on arXiv:2507.20534 for the full bibliography, evaluation tables, ablation curves, and pipeline diagrams.)</p>
+          </div>
+          <div class="zh">
+            <p>附录 A——贡献者:作者按姓氏字母顺序列出。</p>
+            <p>附录 D——MuonClip 消融实验:vanilla Muon 与 Muon + QK-Clip 在多组对照实验下的比较,包括 max-logit 训练曲线、以及训练过程中各 attention head 的逐头 clip 比例。</p>
+            <p>附录 F——Self-Critique 的 core 与 prescriptive rubrics:用于 Self-Critique Rubric Reward 的完整 rubric 列表,包括"核心价值观"core rubrics,以及防止 reward hacking 的 prescriptive rubrics。</p>
+            <p>附录 G——RL 参数更新 pipeline:checkpoint engine 逐参数 pipeline 广播的细节示意图,包含端到端 30 秒内完成 1T 参数同步的时间线。</p>
+            <p>(本离线视图省略了参考文献与附录正文——完整 bibliography、评测表、消融曲线、pipeline 图请参阅 arXiv:2507.20534 原 PDF。)</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

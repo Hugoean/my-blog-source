@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeekMath: Pushing the Limits of Mathematical · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2402.03300 · 30 页 · 5 张图</div>
+    <h1>DeepSeekMath: Pushing the Limits of Mathematical</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-deep">优先级 deep</span>
+      <span>W6</span>
+      <span>GRPO</span><span>RL</span>
+      <span><a href="https://arxiv.org/abs/2402.03300" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2402.03300.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>DeepSeekMath 7B 通过"高质量数学预训练语料(120B tokens / CC 抽取)+ SFT + GRPO RL"三段式,在 MATH 上做到 51.7%(64-sample Self-Consistency 60.9%),逼近 Gemini-Ultra / GPT-4;最具影响力的副产品是 <strong>Group Relative Policy Optimization (GRPO)</strong>——把 PPO 里那个和 policy 同体量的 value/critic 模型彻底去掉,用同一 prompt 下 <em>G 条 rollouts 的组内 reward 做 z-score 归一</em> 来当 advantage,显存与算力近乎砍半,稳定性与显式 KL 正则保留。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>GRPO 损失推导(必默写)</strong>:对每个 prompt $q$ 从旧策略采样 $G$ 条 rollouts $\{o_i\}_{i=1}^G$,reward model 打分 $\{r_i\}$,先做 <em>组内归一</em> 得到 advantage $\hat A_{i,t} = \tilde r_i = (r_i - \mathrm{mean}(\mathbf{r})) / \mathrm{std}(\mathbf{r})$(outcome supervision 时所有 token 共享同一 $\tilde r_i$;process supervision 时 $\hat A_{i,t} = \sum_{\mathrm{index}(j) \ge t} \tilde r_i^{\,\mathrm{index}(j)}$)。优化目标为
+          $$\mathcal{J}_{\text{GRPO}}(\theta) = \mathbb{E}_{q,\,\{o_i\}\sim\pi_{\theta_{\text{old}}}}\!\Biggl[\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\Bigl(\min\!\bigl(\rho_{i,t}\hat A_{i,t},\,\mathrm{clip}(\rho_{i,t},1-\varepsilon,1+\varepsilon)\hat A_{i,t}\bigr) - \beta\,D_{\text{KL}}\!\bigl[\pi_\theta\,\|\,\pi_{\text{ref}}\bigr]\Bigr)\Biggr]$$
+          其中 $\rho_{i,t} = \pi_\theta(o_{i,t}\mid q, o_{i,<t}) / \pi_{\theta_{\text{old}}}(o_{i,t}\mid q, o_{i,<t})$ 是 PPO 的 importance ratio。KL 用 Schulman 的<em>无偏正估计</em>:$D_{\text{KL}}[\pi_\theta\,\|\,\pi_{\text{ref}}] = \frac{\pi_{\text{ref}}}{\pi_\theta} - \log\frac{\pi_{\text{ref}}}{\pi_\theta} - 1 \ge 0$。
+        </li>
+        <li><strong>vs PPO / REINFORCE</strong>:PPO 需要一个和 policy 同尺寸的 <code>value head</code> 拟合 $V_\psi$ 做 GAE,显存/算力 ×2,且 LLM 只在末 token 给 reward,value 在 token 级难学准;GRPO 用<em>组内均值代替 baseline、组内标准差代替方差归一</em>,无需 critic、无需 GAE,本质上是带 KL 正则与重要度裁剪的"<em>group-relative</em> REINFORCE"。相对 REINFORCE,GRPO 多了 ratio clipping 与显式 KL,因此既保持 PPO 的稳定性,又拿掉了 value model。</li>
+        <li><strong>为什么不需要 value function</strong>:① reward model 本身是用<em>同问题不同答案的成对比较</em>训出来的,天然是<em>相对</em>信号,group-relative advantage 与之同构;② LLM rollout 通常只在序列末打 reward,token-level value 训练困难,组内 baseline 反而无偏且方差小;③ 直接节省一份模型——这是 GRPO 在工业上被快速采纳的关键(DeepSeek-R1 / Qwen / Kimi 等都沿用)。</li>
+        <li><strong>KL 放在 loss 里、不放进 reward 里</strong>:PPO 习惯把 per-token KL 折进 reward $r_t = r_\phi - \beta\log(\pi_\theta/\pi_{\text{ref}})$ 再做 GAE;GRPO 直接把 $\beta D_{\text{KL}}$ 加到 loss 上,避免污染组内归一化后的 $\hat A_{i,t}$,数值更干净。</li>
+        <li><strong>Outcome vs Process Supervision</strong>:OS 把最终答案对错(或 reward model 末 token 分)广播到所有 token;PS 给每个推理步打分,advantage 是<em>当前 token 之后所有 step 归一化奖励之和</em>。论文里 GRPO+PS &gt; GRPO+OS,体现细粒度 step-aware credit assignment 的收益。</li>
+        <li><strong>Iterative GRPO</strong>:把当前 policy rollout + rule-judge 形成新数据,加 10% replay 持续更新 reward model;再把<em>新 policy 当新的 ref</em>开下一轮——两轮就把 GSM8K 84%→88%、MATH 47%→52%。</li>
+        <li><strong>实战超参(论文)</strong>:每题采样 $G=64$ 条 rollouts,policy lr $1\text{e-}6$,reward model lr $2\text{e-}5$,$\beta = 0.04$,$\varepsilon$ 标准 PPO 0.2,batch 1024,每 exploration 只更 policy 一次(因此 $\pi_{\theta_{\text{old}}}=\pi_\theta$ 可在分析时近似)。</li>
+        <li><strong>统一视角(必懂)</strong>:论文给出 $\nabla_\theta \mathcal{J}_A = \mathbb{E}[\sum_t GC_A(q,o,t,\pi_{rf})\nabla_\theta \log\pi_\theta(o_t\mid \cdot)]$,SFT / RFT / Online RFT / DPO / PPO / GRPO 的差别只在 <strong>(Data Source, Reward Function, Gradient Coefficient)</strong> 三个分量——SFT 系数恒 1;RFT 系数为 $\mathbb{1}[\text{correct}]$(rule);DPO 系数为 sigmoid 偏好差;PPO/GRPO 系数为 advantage(model)。所以面试时一句话:"GRPO = Online RFT 把 0/1 系数换成 group-normalized reward + clip + KL"。</li>
+        <li><strong>RL 为什么有效?</strong>论文 §5.2.2 给出关键观察:RL <em>提升 Maj@K 但不提升 Pass@K</em>——RL 没在补能力,而是把模型 TopK 中已经存在的正确解的概率往上推,本质是<em>蒸馏式分布锐化 / robust decoding</em>。这是 GRPO 论文最被引用的"祛魅"结论。</li>
+        <li><strong>已知坑 / 后续工作</strong>:① reward hacking + 长度偏置:reward model 容易奖励冗长答案,后续 DAPO/GRPO-zero/Dr.GRPO 引入 length normalization、token-level loss、去掉 std 归一等修正;② std 归一会"惩罚高方差 prompt"——所有都答对/错的 group 没有梯度;③ $G$ 不能太小(论文用 64),小了 baseline 估计太噪声。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      GRPO 原论文,RL 后训练事实标准
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3a">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3b">§1.1 Contributions / 主要贡献</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-3c">§1.2 Summary of Evaluations and Metrics / 评测综述</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-4a">§2.1 Data Collection &amp; Decontamination / 数学语料采集与去污染</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-4b">§2.2 Validating Corpus Quality / 语料质量验证</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-4c">§2.3 Training DeepSeekMath-Base 7B / 预训练基模</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-5a">§3 Supervised Fine-Tuning / SFT</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-6a">§4.1.1 From PPO to GRPO / 从 PPO 到 GRPO</a><span class="toc-page">p.11</span></li>
+
+      <li><a href="#sec-6b">§4.1.2-4 GRPO Outcome / Process / Iterative</a><span class="toc-page">p.13</span></li>
+
+      <li><a href="#sec-6c">§4.2 Training DeepSeekMath-RL / RL 训练与评估</a><span class="toc-page">p.14</span></li>
+
+      <li><a href="#sec-7a">§5.1 Lessons in Pre-Training / 预训练观察</a><span class="toc-page">p.15</span></li>
+
+      <li><a href="#sec-7b">§5.2.1 Unified Paradigm / RL 统一视角</a><span class="toc-page">p.17</span></li>
+
+      <li><a href="#sec-7c">§5.2.2-3 Why &amp; How RL Works / RL 为何有效</a><span class="toc-page">p.21</span></li>
+
+      <li><a href="#sec-7d">§6 Conclusion / 结论与展望</a><span class="toc-page">p.22</span></li>
+
+      <li><a href="#sec-8">References / 参考文献(略)</a><span class="toc-page">p.23</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (5 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2402.03300_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.1 · 1357×800</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>论文 Figure 1,横轴时间线(2023-04 ~ 2024-01),纵轴 MATH benchmark Top@1 accuracy。把当年主流开源数学模型按发布时间打点,顶部三条虚线是闭源 SOTA:GPT-4 early(~42)/ GPT-4 API(~52)/ Gemini-Ultra(~53)。红五角星标的 <strong>DeepSeekMath-7B</strong> 一脚踢到了 52% 量级。</p>
+          <p><strong>② 关键数据:</strong>LLaMA1-65B ≈ 10%,WizardMath-70B ≈ 22%,Mistral-7B ≈ 28%,Llemma-34B ≈ 31%,Qwen-72B ≈ 35%;DeepSeekMath-7B ≈ 52%——以 7B 参数<em>跨越了 70B 量级开源模型并打到闭源 GPT-4 同档</em>。</p>
+          <p><strong>③ 启示:</strong>"门面图",一图证明两件事——① 数学推理能力<em>不是参数堆出来的</em>,高质量数学预训练语料 + GRPO RL 比规模 ×10 更有效;② 在 2024 年初,开源 7B 第一次在 MATH 上突破 50%。这也是为什么这篇 paper 在 R1/o1 时代被反复提及——GRPO 作为算法基底登场。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2402.03300_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.5 · 348×443</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>装饰性 leaf-icon(论文里作为 section divider 出现,非数据图)。叶片轮廓里散布着 π、∂、∑、e、几何符号,象征"从自然语料中生长出来的数学语料"。</p>
+          <p><strong>② 内容性图请看:</strong>fig_5(各语料训练曲线)与 fig_1(MATH 时间线)是真正承载论文 Figure 1/Figure 3 的图。这张 leaf 图对应论文 Section 2 的标题装饰。</p>
+          <p><strong>③ 启示:</strong>解析器把 PDF 里的矢量装饰图当作图片抽出来了,可忽略其语义。如果做笔记可以跳过。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_3">
+        <img src="../figures/2402.03300_fig_3.png" alt="fig_3" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_3</span> · p.5 · 795×855</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_3">
+          <p><strong>① 图说明:</strong>同样是装饰性 tree-icon——彩色数学符号(数字、+−×÷、π、根号)排列成一棵"知识树",对应论文里 Section 3 (SFT) / Section 4 (RL) 的章节扉页装饰。</p>
+          <p><strong>② 内容性图请看:</strong>论文 Figure 4(PPO vs GRPO 架构对比)和 Figure 5(RFT / Online RFT / GRPO+OS / GRPO+PS 训练曲线)未被解析器抽出。如需 PPO/GRPO 框图,请翻原文 PDF p.13。</p>
+          <p><strong>③ 启示:</strong>跳过即可。这张图对理解算法没有信息量。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_4">
+        <img src="../figures/2402.03300_fig_4.png" alt="fig_4" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_4</span> · p.5 · 638×630</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_4">
+          <p><strong>① 图说明:</strong>装饰性 globe-icon——一个网格地球,呼应论文里强调"Common Crawl 是<em>全球</em>多语数学语料来源,中英文都包含"的叙事。</p>
+          <p><strong>② 内容性图请看:</strong>真正承载多语数据贡献的是 Table 1(DeepSeekMath Corpus vs MathPile / OpenWebMath / Proof-Pile-2 在英中 8 个 benchmark 上的对比)和 fig_5 训练曲线。</p>
+          <p><strong>③ 启示:</strong>跳过。论文 Section 2.1 的 Figure 2 (iterative pipeline 流程图)未被抽出,这是真正值得看的——展示 fastText 召回 → 域级人工标注 → 迭代 4 轮 → 35.5M pages / 120B tokens 的全过程。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_5">
+        <img src="../figures/2402.03300_fig_5.png" alt="fig_5" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_5</span> · p.7 · 3022×2857</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_5">
+          <p><strong>① 图说明:</strong>论文 Figure 3,DeepSeek-LLM 1.3B 分别在四种数学语料(MathPile / OpenWebMath / Proof-Pile-2 / <strong>DeepSeekMath Corpus</strong>)上继续预训练 150B tokens,在 GSM8K / MATH / CMATH / BBH 四个 benchmark 上的 few-shot CoT 准确率随训练 token 量(0~150B)的变化曲线。红色 = DeepSeekMath Corpus,显著高于其它。</p>
+          <p><strong>② 关键数据:</strong>训练 150B tokens 后:GSM8K(红 ≈ 23% vs 橙绿 ≈ 12%,蓝 ≈ 2%)、MATH(红 ≈ 13.6% vs 橙绿 ≈ 11%,蓝 ≈ 3%)、CMATH(红 ≈ 42% vs 橙绿 ≈ 18%,蓝 ≈ 0%——MathPile 中文基本没用,因为它 85% 是 arXiv 英文 paper)、BBH(红 ≈ 33% vs 其它 ≈ 28%——数学预训练对通用推理也有正迁移)。</p>
+          <p><strong>③ 启示:</strong>三条:① <em>语料质量 &gt; 语料尺寸</em>(Proof-Pile-2 51.9B 不敌 DeepSeekMath 120B 的前 50B);② <em>多语必要</em>:英文为主的 corpora 在中文 benchmark CMATH 上几乎没增益;③ <em>arXiv 不够用</em>:MathPile(85% arXiv)在所有 benchmark 上几乎贴地——这给后续 §5.1.2 "arXiv ineffective" 的结论铺了路。这是支撑全篇"为什么要自己造 DeepSeekMath Corpus"的核心证据图。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文 / 中文双语逐段对照)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models — Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, Y.K. Li, Y. Wu, Daya Guo (DeepSeek-AI, Tsinghua University, Peking University). <a href="https://github.com/deepseek-ai/DeepSeek-Math" target="_blank">github.com/deepseek-ai/DeepSeek-Math</a></p></div>
+    </details>
+
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Mathematical reasoning poses a significant challenge for language models due to its complex and structured nature. In this paper, we introduce DeepSeekMath 7B, which continues pre-training DeepSeek-Coder-Base-v1.5 7B with 120B math-related tokens sourced from Common Crawl, together with natural language and code data. DeepSeekMath 7B has achieved an impressive score of 51.7% on the competition-level MATH benchmark without relying on external toolkits and voting techniques, approaching the performance level of Gemini-Ultra and GPT-4. Self-consistency over 64 samples from DeepSeekMath 7B achieves 60.9% on MATH. The mathematical reasoning capability of DeepSeekMath is attributed to two key factors: First, we harness the significant potential of publicly available web data through a meticulously engineered data selection pipeline. Second, we introduce Group Relative Policy Optimization (GRPO), a variant of Proximal Policy Optimization (PPO), that enhances mathematical reasoning abilities while concurrently optimizing the memory usage of PPO.</p>
+          </div>
+          <div class="zh">
+            <p>数学推理由于其复杂且高度结构化的特性,对语言模型构成了重大挑战。本文提出 DeepSeekMath 7B——以 DeepSeek-Coder-Base-v1.5 7B 为起点,继续在 120B 来自 Common Crawl 的数学相关 token 上预训练,并辅以自然语言与代码数据。在不使用任何外部工具与投票技巧的前提下,DeepSeekMath 7B 在竞赛级 MATH 基准上取得了 51.7% 的成绩,逼近 Gemini-Ultra 与 GPT-4;在 64 条采样上做 Self-Consistency 则达到 60.9%。DeepSeekMath 的数学能力归功于两件事:① 通过精心设计的数据筛选流水线,我们充分挖掘了公开 Web 数据中的数学价值;② 提出 <strong>Group Relative Policy Optimization (GRPO)</strong>——一种 PPO 的变体,在增强数学推理能力的同时显著降低了 PPO 的显存占用。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3a">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Large language models (LLM) have revolutionized the approach to mathematical reasoning in artificial intelligence, spurring significant advancements in both the quantitative reasoning benchmark and the geometry reasoning benchmark. Moreover, these models have proven instrumental in assisting humans in solving complex mathematical problems. However, cutting-edge models such as GPT-4 and Gemini-Ultra are not publicly available, and the currently accessible open-source models considerably trail behind in performance. In this study, we introduce DeepSeekMath, a domain-specific language model that significantly outperforms the mathematical capabilities of open-source models and approaches the performance level of GPT-4 on academic benchmarks. To achieve this, we create the DeepSeekMath Corpus, a large-scale high-quality pre-training corpus comprising 120B math tokens. This dataset is extracted from the Common Crawl (CC) using a fastText-based classifier.</p>
+          </div>
+          <div class="zh">
+            <p>大语言模型彻底改变了 AI 做数学推理的方式,推动了定量推理(如 MATH)与几何推理基准的进展,也在辅助人类解决复杂数学问题方面发挥了作用。然而,前沿模型 GPT-4、Gemini-Ultra 都是闭源的,目前可用的开源模型在性能上远远落后。本文引入 DeepSeekMath——一个领域专用语言模型,在数学能力上显著超越所有开源模型,并在学术基准上接近 GPT-4 的水平。为此我们构建了 <strong>DeepSeekMath Corpus</strong>:一个由 120B 数学 token 组成的大规模高质量预训练语料,通过 fastText 分类器从 Common Crawl 中抽取。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In the initial iteration, the classifier is trained using instances from OpenWebMath as positive examples and a diverse selection of other web pages as negatives. We then employ the classifier to mine additional positive instances from the CC, which are further refined through human annotation, and the classifier is updated with this enhanced dataset. The evaluation results indicate that the large-scale corpus is of high quality: our base model DeepSeekMath-Base 7B achieves 64.2% on GSM8K and 36.2% on the competition-level MATH dataset, outperforming Minerva 540B. The DeepSeekMath Corpus is multilingual, so we also notice improvements on Chinese mathematical benchmarks. DeepSeekMath-Base is initialized with DeepSeek-Coder-Base-v1.5 7B, as we notice that starting from a code training model is a better choice compared to a general LLM. Furthermore, math training also improves model capability on MMLU and BBH benchmarks, indicating it enhances not only mathematical abilities but also general reasoning.</p>
+          </div>
+          <div class="zh">
+            <p>第一轮迭代中,分类器以 OpenWebMath 中的样本作为正例,以 CC 中的多样化网页作为负例进行训练;随后用该分类器从 CC 中召回更多正例,再经人工标注精修,并以此更新数据反过来改进分类器。评测结果表明该大规模语料质量很高:基模 DeepSeekMath-Base 7B 在 GSM8K 上拿到 64.2%、在竞赛级 MATH 上拿到 36.2%,超过了 Minerva 540B。语料本身多语种,因此中文数学基准也得到提升。DeepSeekMath-Base 从 <em>代码模型</em> DeepSeek-Coder-Base-v1.5 7B 初始化——我们发现从代码模型起步比从通用 LLM 起步更好。此外,数学训练也提升了 MMLU 与 BBH 上的表现,说明它不仅增强数学能力,也<em>放大了通用推理能力</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>After pre-training, we apply mathematical instruction tuning to DeepSeekMath-Base with chain-of-thought, program-of-thought, and tool-integrated reasoning data. The resulting model DeepSeekMath-Instruct 7B beats all 7B counterparts and is comparable with 70B open-source instruction-tuned models. Furthermore, we introduce the <strong>Group Relative Policy Optimization (GRPO)</strong>, a variant reinforcement learning algorithm of Proximal Policy Optimization (PPO). GRPO foregoes the critic model, instead estimating the baseline from group scores, significantly reducing training resources. By solely using a subset of English instruction-tuning data, GRPO obtains a substantial improvement over the strong DeepSeekMath-Instruct: in-domain GSM8K 82.9% → 88.2%, MATH 46.8% → 51.7%, and out-of-domain CMATH 84.6% → 88.8%. We also provide a unified paradigm that subsumes RFT, DPO, PPO, and GRPO as direct or simplified RL techniques, and conduct extensive experiments to investigate the essential elements of this paradigm.</p>
+          </div>
+          <div class="zh">
+            <p>预训练后,我们用 chain-of-thought (CoT)、program-of-thought (PoT) 与 tool-integrated reasoning 三种格式的数据,对 DeepSeekMath-Base 做数学指令微调,得到 DeepSeekMath-Instruct 7B——压过所有 7B 对手,可与 70B 开源 instruction-tuned 模型抗衡。更进一步,我们提出 <strong>Group Relative Policy Optimization (GRPO)</strong>:PPO 的一种变体,<em>放弃 critic 模型,直接用同一 prompt 下一组采样的组内分数估计 baseline</em>,从而显著降低训练资源。仅用一个子集做 RL,GRPO 就将 DeepSeekMath-Instruct 大幅提升——in-domain:GSM8K 82.9% → 88.2%、MATH 46.8% → 51.7%;out-of-domain:CMATH 84.6% → 88.8%。我们还给出一个统一范式,将 RFT、DPO、PPO 与 GRPO 都视作"直接或简化版 RL",并通过大量实验研究其关键要素。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3b">
+      <summary>
+        <span>§1.1 Contributions / 主要贡献<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Math Pre-Training at Scale.</strong> Our research shows that publicly accessible Common Crawl data contains valuable mathematical information. With a carefully designed pipeline, we construct DeepSeekMath Corpus, a 120B-token math corpus filtered from the web — almost 7× the size of Minerva's math web pages and 9× OpenWebMath. Our pre-trained base DeepSeekMath-Base 7B reaches Minerva 540B-level performance, demonstrating that parameter count is not the only key factor for mathematical reasoning. Code training prior to math training improves models' ability to solve mathematical problems both with and without tool use — offering a partial answer to the long-standing question of whether code training improves reasoning. In contrast, although training on arXiv is common in prior math LLMs, it brings no notable improvements on any of our benchmarks.</p>
+          </div>
+          <div class="zh">
+            <p><strong>大规模数学预训练。</strong>我们证明:公开的 Common Crawl 里其实蕴含大量数学价值。借助精心设计的数据选择流水线,我们构建了 <strong>DeepSeekMath Corpus</strong>——一个 120B token 的高质量数学语料,体量近乎 Minerva 数学网页的 7 倍、OpenWebMath 的 9 倍。预训练的基模 DeepSeekMath-Base 7B 达到 Minerva 540B 同档,说明<em>参数量不是数学推理唯一的关键</em>,小模型用高质量数据也能干仗。<em>先训代码再训数学</em>,无论是否使用工具,都能提升数学解题能力——这部分回答了"代码训练是否提升推理?"的悬案:在数学领域,答案是肯定的。然而<em>训 arXiv</em> 虽然在过往工作中常见,在我们所有数学基准上都没带来明显提升。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Exploration and Analysis of Reinforcement Learning.</strong> We introduce <strong>GRPO</strong>, an efficient and effective RL algorithm. GRPO foregoes the critic model and estimates the baseline from group scores, significantly reducing training resources versus PPO. GRPO significantly enhances DeepSeekMath-Instruct using only the instruction-tuning data, and we also observe out-of-domain gains during RL. We further provide a unified paradigm to understand RFT, DPO, PPO and GRPO, and conduct extensive experiments — online vs offline training, outcome vs process supervision, single-turn vs iterative RL — to deeply investigate the essential elements. Finally, based on this paradigm, we explore why RL is effective and summarize potential directions for more effective RL of LLMs.</p>
+          </div>
+          <div class="zh">
+            <p><strong>强化学习的探索与分析。</strong>我们提出 <strong>GRPO</strong>——一个高效有效的 RL 算法。GRPO <em>放弃 critic 模型、从组内分数估计 baseline</em>,相比 PPO 训练资源大幅下降。仅使用 SFT 数据,GRPO 就显著提升了 DeepSeekMath-Instruct;并且在 RL 过程中我们观察到 <em>out-of-domain</em> 也有增益(即只在 GSM8K/MATH 训练,却在 CMATH 等基准也涨)。我们给出一个统一范式来理解 RFT、DPO、PPO、GRPO,并通过 online vs offline、outcome vs process supervision、single-turn vs iterative RL 等大量实验,深入研究范式的关键要素。最后,基于此范式我们探讨"RL 为何有效",并总结出未来更有效 RL of LLMs 的几个方向。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3c">
+      <summary>
+        <span>§1.2 Summary of Evaluations and Metrics / 评测综述<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>English &amp; Chinese Mathematical Reasoning.</strong> We benchmark on English GSM8K / MATH / SAT / OCW Courses / MMLU-STEM and Chinese MGSM-zh / CMATH / Gaokao-MathCloze / Gaokao-MathQA, evaluating both tool-free text solutions and Python-aided solutions. On English benchmarks, DeepSeekMath-Base is competitive with closed-source Minerva 540B and surpasses every open-source base model (e.g., Mistral 7B, Llemma-34B) by a large margin. On Chinese benchmarks, our model is superior — likely because we do not restrict pre-training data to English. With instruction tuning and RL, DeepSeekMath-Instruct and DeepSeekMath-RL obtain &gt;50% accuracy on competition-level MATH for the first time in the open-source community.</p>
+          </div>
+          <div class="zh">
+            <p><strong>中英文数学推理。</strong>评测覆盖英文 GSM8K / MATH / SAT / OCW / MMLU-STEM 和中文 MGSM-zh / CMATH / Gaokao-MathCloze / Gaokao-MathQA,同时考察"纯文本解题"与"Python 工具解题"两类能力。英文基准上,DeepSeekMath-Base 与闭源 Minerva 540B 持平,大幅超越所有开源 base(Mistral 7B、Llemma-34B 等);中文基准上更强,这要归功于我们没像之前的工作那样只用英文数学数据。经过指令微调与 RL,DeepSeekMath-Instruct 与 DeepSeekMath-RL 在 MATH 上首次让开源社区跨过 50% 大关。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Formal Mathematics &amp; General Capability.</strong> We evaluate informal-to-formal theorem proving on miniF2F with Isabelle, where DeepSeekMath-Base shows strong few-shot autoformalization. To build a comprehensive profile, we also report MMLU (57-subject multiple choice), BBH (challenging multi-step reasoning), HumanEval and MBPP (code). Math pre-training benefits both language understanding and general reasoning — DeepSeekMath-Base outperforms its DeepSeek-Coder-Base-v1.5 precursor on MMLU/BBH while maintaining HumanEval/MBPP coding performance.</p>
+          </div>
+          <div class="zh">
+            <p><strong>形式化数学 & 通用能力。</strong>我们用 miniF2F + Isabelle 评测"非形式→形式"定理证明,DeepSeekMath-Base 表现出强 few-shot autoformalization 能力。为了画出更完整的画像,我们还报告 MMLU(57 学科多选)、BBH(挑战性多步推理)、HumanEval / MBPP(代码)。结果显示数学预训练对语言理解与通用推理也有正向迁移:DeepSeekMath-Base 在 MMLU/BBH 上明显超过其前身 DeepSeek-Coder-Base-v1.5,同时在 HumanEval/MBPP 上保持代码能力不退化。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4a">
+      <summary>
+        <span>§2.1 Data Collection &amp; Decontamination / 数学语料采集与去污染<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We outline the iterative pipeline that constructs the DeepSeekMath Corpus from Common Crawl, starting from a small high-quality seed corpus (OpenWebMath). Using the seed corpus we train a fastText model to recall OpenWebMath-like math web pages: we randomly select 500K positives from the seed and 500K negatives from CC, with vector dim 256, lr 0.1, max n-gram 3, min word occurrence 3, 3 training epochs. We apply URL-based and near-duplicate deduplication to the original CC, yielding 40B HTML pages, then recall math pages with the fastText model and only keep top-ranking ones. The volume of data preserved is assessed through pre-training experiments on the top 40B / 80B / 120B / 160B tokens — in the first iteration we keep the top 40B.</p>
+          </div>
+          <div class="zh">
+            <p>我们介绍从 Common Crawl 构造 DeepSeekMath Corpus 的<em>迭代式</em>流水线,以一个小而精的种子语料(OpenWebMath)起步。基于种子,我们训一个 fastText 模型来召回"OpenWebMath 风格"的数学网页:从种子随机抽 50 万正例,从 CC 随机抽 50 万负例,向量维度 256、学习率 0.1、最大 n-gram 3、最小词频 3、训练 3 个 epoch。原始 CC 经过 URL 去重与近邻去重后剩 400 亿 HTML 网页;然后用 fastText 召回数学网页,并按分数排序只保留 Top。保留多少由 4 组预训练实验(Top 40B / 80B / 120B / 160B tokens)决定——第一轮选择 Top 40B。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>After the first iteration, many math web pages remain uncollected because the seed lacks diversity. We therefore identify additional math web sources: we partition CC into <em>domains</em> (pages sharing the same base URL); domains where over 10% of pages were collected in the first iteration are classified as math-related (e.g. <code>mathoverflow.net</code>); we then manually annotate the URL paths associated with math content within those domains (e.g. <code>mathoverflow.net/questions</code>) and add uncollected pages under those paths back into the seed. This yields more positives and a better fastText model for the next iteration. After 4 iterations we end up with <strong>35.5M math web pages, 120B tokens</strong> — in iteration 4 nearly 98% of data was already collected by iteration 3, so we stop.</p>
+          </div>
+          <div class="zh">
+            <p>第一轮后仍有大量数学网页未被收集,因为种子多样性不够。于是我们识别额外的数学网源:把整个 CC 按 <em>domain</em>(共享同一 base URL 的网页集合)切分;若某 domain 在第一轮中超过 10% 网页被召回,就将其判为数学相关(如 <code>mathoverflow.net</code>);随后人工标注该 domain 内承载数学内容的 URL 路径(如 <code>mathoverflow.net/questions</code>),将这些路径下未被召回的网页加入种子。这样得到更多正例与更强的 fastText 模型,进入下一轮。经过 <em>4 轮迭代</em>,最终得到 <strong>3550 万张数学网页、120B token</strong>——第 4 轮发现约 98% 数据已在第 3 轮就被采到,于是停止。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To avoid benchmark contamination, we filter out web pages containing questions or answers from English benchmarks (GSM8K, MATH) and Chinese benchmarks (CMATH, AGIEval). The criteria: any text segment containing a 10-gram string that exactly matches any substring of an evaluation benchmark is removed. For benchmark texts shorter than 10-grams but ≥ 3-grams, we use exact matching.</p>
+          </div>
+          <div class="zh">
+            <p>为了避免基准污染,我们过滤掉任何含有评测题目或答案的网页——英文 benchmark:GSM8K、MATH;中文 benchmark:CMATH、AGIEval。规则:任何文本片段含有与评测集任一子串<em>完全匹配</em>的 10-gram 即剔除;对于不足 10-gram 但 ≥3-gram 的 benchmark 文本,使用精确匹配过滤。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4b">
+      <summary>
+        <span>§2.2 Validating Corpus Quality / 语料质量验证<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We pre-train DeepSeek-LLM 1.3B for 150B tokens separately on each of four math corpora — MathPile (8.9B, &gt;85% arXiv), OpenWebMath (13.6B), Proof-Pile-2 (51.9B; OpenWebMath + AlgebraicStack + arXiv at 2:4:1) and our DeepSeekMath Corpus (120B) — using AdamW ($\beta_1=0.9, \beta_2=0.95$, wd $0.1$), peak lr $5.3\text{e-}4$ with multi-step decay (to $31.6\%$ after 80% and $10\%$ after 90%), batch 4M tokens, 4K context length.</p>
+          </div>
+          <div class="zh">
+            <p>我们用 DeepSeek-LLM 1.3B 在四种数学语料上分别做 150B token 的预训练对照:MathPile(8.9B,&gt;85% 是 arXiv)、OpenWebMath(13.6B)、Proof-Pile-2(51.9B;OpenWebMath + AlgebraicStack + arXiv = 2:4:1)和我们的 DeepSeekMath Corpus(120B)。优化器 AdamW($\beta_1=0.9, \beta_2=0.95$、weight decay $0.1$),峰值学习率 $5.3\text{e-}4$,采用多阶段衰减(80% 进度后降到峰值 31.6%、90% 后降到 10%),batch 大小 4M tokens,上下文长度 4K。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The DeepSeekMath Corpus wins on three dimensions: <strong>(1) High quality</strong> — on 8 math benchmarks with few-shot CoT, the model trained on DeepSeekMath leads clearly (e.g. GSM8K 23.8% vs Proof-Pile-2 14.3%, OpenWebMath 11.5%, MathPile 2.7%; MATH 13.6% vs 11.2/8.9/3.3); Figure 3 shows DeepSeekMath-trained model already beats Proof-Pile-2 at 50B tokens (= 1 full epoch of Proof-Pile-2), indicating higher per-token quality. <strong>(2) Multilingual</strong> — the corpus contains both English and Chinese; existing English-centric corpora may even <em>hurt</em> Chinese math performance (CMATH: 41.5% on DeepSeekMath vs 1.2% on MathPile, vs 12.3% no-math-training baseline). <strong>(3) Large-scale</strong> — DeepSeekMath Corpus is several times larger than alternatives, so the 1.3B model shows a steeper, longer-lasting learning curve; baseline corpora are repeated for many epochs and quickly plateau.</p>
+          </div>
+          <div class="zh">
+            <p>DeepSeekMath Corpus 在三个维度全胜:<strong>① 高质量</strong>——在 8 个数学 benchmark 的 few-shot CoT 评测中遥遥领先(GSM8K 23.8% vs Proof-Pile-2 14.3% / OpenWebMath 11.5% / MathPile 2.7%;MATH 13.6% vs 11.2 / 8.9 / 3.3);Figure 3 显示 DeepSeekMath 训练的模型在 50B token 处已经超过 Proof-Pile-2 跑完 1 个 epoch 的水平,说明<em>每 token 的平均质量更高</em>。<strong>② 多语种</strong>——同时覆盖英中;现有英文为主的语料反而可能<em>损害</em>中文数学表现(CMATH:DeepSeekMath 41.5% vs MathPile 1.2%,而 no-math-training baseline 都有 12.3%——MathPile 训完反而退化)。<strong>③ 大规模</strong>——体量远超其他语料,1.3B 模型在 DeepSeekMath 上呈现更陡且更持久的学习曲线;其它 baseline 语料训不了几个 epoch 就已经被反复重放,性能很快饱和。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4c">
+      <summary>
+        <span>§2.3 Training DeepSeekMath-Base 7B / 预训练基模<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>DeepSeekMath-Base 7B is initialized from DeepSeek-Coder-Base-v1.5 7B and trained for 500B tokens with the following mix: <strong>56% DeepSeekMath Corpus, 4% AlgebraicStack, 10% arXiv, 20% GitHub code, 10% natural-language CC (English &amp; Chinese)</strong>. We use the training setting from §2.2.1 except peak lr $4.2\text{e-}4$ and batch size 10M tokens.</p>
+          </div>
+          <div class="zh">
+            <p>DeepSeekMath-Base 7B 从 DeepSeek-Coder-Base-v1.5 7B 初始化,继续训练 500B token,数据混合比例为:<strong>56% DeepSeekMath Corpus、4% AlgebraicStack、10% arXiv、20% GitHub 代码、10% 中英文 CC 自然语言</strong>。训练设置与 §2.2.1 相同,只把峰值学习率改为 $4.2\text{e-}4$、batch 改为 10M tokens。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Step-by-step CoT reasoning.</strong> Across 8 English/Chinese benchmarks with few-shot CoT, DeepSeekMath-Base 7B leads every open-source base model — including general Mistral 7B and Llemma 34B (which is itself math-pretrained on Proof-Pile-2). On competition-level MATH, DeepSeekMath-Base surpasses other open-source base models by over 10% absolute, and even beats <em>closed-source Minerva 540B</em> — a model 77× larger built on PaLM. Concretely: GSM8K 64.2% (vs Minerva 540B 58.8%), MATH 36.2% (vs 33.6%), CMATH 71.7%, Gaokao-MathQA 35.3%.</p>
+          </div>
+          <div class="zh">
+            <p><strong>纯文本 CoT 推理。</strong>在 8 个中英文数学基准的 few-shot CoT 评测中,DeepSeekMath-Base 7B <em>横扫所有开源 base</em> —— 不论是通用 Mistral 7B,还是在 Proof-Pile-2 上做过数学预训练的 Llemma 34B,都被甩开。在竞赛级 MATH 上,DeepSeekMath-Base 比其他开源 base 高出 10% 以上绝对值,甚至打过<em>闭源 Minerva 540B</em>(77 倍参数、基于 PaLM 进一步训数学)。具体:GSM8K 64.2%(Minerva 540B 58.8%)、MATH 36.2%(33.6%)、CMATH 71.7%、Gaokao-MathQA 35.3%。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Tool-aided math &amp; formal proof.</strong> With few-shot program-of-thought (Python) prompting, DeepSeekMath-Base 7B beats prior SOTA Llemma 34B on both GSM8K+Python (66.9% vs 64.6%) and MATH+Python (31.4% vs 26.3%). On informal-to-formal proving on miniF2F-valid/test with Isabelle (using model-generated proof sketches plus Sledgehammer), it also leads (25.8% / 24.6% vs Llemma 34B's 21.0% / 21.3%).</p>
+            <p><strong>General capability.</strong> Compared to its precursor DeepSeek-Coder-Base-v1.5, DeepSeekMath-Base 7B gains significantly on MMLU (49.1% → 54.9%) and BBH (55.2% → 59.5%), while maintaining HumanEval / MBPP coding scores — i.e., math training also <em>amplifies general reasoning</em> without sacrificing code ability.</p>
+          </div>
+          <div class="zh">
+            <p><strong>工具数学 & 形式化证明。</strong>在 few-shot program-of-thought(Python)评测下,DeepSeekMath-Base 7B 在 GSM8K+Python(66.9% vs 64.6%)与 MATH+Python(31.4% vs 26.3%)上都击败前 SOTA Llemma 34B。在 miniF2F-valid/test 用 Isabelle 做 informal-to-formal proving(模型生成 proof sketch + Sledgehammer 补全)同样领先(25.8% / 24.6% vs Llemma 34B 的 21.0% / 21.3%)。</p>
+            <p><strong>通用能力。</strong>相比前身 DeepSeek-Coder-Base-v1.5,DeepSeekMath-Base 7B 在 MMLU(49.1% → 54.9%)和 BBH(55.2% → 59.5%)上明显提升,同时维持 HumanEval / MBPP 代码能力不退化——也就是说<em>数学训练放大了通用推理,且没牺牲代码能力</em>。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5a">
+      <summary>
+        <span>§3 Supervised Fine-Tuning / SFT 数据 &amp; DeepSeekMath-Instruct<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We construct a 776K-example math instruction-tuning dataset covering English and Chinese problems across diverse fields and difficulty levels, with solutions in three formats: <strong>chain-of-thought (CoT)</strong>, <strong>program-of-thought (PoT)</strong>, and <strong>tool-integrated reasoning</strong>. The English split annotates GSM8K and MATH with tool-integrated solutions plus a subset of MathInstruct and the Lila-OOD training set covering algebra, probability, number theory, calculus and geometry. The Chinese split covers K-12 problems spanning 76 sub-topics (e.g., linear equations) with CoT and tool-integrated solutions.</p>
+          </div>
+          <div class="zh">
+            <p>我们构建了一个 77.6 万样本的数学指令微调数据集,覆盖中英文、各数学分支与不同难度,每道题配三种格式的解答:<strong>chain-of-thought (CoT)</strong>、<strong>program-of-thought (PoT)</strong>、<strong>tool-integrated reasoning</strong>。英文部分:对 GSM8K 和 MATH 重新标注 tool-integrated 解答,并采用 MathInstruct 的一个子集以及 Lila-OOD 训练集——覆盖代数、概率、数论、微积分与几何。中文部分:K-12 数学题,涵盖 76 个子主题(如线性方程),用 CoT 与 tool-integrated 两种格式标注。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>DeepSeekMath-Instruct 7B is trained on the above SFT data starting from DeepSeekMath-Base; examples are randomly concatenated up to 4K context length, trained for 500 steps with batch 256 and constant lr $5\text{e-}5$. Under no-tool evaluation, DeepSeekMath-Instruct 7B surpasses all open-source models and most proprietary ones (Inflection-2, Gemini Pro) by ≥9% absolute on MATH — even beating substantially larger Qwen 72B and math-RL-enhanced WizardMath-v1.1 7B. It rivals Chinese proprietary GLM-4 and Baichuan-3 on MATH but still trails GPT-4 / Gemini Ultra. With tool integration, DeepSeekMath-Instruct 7B approaches 60% on MATH — beating all open-source models — and rivals DeepSeek-LLM-Chat 67B (10× larger) on other benchmarks.</p>
+          </div>
+          <div class="zh">
+            <p>DeepSeekMath-Instruct 7B 从 DeepSeekMath-Base 起步,在上述 SFT 数据上微调:样本随机拼接到 4K 上下文,训练 500 步,batch 256,恒定 lr $5\text{e-}5$。<em>不用工具</em>评测下,DeepSeekMath-Instruct 7B 在 MATH 上以 ≥9% 绝对优势超过所有开源模型与大多数闭源模型(Inflection-2、Gemini Pro)——甚至打过参数大得多的 Qwen 72B、用数学 RL 加强过的 WizardMath-v1.1 7B。在 MATH 上与中文闭源 GLM-4、Baichuan-3 平手,但仍落后 GPT-4 / Gemini Ultra。<em>启用工具</em>后,DeepSeekMath-Instruct 7B 在 MATH 上逼近 60%——超越所有开源——在其他 benchmark 上与体量大 10 倍的 DeepSeek-LLM-Chat 67B 持平。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6a">
+      <summary>
+        <span>§4.1.1 From PPO to GRPO / 从 PPO 到 GRPO(核心算法)<span class="sec-page">p.11</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Reinforcement learning has been proven effective in further improving the mathematical reasoning ability of LLMs after SFT. <strong>Proximal Policy Optimization (PPO)</strong> is the de-facto actor-critic RL algorithm for LLM RL fine-tuning. It optimizes the following clipped surrogate objective:</p>
+            <div class="bi-eq">$$\mathcal{J}_{\text{PPO}}(\theta) = \mathbb{E}_{q\sim P(Q),\,o\sim\pi_{\theta_{\text{old}}}(O\mid q)}\!\left[\frac{1}{|o|}\sum_{t=1}^{|o|}\min\!\left(\frac{\pi_\theta(o_t\mid q,o_{<t})}{\pi_{\theta_{\text{old}}}(o_t\mid q,o_{<t})}A_t,\,\mathrm{clip}\!\left(\frac{\pi_\theta(o_t\mid q,o_{<t})}{\pi_{\theta_{\text{old}}}(o_t\mid q,o_{<t})},1-\varepsilon,1+\varepsilon\right)A_t\right)\right]\quad(1)$$</div>
+            <p>where $A_t$ is computed by Generalized Advantage Estimation (GAE) on rewards $\{r_{\ge t}\}$ and a learned value function $V_\psi$. A per-token KL penalty from a reference model is folded into the reward:</p>
+            <div class="bi-eq">$$r_t = r_\varphi(q, o_{\le t}) - \beta\log\frac{\pi_\theta(o_t\mid q,o_{<t})}{\pi_{\text{ref}}(o_t\mid q,o_{<t})}\quad(2)$$</div>
+          </div>
+          <div class="zh">
+            <p>在 SFT 之后,强化学习被证明能进一步提升 LLM 的数学推理能力。<strong>Proximal Policy Optimization (PPO)</strong> 是 LLM RL 微调阶段的事实标准 actor-critic 算法,它优化下面的<em>带截断的代理目标</em>(公式 1),其中 $A_t$ 是用 Generalized Advantage Estimation (GAE) 基于一连串奖励 $\{r_{\ge t}\}$ 和一个学习的值函数 $V_\psi$ 得到的优势。同时,为缓解 reward model 被过度优化,标准做法是把"对参考模型 $\pi_{\text{ref}}$ 的每 token KL 惩罚"折进 reward(公式 2),其中 $r_\varphi$ 是 reward model、$\beta$ 是 KL 系数。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The value function in PPO is typically another network of comparable size to the policy model, bringing substantial memory and compute burden. Worse, in LLM RL only the <em>last token</em> usually receives a reward score from the reward model, which complicates training a per-token-accurate value function. To address this, we propose <strong>Group Relative Policy Optimization (GRPO)</strong>: it obviates the value function and uses the <em>average reward of multiple sampled outputs to the same question</em> as the baseline. For each question $q$, GRPO samples a group $\{o_1, o_2, \dots, o_G\}$ from $\pi_{\theta_{\text{old}}}$ and optimizes:</p>
+            <div class="bi-eq">$$\mathcal{J}_{\text{GRPO}}(\theta) = \mathbb{E}_{q\sim P(Q),\,\{o_i\}_{i=1}^G\sim\pi_{\theta_{\text{old}}}(O\mid q)}\!\!\left[\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\Bigl(\min\!\bigl(\rho_{i,t}\hat A_{i,t},\,\mathrm{clip}(\rho_{i,t},1-\varepsilon,1+\varepsilon)\,\hat A_{i,t}\bigr) - \beta\,D_{\text{KL}}\!\bigl[\pi_\theta\,\|\,\pi_{\text{ref}}\bigr]\Bigr)\right]\quad(3)$$</div>
+            <p>where $\rho_{i,t} = \pi_\theta(o_{i,t}\mid q,o_{i,<t}) / \pi_{\theta_{\text{old}}}(o_{i,t}\mid q,o_{i,<t})$ and $\hat A_{i,t}$ is the advantage computed from <em>relative rewards inside the group only</em> (detailed in §4.1.2-3). This group-relative way aligns naturally with reward models — they are typically trained on pairwise comparisons of outputs to the same question. Note GRPO adds the KL directly to the loss (not to the reward), avoiding complicating the advantage computation.</p>
+          </div>
+          <div class="zh">
+            <p>PPO 里的值函数通常是另一个与 policy 同等体量的模型,带来巨大的显存与算力负担。更糟糕的是,LLM RL 场景下 reward model 通常只对<em>整段输出最后一个 token</em> 打分,这让"每个 token 都准的 value 函数"非常难训。为此,我们提出 <strong>Group Relative Policy Optimization (GRPO)</strong>:<em>去掉值函数</em>,直接以"对同一问题的多条采样的平均奖励"做 baseline。具体地,对每个问题 $q$,GRPO 从旧策略 $\pi_{\theta_{\text{old}}}$ 采样一组 $\{o_1, o_2, \dots, o_G\}$,并优化公式 3 的目标。其中 $\rho_{i,t}$ 是与 PPO 同义的<em>重要度比</em>;$\hat A_{i,t}$ 是仅由<em>组内相对奖励</em>计算出的优势(§4.1.2-3 详述)。这种"组内相对"的做法与 reward model 天然契合——它本来就是在"对同一问题的输出做<em>成对比较</em>"上训出来的。注意 GRPO <em>直接在 loss 上加 KL</em>,而不是把 KL 折进 reward,从而避免复杂化 $\hat A_{i,t}$ 的计算。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>And different from PPO's KL penalty in (2), GRPO estimates the KL with Schulman's <em>unbiased positive</em> estimator:</p>
+            <div class="bi-eq">$$D_{\text{KL}}\!\bigl[\pi_\theta\,\|\,\pi_{\text{ref}}\bigr] = \frac{\pi_{\text{ref}}(o_{i,t}\mid q,o_{i,<t})}{\pi_\theta(o_{i,t}\mid q,o_{i,<t})} - \log\frac{\pi_{\text{ref}}(o_{i,t}\mid q,o_{i,<t})}{\pi_\theta(o_{i,t}\mid q,o_{i,<t})} - 1\;\ge\;0,\quad(4)$$</div>
+            <p>which is guaranteed to be positive — a useful property when added directly to the loss.</p>
+          </div>
+          <div class="zh">
+            <p>与 PPO 公式 (2) 的 KL 惩罚不同,GRPO 用 Schulman 的<em>无偏正估计</em>来估 KL(公式 4)——这个估计保证非负,正适合作为直接加到 loss 上的正则项。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6b">
+      <summary>
+        <span>§4.1.2-4 Outcome / Process / Iterative GRPO<span class="sec-page">p.13</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§4.1.2 Outcome Supervision RL with GRPO.</strong> For each question $q$, sample $\{o_1, \dots, o_G\}$ from $\pi_{\theta_{\text{old}}}$; the reward model produces $G$ scalar rewards $\mathbf{r} = \{r_1, \dots, r_G\}$. Normalize by group mean and std, then assign the <em>same normalized reward to every token</em> of $o_i$:</p>
+            <div class="bi-eq">$$\hat A_{i,t} = \tilde r_i = \frac{r_i - \mathrm{mean}(\mathbf{r})}{\mathrm{std}(\mathbf{r})}.$$</div>
+            <p>Then optimize Eq. (3).</p>
+          </div>
+          <div class="zh">
+            <p><strong>§4.1.2 Outcome-Supervision GRPO。</strong>对每个问题 $q$,从 $\pi_{\theta_{\text{old}}}$ 采样一组 $\{o_1, \dots, o_G\}$,reward model 给出 $G$ 个标量奖励 $\mathbf{r} = \{r_1, \dots, r_G\}$。对组内做 z-score 归一,然后把<em>同一个归一化奖励</em>赋给 $o_i$ 的所有 token——$\hat A_{i,t} = \tilde r_i = (r_i - \mathrm{mean}(\mathbf{r}))/\mathrm{std}(\mathbf{r})$,再按公式 (3) 优化。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§4.1.3 Process Supervision RL with GRPO.</strong> Outcome supervision only rewards the end of $o_i$, which may not be sufficient for complex math. We additionally explore <em>process supervision</em>: a process reward model (PRM) scores the end of each reasoning step, yielding step rewards $\mathcal{R} = \{\{r_i^{\mathrm{index}(1)},\dots,r_i^{\mathrm{index}(K_i)}\}\}_{i=1}^G$ where $\mathrm{index}(j)$ is the end-token index of the $j$-th step and $K_i$ is the number of steps in $o_i$. We normalize over the whole $\mathcal{R}$, then set each token's advantage as the sum of normalized rewards from following steps:</p>
+            <div class="bi-eq">$$\hat A_{i,t} = \sum_{\mathrm{index}(j)\,\ge\,t}\;\tilde r_i^{\,\mathrm{index}(j)},\qquad \tilde r_i^{\,\mathrm{index}(j)} = \frac{r_i^{\,\mathrm{index}(j)} - \mathrm{mean}(\mathcal{R})}{\mathrm{std}(\mathcal{R})}.$$</div>
+          </div>
+          <div class="zh">
+            <p><strong>§4.1.3 Process-Supervision GRPO。</strong>Outcome 监督只在输出末尾给奖励,在复杂数学任务上可能不够。我们另外探索<em>过程监督</em>:用一个 process reward model (PRM) 对每个推理 step 的末尾打分,得到 $\mathcal{R} = \{\{r_i^{\mathrm{index}(1)},\dots,r_i^{\mathrm{index}(K_i)}\}\}_{i=1}^G$——其中 $\mathrm{index}(j)$ 是 $o_i$ 的第 $j$ 个 step 的末 token 索引、$K_i$ 是 $o_i$ 的总 step 数。对整个 $\mathcal{R}$ 做组内归一,然后把每个 token 的 advantage 设为"它<em>之后</em>所有 step 归一化奖励之和"。这样能给到 token 级、step-aware 的 credit assignment。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§4.1.4 Iterative RL with GRPO.</strong> As RL progresses, the old reward model may not adequately supervise the current policy. We therefore explore <em>iterative GRPO</em>: generate new training sets for the reward model from the current policy's samples, continually train the old reward model with 10% replay of historical data, then set the reference model to the current policy and continue policy training with the new reward model. See Algorithm 1 in the paper.</p>
+            <div class="bi-eq">$$\begin{array}{l}\textbf{Algorithm 1: Iterative GRPO}\\[2pt]\textbf{Input}\;\pi_{\theta_{\text{init}}},\;r_\varphi,\;\mathcal{D},\;\varepsilon,\beta,\mu\\\pi_\theta\leftarrow\pi_{\theta_{\text{init}}}\\\textbf{for}\;\text{iter}=1,\dots,I\;\textbf{do}\\\quad\pi_{\text{ref}}\leftarrow\pi_\theta\\\quad\textbf{for}\;\text{step}=1,\dots,M\;\textbf{do}\\\quad\quad\text{sample}\;\mathcal{D}_b\subset\mathcal{D};\;\pi_{\theta_{\text{old}}}\leftarrow\pi_\theta\\\quad\quad\text{sample}\;\{o_i\}_{i=1}^G\sim\pi_{\theta_{\text{old}}}(\cdot\mid q),\;\forall q\in\mathcal{D}_b\\\quad\quad\{r_i\}\leftarrow r_\varphi(o_i);\;\;\text{compute}\;\hat A_{i,t}\\\quad\quad\textbf{for}\;j=1,\dots,\mu\;\textbf{do}:\;\text{update}\;\pi_\theta\;\text{by maximising Eq.(3)}\\\quad\;\text{update}\;r_\varphi\;\text{via continuous training with 10\% replay}\end{array}$$</div>
+          </div>
+          <div class="zh">
+            <p><strong>§4.1.4 Iterative GRPO。</strong>随着 RL 推进,<em>旧的 reward model</em> 可能无法继续给当前 policy 准确的监督。我们因此探索 iterative GRPO:用当前 policy 的采样为 reward model 生成新训练集,采用<em>10% 历史回放</em>持续训练旧 reward model;然后把参考模型换成当前 policy,用新 reward model 继续训练 policy(论文 Algorithm 1)。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6c">
+      <summary>
+        <span>§4.2 Training DeepSeekMath-RL / RL 训练与评估<span class="sec-page">p.14</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We RL-train from DeepSeekMath-Instruct 7B. The RL training data are CoT-format questions related to GSM8K and MATH from the SFT data — ~144K questions; we exclude other SFT questions to investigate the impact of RL on out-of-distribution benchmarks. The reward model training set follows Math-Shepherd (Wang et al., 2023b); the initial reward model is trained on DeepSeekMath-Base 7B with lr $2\text{e-}5$. For GRPO we use policy lr $1\text{e-}6$, KL coefficient $\beta = 0.04$, $G = 64$ outputs per question, max length 1024, batch 1024, and a single policy update per exploration stage.</p>
+          </div>
+          <div class="zh">
+            <p>我们在 DeepSeekMath-Instruct 7B 之上做 RL。RL 训练数据是 SFT 数据中 GSM8K 与 MATH 相关的 CoT 题目,约 14.4 万条;我们故意排除其他 SFT 题目,以便观察 RL 在<em>分布外 benchmark</em> 上的表现。reward model 训练集沿用 Math-Shepherd(Wang 等,2023b);初始 reward model 基于 DeepSeekMath-Base 7B,学习率 $2\text{e-}5$。GRPO 关键超参:policy 学习率 $1\text{e-}6$、KL 系数 $\beta=0.04$、每题采样 $G=64$ 条输出、最大长度 1024、batch 1024、每个 exploration 阶段只做<em>一次</em> policy 更新。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Results: DeepSeekMath-RL 7B reaches <strong>88.2% on GSM8K and 51.7% on MATH</strong> with CoT — beating every open-source 7B-70B model and most closed-source models. Crucially, although DeepSeekMath-RL is only RL-trained on GSM8K/MATH CoT questions starting from DeepSeekMath-Instruct, it improves over DeepSeekMath-Instruct on <em>all</em> benchmarks (including OOD: CMATH 84.6 → 88.8, MGSM-zh 73.2 → 79.6, tool-aided MATH 57.4 → 58.8). This out-of-domain transfer is one of GRPO's most striking empirical findings.</p>
+          </div>
+          <div class="zh">
+            <p>结果:DeepSeekMath-RL 7B 用 CoT 在 <strong>GSM8K 拿 88.2%、MATH 拿 51.7%</strong>——超越所有 7B~70B 开源模型与大多数闭源模型。关键的是,虽然 DeepSeekMath-RL 仅在 GSM8K / MATH 的 CoT 题目上做 RL,它在<em>所有</em> benchmark 上都优于 DeepSeekMath-Instruct,包括 OOD:CMATH 84.6 → 88.8、MGSM-zh 73.2 → 79.6、带工具的 MATH 57.4 → 58.8。这种"分布外迁移"是 GRPO 最具说服力的实证发现之一。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7a">
+      <summary>
+        <span>§5.1 Lessons Learnt in Pre-Training / 预训练观察<span class="sec-page">p.15</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.1.1 Code training benefits mathematical reasoning.</strong> Using DeepSeek-LLM 1.3B, we compare two-stage settings (general/code 400B → math 150B) and one-stage settings (math-only 150B, mixed code+math). Findings: (i) code training, even alone, improves Python-aided GSM8K/MATH; with math added in stage 2, gains compound. (ii) Code training also improves tool-free math reasoning. (iii) One-stage mixed code+math mitigates the catastrophic forgetting that the two-stage setup causes on code benchmarks, but slightly hurts tool-free math — likely because 1.3B lacks capacity to absorb both simultaneously.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.1.1 代码训练对数学推理有益。</strong>我们用 DeepSeek-LLM 1.3B 对比"两阶段(通用/代码 400B → 数学 150B)"与"单阶段(只训数学 150B、或代码+数学混训)"的训练。结论:① 仅代码训练就能显著提升 Python-aided GSM8K/MATH;再追加数学训练,收益叠加;② 代码训练也能提升<em>纯文本</em>数学推理;③ 一阶段"代码+数学"混训能缓解两阶段在代码 benchmark 上的灾难性遗忘,但稍微损害纯文本数学——可能因为 1.3B 容量不够,同时吃下代码与数学还不够。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.1.2 ArXiv papers seem ineffective for math reasoning.</strong> Counter-intuitively, training on arXiv-heavy corpora (MathPile, ArXiv-RedPajama) brings no notable improvements — and sometimes degradation — on GSM8K, MATH, MMLU-STEM and miniF2F. We tested both DeepSeek-LLM 1.3B (trained 150B tokens) and DeepSeek-Coder-Base-v1.5 7B (40B tokens). Caveats: we have not studied arXiv on tasks like theorem informalization, in combination with other data, or at much larger model scale.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.1.2 arXiv 论文对数学推理似乎没用。</strong>反直觉:在 arXiv 为主的语料(MathPile、ArXiv-RedPajama)上训练并不能在 GSM8K、MATH、MMLU-STEM 与 miniF2F 上带来明显提升,有时甚至退化。我们在 DeepSeek-LLM 1.3B(150B token)与 DeepSeek-Coder-Base-v1.5 7B(40B token)上都验证了这一点。注意保留:我们没有研究 arXiv 在"定理非形式化"等更专门任务上的作用,也没研究它与其他数据混合、或在更大模型尺度下的影响。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7b">
+      <summary>
+        <span>§5.2.1 Towards a Unified Paradigm / RL 统一视角<span class="sec-page">p.17</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We provide a unified paradigm to analyze SFT, RFT, DPO, PPO, GRPO. Generally, the gradient w.r.t. $\theta$ can be written as</p>
+            <div class="bi-eq">$$\nabla_\theta\,\mathcal{J}_{\mathcal{A}}(\theta) = \mathbb{E}_{(q,o)\sim\mathcal{D}}\!\left[\frac{1}{|o|}\sum_{t=1}^{|o|} \underbrace{GC_{\mathcal{A}}(q,o,t,\pi_{rf})}_{\text{gradient coefficient}}\;\nabla_\theta\log\pi_\theta(o_t\mid q,o_{<t})\right]\quad(5)$$</div>
+            <p>Three components: <strong>(1) Data Source $\mathcal{D}$</strong>; <strong>(2) Reward Function $\pi_{rf}$</strong>; <strong>(3) Algorithm $\mathcal{A}$</strong> which maps data &amp; reward to a gradient coefficient $GC$. The five methods differ only in these three knobs (Table 10 of the paper):</p>
+            <ul>
+              <li><strong>SFT</strong>: $\mathcal{D} = P_{\text{sft}}$, no reward, $GC = 1$.</li>
+              <li><strong>RFT</strong>: $\mathcal{D} = $ SFT questions × SFT samples, reward = Rule (answer correct?), $GC = \mathbb{1}[\text{correct}]$ (Eq. 10).</li>
+              <li><strong>Online RFT</strong>: same as RFT but samples from real-time $\pi_\theta$.</li>
+              <li><strong>DPO</strong>: pairs from $\pi_{\text{sft}}$, $GC = \sigma\!\bigl(\beta\,\Delta\log\pi/\pi_{\text{ref}}\bigr)$ (Eq. 14).</li>
+              <li><strong>PPO</strong>: online samples, reward = Model, $GC = A_t$ (GAE).</li>
+              <li><strong>GRPO</strong>: online <em>group</em> samples, reward = Model, $GC = \hat A_{i,t} + \beta(\pi_{\text{ref}}/\pi_\theta - 1)$ (Eq. 21).</li>
+            </ul>
+          </div>
+          <div class="zh">
+            <p>我们给出一个统一范式来分析 SFT、RFT、DPO、PPO、GRPO。一般地,目标关于 $\theta$ 的梯度可以写成公式 (5)——三大要素:<strong>① 数据源 $\mathcal{D}$</strong>;<strong>② 奖励函数 $\pi_{rf}$</strong>;<strong>③ 算法 $\mathcal{A}$</strong> 把数据和奖励映射到梯度系数 $GC$。五种方法的差别只在这三个旋钮上(论文 Table 10):</p>
+            <ul>
+              <li><strong>SFT</strong>:$\mathcal{D}=P_{\text{sft}}$,无奖励,$GC=1$。</li>
+              <li><strong>RFT</strong>:$\mathcal{D}$ = SFT 题 × SFT 模型采样,奖励 = Rule(答案对不对),$GC = \mathbb{1}[\text{正确}]$(公式 10)。</li>
+              <li><strong>Online RFT</strong>:与 RFT 唯一不同——采样自<em>实时</em> $\pi_\theta$。</li>
+              <li><strong>DPO</strong>:成对样本来自 $\pi_{\text{sft}}$,$GC = \sigma\!\bigl(\beta\,\Delta\log\pi/\pi_{\text{ref}}\bigr)$(公式 14)。</li>
+              <li><strong>PPO</strong>:在线采样,奖励 = Model,$GC = A_t$(GAE 给出)。</li>
+              <li><strong>GRPO</strong>:在线<em>组</em>采样,奖励 = Model,$GC = \hat A_{i,t} + \beta(\pi_{\text{ref}}/\pi_\theta - 1)$(公式 21,KL 直接吸进系数)。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Observation 1: Online &gt; Offline.</strong> Online RFT &gt; RFT — comparable early, but Online RFT pulls ahead later when the actor and SFT model diverge enough that real-time sampling matters. <strong>Observation 2: Gradient coefficient matters.</strong> GRPO &gt; Online RFT — Online RFT just reinforces every correct response with the same magnitude, whereas GRPO uses reward-magnitude-dependent coefficients to differentially reinforce/penalize. Furthermore, <strong>GRPO+PS &gt; GRPO+OS</strong> — step-aware fine-grained coefficients win. And iterative GRPO (Figure 6) brings further gains, especially in iteration 1.</p>
+          </div>
+          <div class="zh">
+            <p><strong>观察 1:Online &gt; Offline。</strong>Online RFT 优于 RFT——早期两者接近,但当 actor 与 SFT 偏离足够大时,实时采样的优势就显现出来,Online RFT 后期明显甩开 RFT。<strong>观察 2:梯度系数很关键。</strong>GRPO &gt; Online RFT——Online RFT 对所有正确答案<em>同等强化</em>,而 GRPO 根据 reward 大小做差异化奖惩。更进一步,<strong>GRPO+PS(过程监督) &gt; GRPO+OS(结果监督)</strong>——细粒度、step-aware 的系数胜出。Iterative GRPO(Figure 6)还能再涨一截,尤其是第一轮迭代。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7c">
+      <summary>
+        <span>§5.2.2-3 Why &amp; How RL Works / RL 为何有效 + 未来方向<span class="sec-page">p.21</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.2.2 Why does RL work?</strong> A striking finding: RL improves Maj@K but <em>not</em> Pass@K (Figure 7, $K \in [1, 64]$). This indicates that RL is not adding new capabilities — instead, RL is making the output distribution <em>more robust</em> by boosting the correct response that already exists within the model's Top-K. Wang et al. (2023a) similarly identified a "misalignment" in SFT models that preference-alignment fixes. In short: <em>RL = distribution sharpening over already-present correct solutions</em>.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.2.2 RL 为什么有效?</strong>关键观察:RL 提升 <strong>Maj@K 但<em>不</em>提升 Pass@K</strong>(Figure 7,$K\in[1,64]$)。这说明 RL 并未增加新能力,而是<em>把已存在于模型 Top-K 中的正确解的概率推高</em>,让输出分布更"鲁棒"。Wang 等(2023a)在 SFT 模型上也发现类似"对齐失配"问题,认为通过偏好对齐能修复。一句话总结:<em>RL = 对已存在的正确解做分布锐化(distribution sharpening)</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§5.2.3 How to achieve more effective RL?</strong> Within the unified paradigm (Eq. 5), there are three knobs to tune: <strong>Data Source</strong> (we only used SFT-stage questions and naive nucleus sampling — explore OOD prompts, tree-search decoding, efficient inference like PagedAttention / speculative decoding to widen exploration); <strong>Algorithm</strong> (all current methods fully <em>trust</em> the reward — explore noisy-reward-robust RL, weak-to-strong alignment); <strong>Reward Function</strong> (improve generalization to OOD, reflect uncertainty as a bridge to weak-to-strong, build efficient high-quality process reward models).</p>
+          </div>
+          <div class="zh">
+            <p><strong>§5.2.3 如何做更有效的 RL?</strong>在统一范式(公式 5)下,有三个旋钮可调:<strong>① 数据源</strong>——我们只用了 SFT 阶段的题目 + 朴素 nucleus 采样,未来要探索 OOD 题目、tree-search 解码、PagedAttention / speculative decoding 等高效推理以扩大探索;<strong>② 算法</strong>——当下所有方法都<em>完全相信</em> reward signal,但 reward 永远会出错(PRM800K 这种精细标注集仍有约 20% 错误),需要"对噪声 reward 鲁棒"的 RL 算法、weak-to-strong 对齐方法;<strong>③ 奖励函数</strong>——增强 reward model 的 OOD 泛化、量化 reward 的不确定性、构建高效高质的 process reward model。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7d">
+      <summary>
+        <span>§6 Conclusion, Limitation, and Future Work / 结论与展望<span class="sec-page">p.22</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We present DeepSeekMath — which outperforms all open-source models on competition-level MATH and approaches closed models. It is initialized with DeepSeek-Coder-v1.5 7B and continually trained for 500B tokens, of which 120B math tokens come from Common Crawl. Our ablations show web pages offer significant potential for high-quality mathematical data, while arXiv may be less beneficial than expected. We introduce <strong>GRPO</strong>, a PPO variant that notably improves mathematical reasoning with less memory; GRPO is effective even when starting from a strong DeepSeekMath-Instruct 7B. We also provide a unified paradigm to understand a family of methods and summarize potential directions for more effective RL.</p>
+          </div>
+          <div class="zh">
+            <p>我们提出 DeepSeekMath——在竞赛级 MATH 上超越所有开源模型并逼近闭源模型。它以 DeepSeek-Coder-v1.5 7B 初始化,继续训练 500B token,其中 120B 数学 token 来自 Common Crawl。大量消融表明:Web 网页蕴含高质量数学数据的巨大潜力,而 arXiv 的收益可能没我们想象中大。我们提出 <strong>GRPO</strong>——PPO 的一种变体,用更少显存就能显著提升数学推理;即便起点已是很强的 DeepSeekMath-Instruct 7B,GRPO 仍然有效。我们还给出统一范式以理解一系列方法,并总结出未来更有效 RL 的若干方向。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Limitations.</strong> Although DeepSeekMath scores well on quantitative reasoning benchmarks, its capability on geometry and theorem-proof is weaker than closed models — in dry runs it struggles on triangle/ellipse problems, suggesting data selection bias in pre-training and fine-tuning. Limited by 7B scale, DeepSeekMath is worse than GPT-4 on few-shot prompts — GPT-4 improves with few-shot, whereas DeepSeekMath performs similarly in zero-shot and few-shot. Future work: better-engineered data pipeline for higher-quality pre-training corpus, and exploring the directions in §5.2.3 for more effective RL.</p>
+          </div>
+          <div class="zh">
+            <p><strong>局限。</strong>虽然 DeepSeekMath 在定量推理 benchmark 上表现亮眼,但在几何与定理证明上仍弱于闭源模型——在试跑中无法处理三角形、椭圆类题目,提示我们的预训练与微调数据存在偏置。受 7B 规模所限,在 few-shot 能力上不如 GPT-4:GPT-4 能借 few-shot 提升,而 DeepSeekMath 的 zero-shot 与 few-shot 表现接近。未来工作:进一步打磨数据流水线以构建更高质的预训练语料,并沿 §5.2.3 给出的方向继续推进更有效的 LLM RL。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>References / 参考文献(略)<span class="sec-page">p.23</span></span>
+      </summary>
+      <div class="sec-content">
+        <p style="font-family:var(--sans);color:var(--text-dim);font-size:14px;">参考文献共 ~80 篇,涉及 PPO (Schulman et al., 2017)、GAE (Schulman et al., 2015)、KL 估计 (Schulman, 2020)、Math-Shepherd (Wang et al., 2023b)、Let's Verify Step by Step / PRM800K (Lightman et al., 2023)、MATH (Hendrycks et al., 2021)、GSM8K (Cobbe et al., 2021)、Minerva (Lewkowycz et al., 2022)、Llemma (Azerbayev et al., 2023)、OpenWebMath (Paster et al., 2023)、DeepSeek-Coder (Guo et al., 2024)、DPO (Rafailov et al., 2023)、ToRA (Gou et al., 2023)、CoT/PoT/PAL、Weak-to-Strong (Burns et al., 2023)、Tree-of-Thoughts、PagedAttention / vLLM、Speculative Decoding 等。完整列表见 <a href="https://arxiv.org/pdf/2402.03300.pdf" target="_blank">arxiv:2402.03300 PDF p.23-27</a> 和附录 A.1 中各方法的梯度推导(SFT / RFT / Online RFT / DPO / PPO / GRPO,公式 6-21,p.28-30)。</p>
+      </div>
+    </details>
+
+  </div>
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

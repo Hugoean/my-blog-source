@@ -1,0 +1,479 @@
+[
+  {
+    "slug": "dolma",
+    "href": "papers/dolma.html",
+    "title": "Dolma: an Open Corpus of Three Trillion Tokens",
+    "arxiv": "2402.00159",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "开源完整 pipeline + 工具链 + 决策记录，工业数据工程的教科书。"
+  },
+  {
+    "slug": "fineweb",
+    "href": "papers/fineweb.html",
+    "title": "The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale",
+    "arxiv": "2406.17557",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "质量过滤消融最透；FineWeb-Edu 把\"教材级\"概念量化，2024 后训练数据范式。"
+  },
+  {
+    "slug": "datacomp-lm",
+    "href": "papers/datacomp-lm.html",
+    "title": "DataComp-LM: In Search of the Next Generation of Training Sets",
+    "arxiv": "2406.11794",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "把\"数据选择\"做成 benchmark，统一对比不同过滤策略的实验框架。"
+  },
+  {
+    "slug": "multilang-filter",
+    "href": "papers/multilang-filter.html",
+    "title": "Multilingual Data Filtering for Pretraining",
+    "arxiv": "2505.22232",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "英语外其他语言数据该怎么筛？低资源语种的工业实战，东南亚/印地语适用。"
+  },
+  {
+    "slug": "doremi",
+    "href": "papers/doremi.html",
+    "title": "DoReMi: Optimizing Data Mixtures Speeds Up LM Pretraining",
+    "arxiv": "2305.10429",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "把\"调配比\"自动化的奠基论文。Group-DRO 思路用代理模型搜最优 domain weights。"
+  },
+  {
+    "slug": "redpajama-v2",
+    "href": "papers/redpajama-v2.html",
+    "title": "RedPajama-v2: an Open Dataset for Training LLMs",
+    "arxiv": "2411.12372",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "质量信号比 v1 多 40+，多语种支持，2025 仍是开源训练的主力底料。"
+  },
+  {
+    "slug": "dont-stop",
+    "href": "papers/dont-stop.html",
+    "title": "Don't Stop Pretraining: Adapt LMs to Domains and Tasks",
+    "arxiv": "2004.10964",
+    "tags": [
+      "CPT"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "CPT 概念的鼻祖，提出 DAPT（领域）/ TAPT（任务）两套范式，面试常问。"
+  },
+  {
+    "slug": "cpt-gupta",
+    "href": "papers/cpt-gupta.html",
+    "title": "Continual Pre-Training of LLMs: How to (re)warm your model?",
+    "arxiv": "2308.04014",
+    "tags": [
+      "CPT"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "CPT 学习率重启策略 + replay 比例。工业训练落地必读，灾难性遗忘缓解方案。"
+  },
+  {
+    "slug": "scaling-laws",
+    "href": "papers/scaling-laws.html",
+    "title": "Scaling Laws for Neural Language Models",
+    "arxiv": "2001.08361",
+    "tags": [
+      "CPT",
+      "其他"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "skim",
+    "note": "Kaplan 2020 的 power law 三件套。面试经典，后被 Chinchilla 修正但仍要知道。"
+  },
+  {
+    "slug": "chinchilla",
+    "href": "papers/chinchilla.html",
+    "title": "Training Compute-Optimal Large Language Models (Chinchilla)",
+    "arxiv": "2203.15556",
+    "tags": [
+      "CPT",
+      "其他"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "skim",
+    "note": "推翻 Kaplan，现行 compute-optimal 标准（D ≈ 20×N）。70B 时代的依据。"
+  },
+  {
+    "slug": "instructgpt",
+    "href": "papers/instructgpt.html",
+    "title": "Training LMs to Follow Instructions with Human Feedback (InstructGPT)",
+    "arxiv": "2203.02155",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "skim",
+    "note": "RLHF 三阶段流水线奠基。所有后训练论文的\"前作\"，面试必背三阶段画图。"
+  },
+  {
+    "slug": "dpo",
+    "href": "papers/dpo.html",
+    "title": "Direct Preference Optimization: Your LM is Secretly a Reward Model",
+    "arxiv": "2305.18290",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "用 BT 模型 + KL 等价性，把 RLHF 退化成监督式分类。损失函数必默写。"
+  },
+  {
+    "slug": "simpo",
+    "href": "papers/simpo.html",
+    "title": "SimPO: Simple Preference Optimization with a Reference-Free Reward",
+    "arxiv": "2405.14734",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "DPO 的 reference-free 简化版，长度归一化 + 目标 margin γ。小算力首选 baseline。"
+  },
+  {
+    "slug": "kto",
+    "href": "papers/kto.html",
+    "title": "KTO: Model Alignment as Prospect Theoretic Optimization",
+    "arxiv": "2402.01306",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "用前景理论解释损失厌恶，需要\"好/坏\"二元标签而非成对偏好。冷启动友好。"
+  },
+  {
+    "slug": "ipo",
+    "href": "papers/ipo.html",
+    "title": "A General Theoretical Paradigm to Understand Learning from Human Preferences (IPO)",
+    "arxiv": "2310.12036",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "指出 BT 在 deterministic 偏好下 reward 发散 → DPO 过拟合，提 squared loss 修正。写论文必引。"
+  },
+  {
+    "slug": "grpo",
+    "href": "papers/grpo.html",
+    "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning (GRPO 出处)",
+    "arxiv": "2402.03300",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "GRPO 原论文：去掉 critic 用 group baseline，省一半显存，成为 2024-2025 RL 后训练事实标准。"
+  },
+  {
+    "slug": "dapo",
+    "href": "papers/dapo.html",
+    "title": "DAPO: An Open-Source LLM Reinforcement Learning System at Scale",
+    "arxiv": "2503.14476",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "字节工程版 GRPO：Clip-Higher + Dynamic Sampling + Token-Level Loss + Overlong Reward Shaping。"
+  },
+  {
+    "slug": "minillm",
+    "href": "papers/minillm.html",
+    "title": "MiniLLM: Knowledge Distillation of Large Language Models",
+    "arxiv": "2306.08543",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "把 KD 从 forward KL 换成 reverse KL，避免 mode-averaging，LLM 蒸馏的范式转变。"
+  },
+  {
+    "slug": "distillm",
+    "href": "papers/distillm.html",
+    "title": "DistiLLM: Towards Streamlined Distillation for LLMs",
+    "arxiv": "2402.03898",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "Skew-KL 插值 + adaptive off-policy，蒸馏工程效率显著提升。"
+  },
+  {
+    "slug": "on-policy-distill",
+    "href": "papers/on-policy-distill.html",
+    "title": "On-Policy Distillation: Learning from Self-Generated Mistakes",
+    "arxiv": "2306.13649",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "学生采样自己的输出 + 老师打分的范式，蒸馏与 RL 的桥梁。"
+  },
+  {
+    "slug": "deepseek-v3",
+    "href": "papers/deepseek-v3.html",
+    "title": "DeepSeek-V3 Technical Report",
+    "arxiv": "2412.19437",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "2024 年底 SOTA：DeepSeekMoE + MLA 注意力 + MTP 多 token 预测 + FP8 训练。系统工程教科书。"
+  },
+  {
+    "slug": "qwen-2.5",
+    "href": "papers/qwen-2.5.html",
+    "title": "Qwen2.5 Technical Report",
+    "arxiv": "2412.15115",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "CPT 数据章节教科书级。0.5B-72B 全规模，多语言、长上下文、数学/代码专项全覆盖。"
+  },
+  {
+    "slug": "qwen-3",
+    "href": "papers/qwen-3.html",
+    "title": "Qwen3 Technical Report",
+    "arxiv": "2505.09388",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "最新一代 · 思考/非思考混合模式 · 36T 预训练 · 后训练四阶段。一份就能讲清现代 pipeline。"
+  },
+  {
+    "slug": "deepseek-r1",
+    "href": "papers/deepseek-r1.html",
+    "title": "DeepSeek-R1: Incentivizing Reasoning via RL",
+    "arxiv": "2501.12948",
+    "tags": [
+      "技术报告",
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "R1-Zero 纯 RL · cold-start SFT + 多阶段 RL · aha moment · GRPO 工业实战 · distill 到小模型。开源推理 SOTA。"
+  },
+  {
+    "slug": "kimi-k2",
+    "href": "papers/kimi-k2.html",
+    "title": "Kimi K2: Open Agentic Intelligence",
+    "arxiv": "2507.20534",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "Muon 优化器大规模训练（面试热点！）+ agentic foundation。"
+  },
+  {
+    "slug": "kimi-k1.5",
+    "href": "papers/kimi-k1.5.html",
+    "title": "Kimi K1.5: Scaling RL with LLMs",
+    "arxiv": "2501.12599",
+    "tags": [
+      "技术报告",
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "long context RL + partial rollouts + length penalty。和 R1 同期对标，方法论不同。"
+  },
+  {
+    "slug": "llama-3",
+    "href": "papers/llama-3.html",
+    "title": "The Llama 3 Herd of Models",
+    "arxiv": "2407.21783",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "C"
+    ],
+    "priority": "skim",
+    "note": "405B dense + 多模态。92 页全方位，只读架构 + 数据 + 后训练四阶段。"
+  },
+  {
+    "slug": "minimax-01",
+    "href": "papers/minimax-01.html",
+    "title": "MiniMax-01: Scaling with Lightning Attention",
+    "arxiv": "2501.08313",
+    "tags": [
+      "技术报告",
+      "其他"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "Lightning Attention 7/8 + softmax 1/8 混合，MoE 456B，4M 上下文。线性注意力工业落地标杆。"
+  },
+  {
+    "slug": "glm-4.5",
+    "href": "papers/glm-4.5.html",
+    "title": "GLM-4.5 Technical Report",
+    "arxiv": "2508.06471",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "C"
+    ],
+    "priority": "skim",
+    "note": "三阶段 RL 路线，Reasoning + Coding + Agentic 三轴并进。"
+  },
+  {
+    "slug": "mimo",
+    "href": "papers/mimo.html",
+    "title": "MiMo: Unlocking the Reasoning Potential of LM (Xiaomi)",
+    "arxiv": "2505.07608",
+    "tags": [
+      "技术报告",
+      "后训练"
+    ],
+    "audience": [
+      "C"
+    ],
+    "priority": "skim",
+    "note": "小米首个推理模型 · RL on math/code · 数据合成思路 · 与 R1 对比。"
+  },
+  {
+    "slug": "yi",
+    "href": "papers/yi.html",
+    "title": "Yi: Open Foundation Models by 01.AI",
+    "arxiv": "2403.04652",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "C"
+    ],
+    "priority": "skim",
+    "note": "Yi-6B / 34B，数据 pipeline 写得最细，中文优化方法系统。"
+  }
+]

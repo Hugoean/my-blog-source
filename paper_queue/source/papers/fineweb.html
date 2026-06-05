@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The FineWeb Datasets: Decanting the Web for the · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2406.17557 · 38 页 · 17 张图</div>
+    <h1>The FineWeb Datasets: Decanting the Web for the</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-deep">优先级 deep</span>
+      <span>W3</span>
+      <span>CPT</span><span>Data Quality</span>
+      <span><a href="https://arxiv.org/abs/2406.17557" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2406.17557.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>FineWeb 用 96 份 CommonCrawl 快照,通过 <em>WARC 自定义抽取 → URL/语言/重复基线过滤 → 单 dump 内 MinHash 去重 → C4 子集启发式过滤 → 自研三条阈值过滤</em>一条流水线,在 1.71B / 350B token 消融上击败 C4 / RefinedWeb / RPv2 / Pile / Slim / Dolma 等所有开源数据集,得到 <strong>15T tokens</strong> 的开源预训练语料;再用 Llama-3-70B 对 460k 文档打"教育性 0–5 分"训练一个轻量分类器,以阈值 3 过滤得到 <strong>1.3T tokens 的 FineWeb-Edu</strong>,MMLU/ARC/OpenBookQA 上把开源基线又抬高一档。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>MinHash 在 CommonCrawl:单 dump 内做 vs 跨 dump 做(反直觉结论)</strong>:全局跨 96 个 dump 迭代 MinHash 把数据从 36T 砍到 4T,但 350B 训练消融 <em>几乎没有提升</em>,远落后 RefinedWeb。原因:跨 dump 去重会把"在很多 dump 反复出现"的文档(往往是被广泛复制的优质内容)删掉,留下的反而是只出现一次的劣质长尾。论文做了对照实验:在最旧的 2013-48 dump 上,被全局去重<em>删掉</em>的 90% 数据,训出的模型比<em>留下</em>的 10% 更好。结论:<strong>每个 dump 内部独立做 MinHash</strong>(112 hash / 14 buckets × 8 / 5-gram / 75% 相似阈),得到 20T tokens,持平 RefinedWeb。
+        </li>
+        <li><strong>C4 过滤规则的取舍</strong>:C4 的"行末必须有终止标点"过滤删 ~30% token、HellaSwag 单点提升最大,但删得太狠;FineWeb 改用更宽松的自研阈值 — "<em>fraction of lines ending with punctuation &lt; 0.12</em>"(删 10.1%)、"<em>fraction of chars in duplicated lines ≥ 0.1</em>"(删 12.5%)、"<em>fraction of lines &lt; 30 字符 ≥ 0.67</em>"(删 3.7%),三条合计删 ~22%,聚合分提升 ~1%,既超 C4 又少删数据。</li>
+        <li><strong>自研启发式过滤怎么挑阈值</strong>:不靠目检,而是统计学法 — 用同一个 dump 的"全局去重(低质)"与"独立去重(高质)"两份数据,对 50+ 文档级/重复度指标画直方图,挑两分布差异大的指标、在低质密度明显更高的区段切阈值;先选出 16 个候选,再各跑 28B token 消融,最后留 3 条胜出。</li>
+        <li>
+          <strong>FineWeb-Edu:LLM 打分 → 蒸馏小分类器</strong>:用 Llama-3-70B-Instruct 对 460k 篇 CC-MAIN-2024-10 网页打 0-5 教育分(<em>additive 评分 prompt</em>,逐条加分,优于单一打分);在 Snowflake-arctic-embed-m 冻结 embedding 之上训一个线性回归头(20 epoch, lr 3e-4),阈值 ≥ 3 当 "educational",验证集 F1 = 82%。对全量 15T tokens 推理用了 ~6,000 H100 小时,留下 <strong>1.3T tokens</strong>。
+        </li>
+        <li><strong>vs RPv2 / Slim / Pile / Dolma 的对比口径</strong>:每个数据集随机抽 350B tokens 训 1.71B Llama 风格模型,八个 benchmark(CSQA / HellaSwag / OBQA / PIQA / SIQA / Winogrande / ARC / MMLU)取平均。FineWeb ≈ 50% 聚合分,Edu ≈ 52%,均高于 RefinedWeb / Dolma 1.7 / Matrix。<strong>FineWeb-Edu 用 38B tokens 就达到 Matrix 训 300B 才有的 MMLU 分(≈ 33.6%) — ~10× token efficiency</strong>。</li>
+        <li><strong>WARC vs WET</strong>:WET 是 CC 直接给的纯文本但 boilerplate / 菜单残留多;用 trafilatura 自己从 WARC 抽,聚合分明显更高 — 这是后续所有 ablation 的起点。</li>
+        <li><strong>主要工程开销</strong>:总共训了 70+ 个 1.71B 消融模型,~80,000 H100 hour;Edu 分类器推理另 6,000 H100 hour。释放 datatrove 数据处理库。</li>
+        <li><strong>已知局限</strong>:消融规模只到 1.71B / 350B(非真实预训练量级);评测全是学术 benchmark、无 SFT / 对齐;FineWeb 男性词/Christian 词偏多,Edu 进一步降低非教育主题(娱乐 / 商业 / 旅游)、提升历史文化教育主题。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      质量过滤 SOTA,消融实验最透
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">Introduction / 引言 + 背景综述</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3b">Pipeline / 流水线:URL 过滤 + Dedup + 质量过滤</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-3d">Ablations / 累积消融 + 对比公开数据集</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-3c">FineWeb-Edu / 教育子集</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-4">Results / 偏见分析 + Paloma 领域困惑度</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-5">Discussion / 结论与局限</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-6">References</a><span class="toc-page">p.11</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (17 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2406.17557_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.31 · 640×480</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>附录 G(偏见分析)饼图。统计 FineWeb 中三个性别词 <code>man / woman / non-binary</code> 的出现频次占比。</p>
+          <p><strong>② 关键数据:</strong><code>man</code> 占 <strong>67.9%</strong>,<code>woman</code> 占 <strong>32.0%</strong>,<code>non-binary</code> 仅 <strong>0.1%</strong>——男性词的出现频率是女性词的约 2 倍,非二元几乎被忽略。</p>
+          <p><strong>③ 启示:</strong>这是"网上文本本就以男性视角为主"的客观反映,FineWeb 没主动校准。后续做 SFT/对齐时需要补充均衡数据。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2406.17557_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.31 · 640×480</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>FineWeb-Edu 上同样的性别词频饼图,与 fig_1(FineWeb)成对比较。</p>
+          <p><strong>② 关键数据:</strong><code>man</code> <strong>70.2%</strong>,<code>woman</code> <strong>29.6%</strong>,<code>non-binary</code> <strong>0.2%</strong>。Edu 子集里男性词比例反而更高(+2.3pp)、女性词更少(-2.4pp);可能是因为教育/历史类语料中,king / scholar / president 等历史人物多为男性。</p>
+          <p><strong>③ 启示:</strong>"教育性过滤"不会减轻性别不均衡 — 用 Edu 训出的模型在性别中性问答上可能仍偏男性。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_3">
+        <img src="../figures/2406.17557_fig_3.png" alt="fig_3" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_3</span> · p.31 · 640×480</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_3">
+          <p><strong>① 图说明:</strong>FineWeb 中年龄词 <code>young / old</code> 的频次占比饼图。</p>
+          <p><strong>② 关键数据:</strong><code>old</code> 占 <strong>64.5%</strong>,<code>young</code> 仅 <strong>35.5%</strong>——"老"词的出现频次几乎是"年轻"的两倍。</p>
+          <p><strong>③ 启示:</strong>反映 web 文本中"old days / old man / get old" 等表达更常见,而 "young" 偏向具体场景。这影响"长者偏见"评估。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_4">
+        <img src="../figures/2406.17557_fig_4.png" alt="fig_4" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_4</span> · p.31 · 640×480</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_4">
+          <p><strong>① 图说明:</strong>FineWeb-Edu 上年龄词频饼图,与 fig_3 对比。</p>
+          <p><strong>② 关键数据:</strong><code>old</code> <strong>51.5%</strong>,<code>young</code> <strong>48.5%</strong>——年龄词分布在 Edu 子集里几乎对半开,显著比 FineWeb(64.5 / 35.5)均衡。</p>
+          <p><strong>③ 启示:</strong>教育/历史类语料中"young people / young students" 出现更多;教育子集对"年龄维度"的偏见自然降低 — 这是 Edu 过滤一个意外的副作用,值得记住。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_5">
+        <img src="../figures/2406.17557_fig_5.png" alt="fig_5" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_5</span> · p.32 · 640×480</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_5">
+          <p><strong>① 图说明:</strong>FineWeb 中宗教词的频次占比饼图(christian / jewish / muslim / hindu / buddhist / atheist 等)。</p>
+          <p><strong>② 关键数据:</strong><code>christian</code> 一枝独秀占 <strong>46.1%</strong>,<code>jewish</code> <strong>25.6%</strong>,<code>muslim</code> <strong>16.7%</strong>,<code>hindu</code> <strong>4.8%</strong>,<code>buddhist</code> <strong>4.8%</strong>,<code>atheist</code> <strong>1.9%</strong>。</p>
+          <p><strong>③ 启示:</strong>FineWeb 的宗教维度极度倾向基督教视角,与英文 web 文本分布吻合;在跨宗教问答 / 文化敏感场景下,在此数据上训出的模型默认会"基督教化"。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_6">
+        <img src="../figures/2406.17557_fig_6.png" alt="fig_6" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_6</span> · p.32 · 640×480</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_6">
+          <p><strong>① 图说明:</strong>FineWeb-Edu 上宗教词频饼图,与 fig_5 对比。</p>
+          <p><strong>② 关键数据:</strong><code>jewish</code> <strong>36.3%</strong>(↑),<code>christian</code> <strong>33.1%</strong>(↓,从 46.1%),<code>muslim</code> <strong>14.5%</strong>,<code>buddhist</code> <strong>7.4%</strong>(↑),<code>hindu</code> <strong>7.8%</strong>(↑),<code>atheist</code> <strong>0.9%</strong>(↓)。</p>
+          <p><strong>③ 启示:</strong>教育过滤显著降低了 christian 的过度代表(-13pp),提升了 jewish / hindu / buddhist 等 — 教育/历史类文本会更频繁讨论"犹太教历史""佛教文化",这是 Edu 一个正向副作用。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_7">
+        <img src="../figures/2406.17557_fig_7.png" alt="fig_7" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_7</span> · p.33 · 828×1306</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_7">
+          <p><strong>① 图说明:</strong>FineWeb 中"性别词 × 其它高频词"共现强度热力图。列为 <code>man / man+ / woman / woman+ / non-binary / non-binary+</code>(<code>+</code> 表示在该群体文本中"超出 baseline 的比例")。</p>
+          <p><strong>② 关键数据:</strong><code>non-binary</code> 行在 "gender / trans / queer / transgender / lgbtq / sexual" 等词上 <code>+</code> 值最高(0.044–0.061),说明非二元相关文档高度聚焦在性别议题本身;<code>man+ / woman+</code> 几乎全为 0(关联词分布与整体语料同质化)。</p>
+          <p><strong>③ 启示:</strong>FineWeb 里描述 non-binary 群体的文本,几乎都嵌在"LGBTQ / 跨性别"特定语境;而 man / woman 几乎无主题集中——这意味着模型谈 non-binary 时表达分布更窄,可能更刻板。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_8">
+        <img src="../figures/2406.17557_fig_8.png" alt="fig_8" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_8</span> · p.33 · 790×1144</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_8">
+          <p><strong>① 图说明:</strong>FineWeb 上"性别词关联"TF-IDF 热力图,以 <code>woman+</code> 列排序(<code>+</code> 表示 "该列减去所有词的均值",即"超出 baseline 的部分")。和 fig_7 相比,这张按 <code>woman+</code> 排序、更突出 <em>woman</em> 的共现词。</p>
+          <p><strong>② 关键数据:</strong>共现强度最高的几个词,<code>woman</code> 列:<em>women</em> 0.051、<em>said</em> 0.022、<em>love</em> 0.017、<em>family</em> 0.014;再看 <code>woman+</code>(超出基线):<em>women</em> +0.026、<em>love</em> +0.011、<em>dating</em> 在 woman 列 0.011 / woman+ 0.008。<em>non-binary+</em> 在 "gender / trans / sexual" 上仍是大正值。</p>
+          <p><strong>③ 启示:</strong>FineWeb 里和 <code>woman</code> 强共现的词,除"women / said"等中性词外,带情感/亲密语境(love、family、dating)的偏高,这与论文 §5 提到的"宗教词 × intimacy"偏见同源。Edu 子集在这点上要好一些(见 fig_2 与下一节)。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_9">
+        <img src="../figures/2406.17557_fig_9.png" alt="fig_9" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_9</span> · p.33 · 782×646</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_9">
+          <p><strong>① 图说明:</strong>性别 TF-IDF 热力图的第三种排序——按 <code>man</code> 列从大到小排,对应论文 Fig 22.C(FineWeb 中"man+"的最强关联)。</p>
+          <p><strong>② 关键数据:</strong><code>man</code> 列最大值:<em>man</em> 0.046(自共现)、<em>said</em> 0.022、<em>god</em> 0.018、<em>time</em> 0.017、<em>life</em> 0.015、<em>police</em> 0.014。<em>man+</em> 列(超出基线):<em>man</em> +0.022 一骑绝尘。<em>non-binary+</em> 几乎全为负(因为这些"通用"词在 non-binary 文本里反而不突出)。</p>
+          <p><strong>③ 启示:</strong>FineWeb 中提到 <code>man</code> 的文档,语境集中于"god / police / life / good"——典型的新闻报道与宗教/社会议题。<code>non-binary</code> 文档则被特定 LGBTQ 话题主导(见 fig_7);两个群体的"语义半径"差异很大,模型在跨群体生成时易于走形。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_10">
+        <img src="../figures/2406.17557_fig_10.png" alt="fig_10" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_10</span> · p.34 · 1568×1006</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_10">
+          <p><strong>① 图说明:</strong>宗教词 TF-IDF 关联热力图,按 <code>atheist+</code> 列排序——对应论文 Fig 23,展示"无神论者"语境下最显著的共现词。</p>
+          <p><strong>② 关键数据:</strong><em>atheist</em> 自共现 0.095,<em>atheist+</em> 0.078(均最大);<em>god</em> 在 atheist 列 0.080 / atheist+ 0.057——明显比 christian (0.026) / muslim (0.012) 都高,说明无神论文本中 god 出现密度反而最高(辩论语境)。<em>christian</em> 在 <em>christian+</em> 列 +0.026(catholic+0.018);<em>buddhist</em> 在自列 0.077。</p>
+          <p><strong>③ 启示:</strong>"无神论"文本在 web 上几乎都是"反对/讨论 god"的二阶语料——这解释了为什么训出来的 LLM 谈 atheist 时往往复述基督教叙事。这种"对立绑定"也是 FineWeb 没主动校准的偏见。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_11">
+        <img src="../figures/2406.17557_fig_11.png" alt="fig_11" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_11</span> · p.34 · 1576×854</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_11">
+          <p><strong>① 图说明:</strong>宗教 TF-IDF 关联热力图,按 <code>buddhist+</code> 列排序(论文 Fig 24)。</p>
+          <p><strong>② 关键数据:</strong><em>buddhist</em> 自共现 0.169 / buddhist+ 0.134;<em>single</em> 0.085 / buddhist+ 0.069(异常高,与"dating"语境相关);<em>dating</em> 在 buddhist 列 0.110,但 buddhist+ 仅 +0.054——意味着"dating"对 buddhist 是高频但相对差异小。<em>personals</em> 0.064 / buddhist+ 0.045。</p>
+          <p><strong>③ 启示:</strong>就 buddhist 的相对偏置看,关键词集中在"single / dating / personals / chat"——也即 web 中"佛教徒"语境强行被"约会网站"绑架。这是论文 §5 强调的"宗教 × intimacy 偏见"的最直接证据之一,Edu 过滤后这一关联会显著弱化。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_12">
+        <img src="../figures/2406.17557_fig_12.png" alt="fig_12" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_12</span> · p.35 · 1574×1156</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_12">
+          <p><strong>① 图说明:</strong>宗教 TF-IDF 关联,按 <code>christian+</code> 排序(论文 Fig 25)。</p>
+          <p><strong>② 关键数据:</strong><em>christian</em> 自共现 0.077 / christian+ 0.049 ;<em>dating</em> 0.192(christian 列最高) / christian+ 仅 0.046 — 因为 dating 在所有宗教里都极高;<em>jewish</em> 0.212 / jewish+ 0.069 同样"dating"占头部;<em>singles</em> 0.076 / christian+ 0.006;<em>catholic</em> christian+ 0.080(强基督教内部共现)。<em>online / online+</em>:christian 0.047 / +0.035。</p>
+          <p><strong>③ 启示:</strong>christian 在 web 上"约会化"严重—— <em>christian dating</em> / <em>christian singles</em> 是高度成型的内容簇,几乎所有宗教都被卷入 dating 语境;catholic 是 christian 真正的"无 dating 关联词"。这也是论文中"religion × intimacy"偏见排第一的实证表现。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_13">
+        <img src="../figures/2406.17557_fig_13.png" alt="fig_13" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_13</span> · p.35 · 1558×998</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_13">
+          <p><strong>① 图说明:</strong>宗教 TF-IDF 关联,按 <code>muslim+</code> 排序(论文 Fig 26)。</p>
+          <p><strong>② 关键数据:</strong><em>muslim</em> 自共现 0.115 / muslim+ 0.083;<em>dating</em> 0.164 在 muslim 列高、muslim+ 也是 +0.164(意外地比 christian dating 的 +0.046 高很多)——说明"muslim dating"在数据集里与 christian dating 一样普遍;<em>women</em> 0.043 / muslim+ +0.014;<em>online / sex</em> 也都偏高。</p>
+          <p><strong>③ 启示:</strong>"muslim"在 web 上同样被 dating/约会内容主导,且 muslim 的 intimacy 偏置在所有宗教里相对最大(muslim+ dating = 0.164,几乎与 jewish dating 0.212 同一量级)。Edu 子集对此清洗效果显著。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_14">
+        <img src="../figures/2406.17557_fig_14.png" alt="fig_14" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_14</span> · p.36 · 1584×1406</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_14">
+          <p><strong>① 图说明:</strong>宗教 TF-IDF 关联,按 <code>jewish+</code> 排序(论文 Fig 27),这是论文 §5 重点点名"intimacy 偏置最大"的图。</p>
+          <p><strong>② 关键数据:</strong><em>jewish</em> 自共现 0.128 / jewish+ 0.097(很高);<em>dating</em> 0.212(全图最大值)/ jewish+ 0.069;<em>singles</em> 0.110 / jewish+ 0.041 —— "jewish dating" 与 "jewish singles" 是 FineWeb 里和 jewish 强共现的两个最大词;<em>women</em> jewish 0.050 / jewish+ 0.009。</p>
+          <p><strong>③ 启示:</strong>这张图是论文摘要"<em>religion words 与 intimacy 关联最严重</em>"判断的直接证据——jewish 的 dating / singles 关联值在所有宗教里最大。该效应在 Edu 中显著缓解(见正文 §5 与摘要)。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_15">
+        <img src="../figures/2406.17557_fig_15.png" alt="fig_15" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_15</span> · p.37 · 1558×1256</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_15">
+          <p><strong>① 图说明:</strong>宗教 TF-IDF 关联,按 <code>hindu+</code> 排序(论文 Fig 28)。</p>
+          <p><strong>② 关键数据:</strong><em>hindu</em> 自共现 0.129 / hindu+ 0.100;<em>dating</em> 0.146 / hindu+ 仅 +0.004(在 hindu 语境里 dating 相对不突出);<em>indian</em> 0.037 / hindu+ +0.026(特有);<em>single</em> 0.054 / hindu+ +0.017。其它"women / men / family"等通用词在 hindu+ 上几乎为 0。</p>
+          <p><strong>③ 启示:</strong>hindu 的 intimacy 偏置比 jewish / muslim 弱,真正的特殊关联是 <em>indian / single</em>(印度文化语境);这意味着用 FineWeb 训出的模型谈 hindu 时,主题更偏文化/民族而非约会——与 jewish / christian 的偏置面相完全不同。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_16">
+        <img src="../figures/2406.17557_fig_16.png" alt="fig_16" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_16</span> · p.38 · 444×1350</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_16">
+          <p><strong>① 图说明:</strong>年龄词 TF-IDF 关联,按 <code>old</code> 列排序(论文 Fig 29.A)。</p>
+          <p><strong>② 关键数据:</strong><em>old</em> 自共现 0.034 / old+ 0.012(差异不大);其它共现词在 old / young 两列几乎贴近,例如 <em>just</em> 0.019 / 0.016、<em>like</em> 0.021 / 0.017、<em>time</em> 0.019 / 0.017;<em>old+</em> 列几乎全是 +0.001~0.002 的微正值,而对应的 <em>young+</em> 几乎全为 -0.001~-0.002。</p>
+          <p><strong>③ 启示:</strong>"old" 在 FineWeb 中的差异化语境很弱——它和"young"共现的几乎是同一组高频通用词(time / good / day / way / great)。换言之,年龄维度上 FineWeb 没明显刻板偏见,但也意味着模型对"old / young"两个词的语义区分主要靠词本身,而非语境支撑。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_17">
+        <img src="../figures/2406.17557_fig_17.png" alt="fig_17" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_17</span> · p.38 · 462×702</div>
+
+        </div>
+        <div class="figure-explain" data-fig-id="fig_17">
+          <p><strong>① 图说明:</strong>年龄词 TF-IDF 关联,按 <code>young</code> 列排序(论文 Fig 29.B),与 fig_16 配对。</p>
+          <p><strong>② 关键数据:</strong><em>young</em> 自共现 0.038 / young+ 0.016 (比 old+ 大);<em>children</em> 0.016 / young+ +0.005;<em>women</em> 0.011 / young+ +0.003 —— 论文直接点名这是"<em>过度关注女性年轻化</em>"的实证(Durham 79 / Sidani 80);<em>school</em> 0.013 / young+ +0.003;<em>child</em> 0.009 / young+ +0.002。</p>
+          <p><strong>③ 启示:</strong>young 在 FineWeb 中最特征化的共现是 <em>children / women / school / child / family</em> ——其中"young women / young girl"的共现明显高于"old women"。这正是论文引用文献(Lolita effect, hypersexualization of young girls)指出的英语 web 文本的结构性偏见,是 FineWeb 无法自动消除、需要下游对齐处理的部分。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale Guilherme Penedo Hynek Kydlíˇcek Loubna Ben allal Anton Lozhkov Margaret Mitchell Colin Raffel Leandro Von Werra Thomas Wolf Hugging Face https://huggingface.co/datasets/HuggingFaceFW/fineweb https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The performance of a large language model (LLM) depends heavily on the quality and size of its pretraining dataset. However, the pretraining datasets for state-of-the-art open LLMs like Llama 3 and Mixtral are not publicly available and very little is known about how they were created. In this work, we introduce FineWeb, a 15-trillion token dataset derived from 96 Common Crawl snapshots that produces better-performing LLMs than other open pretraining datasets. To advance the understanding of how best to curate high-quality pretraining datasets, we carefully document and ablate all of the design choices used in FineWeb, including in-depth investigations of deduplication and filtering strategies. In addition, we introduce FineWeb-Edu, a 1.3-trillion token collection of educational text filtered from FineWeb. LLMs pretrained on FineWeb-Edu exhibit dramatically better performance on knowledge- and reasoning-intensive benchmarks like MMLU and ARC. Along with our datasets, we publicly release our data curation codebase and all of the models trained during our ablation experiments.</p>
+          </div>
+          <div class="zh">
+            <p>大语言模型(LLM)的性能严重依赖于其预训练数据集的质量与规模。然而,Llama 3、Mixtral 等当前最强的"开源"LLM,其预训练数据集并未公开,关于它们如何构建也几乎没有公开信息。在本工作中,我们提出 <strong>FineWeb</strong>——一个从 96 份 CommonCrawl 快照中提取的 15 万亿(15T)token 的数据集,所训出的 LLM 优于其它开源预训练数据集。为了推进关于"如何构建高质量预训练数据集"的理解,我们对 FineWeb 中所有的设计选择都做了细致的文档化与消融,包括对去重(dedup)与过滤策略的深入研究。此外,我们还提出 <strong>FineWeb-Edu</strong>——一个从 FineWeb 中筛出的、含 1.3 万亿 token 的教育性文本子集。在 FineWeb-Edu 上预训练的 LLM 在 MMLU、ARC 等知识与推理类基准上表现显著更好。我们同时开源数据集、整套数据处理代码库以及消融阶段训练的全部模型。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>Introduction / 引言 + 背景综述<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">§1 Introduction / 引言</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Large Language Models (LLMs) have quickly become a ubiquitous technology thanks to their ability to competently perform a wide range of text-based tasks. A driving factor in the success of LLMs has been a steady increase in model sizes, which in turn necessitate ever-larger pretraining datasets. Beyond scale, other characteristics of pretraining data have proven to be important, including filtering out "low-quality" content and removing duplicate text. Ultimately, the curation choices made when developing a pretraining dataset can have a huge impact on the downstream capabilities and performance of an LLM. As such, pretraining dataset curation strategies are often treated as closely guarded trade secrets. In fact, there are many popular "open" language models whose parameters are publicly available but whose pretraining datasets were not released and are scarcely documented. The lack of access to high-quality large-scale pretraining datasets and lack of information about their curation has led to concerns of a growing gap between proprietary and public knowledge.</p>
+          </div>
+          <div class="zh">
+            <p>大语言模型(LLM)凭借在大量文本任务上的胜任能力,迅速成为一种无处不在的技术。LLM 成功背后的一大驱动因素是模型规模的持续增长——而这又需要越来越大的预训练数据集。在规模之外,预训练数据的其它特性也被证明十分重要,包括过滤掉"低质量"内容,以及去除重复文本。最终,在构建预训练数据集时所做的"整理(curation)选择",会对 LLM 的下游能力与表现产生巨大影响。正因如此,预训练数据集的整理策略往往被视为"看得很紧的商业机密"。事实上,有不少流行的"开源"语言模型,虽然参数公开,但其预训练数据集既未释放,也几乎没有文档可查。无法获取高质量、大规模的预训练数据集,以及对其整理流程缺乏信息,引发了人们对"私有知识与公开知识鸿沟正在拉大"的担忧。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we aim to minimize this gap by developing and releasing the FineWeb datasets, a collection of large-scale pretraining datasets that can be used to train performant LLMs. Specifically, we first introduce FineWeb, a 15-trillion token dataset of text sourced from 96 Common Crawl snapshots. FineWeb is sufficiently large to train a Chinchilla-optimal model with more than 500 billion parameters. Beyond scale, FineWeb's recipe involves a principled strategy for choosing and tuning filtering heuristics that helped produce a small set of effective filters out of over fifty candidate filters from past work. In addition, we performed an in-depth exploration of how different deduplication strategies and granularities can impact performance. To validate our design choices, we ultimately demonstrate that models trained on FineWeb perform better than those trained on other public web-based pre-training datasets.</p>
+          </div>
+          <div class="zh">
+            <p>在本工作中,我们旨在通过开发并释出 <strong>FineWeb</strong> 数据集——一组可用来训练高性能 LLM 的大规模预训练数据集合——把这一鸿沟最小化。具体来说,我们先提出 FineWeb:一个从 96 份 CommonCrawl 快照中抽取的 15T token 文本数据集。FineWeb 已足够大,可以用 Chinchilla 最优配比训出一个 500B+ 参数的模型。在规模之外,FineWeb 的配方还包含一套"系统化挑选与调优启发式过滤器"的策略——它从以往工作中超过 50 个候选过滤器里,筛出一小撮真正有效的过滤器。此外,我们还对不同去重(dedup)策略与粒度如何影响性能,做了深入探究。为了验证设计选择,我们最终证明:在 FineWeb 上训练的模型,优于在其它公开 web 类预训练数据集上训练的模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Inspired by recent work advocating for training LLMs on educational data, we additionally introduce FineWeb-Edu, a subset of 1.3 trillion tokens from FineWeb that was rated as highly educational by a custom classifier. Models trained on FineWeb-Edu exhibit significantly better performance on knowledge- and reasoning-intensive benchmarks like MMLU and ARC. Both datasets are released under the permissive ODC-By License. Apart from contributing datasets, we also release datatrove, the data processing library we developed to create FineWeb. On the whole, our work represents a significant step towards improving public knowledge and resources for curating LLM pre-training datasets.</p>
+          </div>
+          <div class="zh">
+            <p>受"在教育性数据上训练 LLM"这一最近趋势的启发,我们额外提出 <strong>FineWeb-Edu</strong>:它是 FineWeb 的一个 1.3T token 子集,由一个自研分类器判定为"高教育性"的文档构成。在 FineWeb-Edu 上训练的模型,在 MMLU、ARC 等知识与推理密集型基准上表现显著更好。两份数据集都以宽松的 ODC-By 协议释放。除数据集外,我们还释放了 <code>datatrove</code>——构建 FineWeb 时开发的数据处理库。总的来说,本工作为提升"公开的 LLM 预训练数据整理知识与资源"迈出了重要一步。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">§2 Background / 背景</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we focus on the curation of training datasets for autoregressive Transformer-based large language models (LLMs). At their core, LLMs aim to produce a distribution over the next token of text conditioned on past tokens, where each token is typically a word or subword unit. The generality of this paradigm allows LLMs to be applied to virtually any text-based task by formulating a prefix whose continuation corresponds to performing the task. Such models may undergo many stages of training including pretraining on unstructured text data, fine-tuning to improve performance on a specific task, multitask fine-tuning to improve generalization, and learning from human feedback to improve instruction-following capabilities. In this work, we focus solely on curating data for the pretraining stage.</p>
+          </div>
+          <div class="zh">
+            <p>本工作聚焦于"为自回归 Transformer 大语言模型(LLM)整理训练数据"。本质上,LLM 的目标是基于过往 token 预测下一个 token 的分布,其中每个 token 通常是一个单词或子词单元。该范式的通用性让 LLM 可以通过"写一个前缀,让其续写完成任务"的方式被应用到几乎任何文本任务上。这类模型可能要经历多个训练阶段——在非结构化文本上预训练、为某具体任务做微调、为提升泛化做多任务微调、用人类反馈学习以提升指令跟随等等。本文只关注<em>预训练</em>阶段的数据整理。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While many sources have been considered for pretraining data including text from books, Wikipedia, and research papers, a highly common choice is to use web text, i.e. text scraped from webpages on the public internet. While some companies like OpenAI and Anthropic perform their own web scrapes, designing, implementing, and running a web scraper at scale requires significant resources and expertise. Many LLM pretraining datasets have therefore been constructed from text from the Common Crawl, a publicly available and continually updated collection of website snapshots that has been running since 2007. As of writing, Common Crawl has produced 100 web snapshots totaling petabytes of data. Although Common Crawl has produced more than enough data to train recent LLMs, it has been shown that the performance of an LLM can heavily depend on how web text has been filtered and preprocessed before being used for pretraining.</p>
+          </div>
+          <div class="zh">
+            <p>预训练数据来源繁多——书籍、Wikipedia、科研论文等等;但最常见的选择仍是 web 文本,即从公开互联网网页抓取的文本。虽然 OpenAI、Anthropic 等公司会自建网爬,但要在大规模下设计、实现、运行一个网爬器需要大量资源与专业知识。因此,许多 LLM 预训练数据集都是基于 <strong>CommonCrawl</strong> 构建的——这是一个自 2007 年以来持续更新的公开网页快照集合。截至本文写作时,CommonCrawl 已产出 100 份 web 快照,合计 PB 级数据。尽管 CommonCrawl 的数据量早已超出训练近期 LLM 所需,但已有研究表明:LLM 性能严重依赖于"在用作预训练前 web 文本如何被过滤与预处理"。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In particular, web text can contain a large amount of "unnatural" language (e.g. "boilerplate" text, gibberish, etc.). Training on unnatural language data can harm the performance of LLMs, possibly because most downstream uses of LLMs do not involve such data. On the other hand, filtering out too much content can produce a dataset that is too small to perform sufficient pretraining for a general use model. Separately, web text can contain a large amount of duplicated content, which has also been shown to be harmful in the context of pretraining data. While deduplication may seem as straightforward as "removing duplicate text", in practice many design choices must be made (line, paragraph, or document-level deduplication? fuzzy or exact matching? etc.). The curation and relative performance of different web text-based pretraining datasets therefore heavily depends on a given dataset's filtering and deduplication pipeline.</p>
+          </div>
+          <div class="zh">
+            <p>具体而言,web 文本含有大量"不自然语言",如 boilerplate(模板/导航文)、乱码等。在不自然语言上训练会损害 LLM 性能——可能是因为 LLM 的下游用途大多不涉及这种数据。另一方面,过滤掉太多内容,会让数据集变得太小、无法支撑通用模型的预训练。此外,web 文本含有大量<em>重复</em>内容,在预训练数据语境下这同样已被证明有害。dedup 看似只是"删去重复文本"那么简单,但实际中要做很多设计选择:行级 / 段级 / 文档级?fuzzy 还是 exact?……因此,各家 web 类预训练数据集的整理质量与相对表现,严重取决于它的过滤与 dedup 流水线。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Survey of prior pipelines.</strong> OSCAR processes Common Crawl with a fastText language classifier + line-level non-cryptographic hash dedup. C4 uses langdetect + a series of heuristics (terminal-punctuation, length, "bad words" list, etc.) + 3-line-window dedup. CC-100 uses the cc_net pipeline: fastText for LID, paragraph-level hash dedup, and a Wikipedia-trained n-gram LM perplexity filter. The Pile contains "Pile-CC" from one snapshot, processed with pycld2 / jusText / WebText-similarity classifier and MinHash fuzzy dedup. RedPajama processes CC with cc_net plus a Wikipedia-vs-random classifier; SlimPajama further removes short docs and adds extra MinHash dedup. RefinedWeb uses trafilatura + fastText + MassiveText-style heuristics + MinHash + ExactSubstr dedup. RedPajama v2 ships 84 unfiltered snapshots with quality annotations (cc_net / C4 / MassiveText / RefinedWeb) and dedup labels (Bloom + MinHash). Dolma's CC subset uses fastText, MassiveText+C4 heuristics, toxicity filters, and URL/doc/paragraph Bloom-filter dedup. Among closed models, WebText scraped Reddit-linked pages, GPT-3 used a WebText-classifier + MinHash, and MassiveText (Gopher) used SafeSearch + content heuristics + MinHash.</p>
+          </div>
+          <div class="zh">
+            <p><strong>已有流水线综述。</strong>OSCAR:fastText 做语言判别 + 行级非加密哈希 dedup;<strong>C4</strong>:langdetect + 一组启发式规则(终止标点、长度、"脏话表"等)+ 3 行窗口 dedup;<strong>CC-100</strong>:cc_net 流水线(fastText LID + 段级哈希 dedup + Wikipedia n-gram LM 困惑度过滤);<strong>Pile</strong>:Pile-CC 用 pycld2、jusText 去 boilerplate、WebText 相似度分类器、MinHash 模糊 dedup;<strong>RedPajama</strong>:CC + cc_net + "Wikipedia vs 随机 CC"质量分类器;<strong>SlimPajama</strong>:在 RPv1 之上删短文档 + 再做一遍 MinHash;<strong>RefinedWeb</strong>:trafilatura 抽文 + fastText + MassiveText 风格启发式 + MinHash + ExactSubstr;<strong>RPv2</strong>:84 份"原汁"快照 + 多套质量标注(cc_net / C4 / MassiveText / RefinedWeb)+ 两套 dedup 标签(Bloom + MinHash);<strong>Dolma</strong> CC 子集:fastText + MassiveText+C4 规则 + 毒性过滤 + URL/文档/段三层 Bloom dedup。闭源端:WebText 仅取被 Reddit 高赞贴链接到的网页;GPT-3 用 "WebText 分类器 + MinHash";Gopher 的 MassiveText 用 SafeSearch + 内容启发式 + MinHash。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3">
+        <details class="cn-note">
+          <summary>中文导读 · 引言要点</summary>
+          <div class="cn-content">
+            <ul>
+              <li><strong>问题:</strong>Llama 3 / Mixtral 等"开源"模型不开放预训练数据,导致公开/私有数据知识鸿沟拉大。</li>
+              <li><strong>本文目标:</strong>① 释放 <code>FineWeb</code>(15T tokens, 96 CC 快照)+ <code>FineWeb-Edu</code>(1.3T 教育子集);② 完整公开消融、训练代码、所有 ablation checkpoint;③ 释放 <code>datatrove</code> 数据处理库。</li>
+              <li><strong>研究方法:</strong>纯实证 ablation——每一步流水线设计都用"训 1.71B 模型在 28B / 350B token 上跑、八个 benchmark 取平均"来验证。</li>
+              <li><strong>背景关键词盘点:</strong>OSCAR / C4 / CC-100 / Pile / RedPajama / SlimPajama / RefinedWeb / RPv2 / Dolma —— 每家在"语言判别 + 启发式 + dedup"三件套上各有取舍,本节给出非常密集的对照。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3b">
+      <summary>
+        <span>Pipeline / 流水线:URL 过滤 + Dedup + 质量过滤<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">§3.1 Experimental setup / 实验设置</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our design of FineWeb is primarily empirical: we performed a series of "data ablation" experiments to test different methods at each stage of the pipeline. All ablations follow an iterative process: the baseline for each subsection includes only the processing steps from previous subsections. We compare pipeline design choices by training data ablation models that are identical apart from the data they were trained on (same parameters, architecture, equal number of randomly sampled tokens). To minimize random-subset noise, we trained two models per dataset version with different random subsets and seeds, and averaged the scores.</p>
+            <p>All training used nanotron. Ablation models had 1.71B parameters (with embeddings), Llama architecture, 2048 sequence length, ~2M-token global batch size, GPT-2 tokenizer. Filtering ablations: ~28B tokens (roughly Chinchilla-optimal for this size). Deduplication ablations and final cumulative runs: 350B tokens. We trained over 70 models for a total of ~80,000 H100 GPU-hours. Evaluation used lighteval on CommonSenseQA, HellaSwag, OpenBookQA, PIQA, SIQA, WinoGrande, ARC, and MMLU (truncated to 1000 samples each).</p>
+          </div>
+          <div class="zh">
+            <p>FineWeb 的设计主要是实证的:我们对流水线每一阶段都做一系列"数据消融"实验。所有消融遵循<em>迭代</em>:每一小节的 baseline 只包含前面小节已经确定的处理步骤。要比较流水线设计,我们训一组"除了数据其它都相同"的 ablation 模型(同参数、同架构、同等数量的随机采样 token)。为了压低随机子集带来的噪声,每个数据版本训两个模型(不同随机子集 + 不同种子)并取平均。</p>
+            <p>训练用 nanotron 库。Ablation 模型为 1.71B 参数(含 embedding)、Llama 架构、序列长度 2048、global batch ≈ 2M tokens、GPT-2 tokenizer。过滤消融用 ≈ 28B tokens(差不多就是该模型规模的 Chinchilla 最优);dedup 消融和最终累积验证用 350B tokens。一共训了 70+ 个模型,大约 80,000 H100 小时。评测用 lighteval,选 CSQA / HellaSwag / OBQA / PIQA / SIQA / Winogrande / ARC / MMLU 八个(大基准都截到 1000 条以便边训边评)。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">§3.2 Text extraction (WARC vs WET) / 正文抽取</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>CommonCrawl data comes in two formats: WARC (raw HTML + crawl metadata) and WET (text-only, extracted with a generic htmlparser). Similarly to Gao et al., we found that WET files retained too much boilerplate and menu text. We therefore extracted text from WARC files using the open-source trafilatura library, which by visual inspection gave less boilerplate than other libraries. Custom extraction is expensive but pays off: training on trafilatura-WARC clearly beats WET when only fastText English filtering is applied and no deduplication is done. We therefore use WARC-based data in all later experiments.</p>
+          </div>
+          <div class="zh">
+            <p>CommonCrawl 提供两种格式:WARC(原始 HTML + 抓取元数据)与 WET(用通用 htmlparser 抽出来的纯文本)。和 Gao 等人一样,我们发现 WET 残留太多 boilerplate / 菜单文字。于是我们用开源 <em>trafilatura</em> 库自己从 WARC 抽取——目视下它比其它库更干净。自定义抽取成本不低,但回报很明显:只做 fastText 英文过滤、不去重的设定下,trafilatura-WARC 训出的模型聚合分明显高于 WET。因此后续所有实验都基于 WARC 数据。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">§3.3 Base filtering / 基线过滤</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>As a starting point, we applied a basic pipeline borrowed from RefinedWeb: URL filtering via a blocklist (adult content), fastText language classifier keeping only English with score ≥ 0.65, and MassiveText-style quality and repetition filters at their original thresholds. Applying this filtering to all 96 WARC-extracted snapshots produced roughly <strong>36 trillion tokens</strong> (GPT-2 tokenizer). This step yields a clear performance uplift over unfiltered WARC.</p>
+          </div>
+          <div class="zh">
+            <p>作为起点,我们从 RefinedWeb 借来一条基线过滤流水线:用屏蔽名单做 URL 过滤(屏蔽成人内容);用 fastText 语言分类器,只保留英文(分 ≥ 0.65);再套用 MassiveText 风格的质量与重复度过滤(沿用其原始阈值)。对所有 96 份 WARC 提取的数据做完上述操作,得到 <strong>≈ 36T tokens</strong>(GPT-2 tokenizer)。这一步相对未过滤的 WARC 已经能带来明显的性能提升。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">§3.4 Deduplication / 去重 — 全文最反直觉的一节</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Following RefinedWeb, we use MinHash, a fuzzy hash-based dedup technique. We collect each document's 5-grams (English word tokenizer), compute 112 MinHashes split into 14 buckets of 8 hashes each — targeting documents that are at least 75% similar. Documents sharing the same 8 MinHashes in any bucket are duplicates. We then perform transitive clustering and keep one random document per cluster.</p>
+          </div>
+          <div class="zh">
+            <p>沿用 RefinedWeb,我们用 <strong>MinHash</strong>(基于哈希的模糊 dedup)。每篇文档先用英文分词器抽 5-gram,再算 112 个 MinHash,把它们切成 <strong>14 个桶 × 每桶 8 个 hash</strong>——目标是召回相似度 ≥ 75% 的文档对。任一桶中 8 个 MinHash 完全相同就视为重复;再做一次"传递闭包"聚类(A≈C、B≈C 则 A、B 同簇),每个簇随机留一份。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Global dedup did not help.</strong> Our first attempt was iterative MinHash <em>across all 96 snapshots</em>, starting with the most recent (2023-50). For the oldest snapshots this removed up to 90% of base-filtered data, shrinking the dataset to ~4T tokens. But on a 350B-token training run, the ablation model showed almost no improvement and remained far below RefinedWeb. We then trained two probes on slices of the 2013-48 snapshot: (a) the ~31B tokens kept after global dedup ("originally kept"), and (b) 171B tokens obtained by independently deduplicating the ~460B tokens that had been removed ("originally removed"). The "originally removed" data trained a clearly better model — visual inspection confirmed the "kept" data was actually worse (more ads, gibberish keyword lists, badly formatted text).</p>
+          </div>
+          <div class="zh">
+            <p><strong>全局 dedup 没用。</strong>第一次尝试是<em>跨 96 份快照</em>迭代 MinHash:从最新的 2023-50 开始,按时间倒推。对最古老的快照,这一步删掉了高达 90% 的基线过滤数据,整体只剩 ≈ 4T tokens。但在 350B token 训练消融上,该模型相比未去重几乎没有提升,远落后于 RefinedWeb。我们继而做了一个对照实验:在 2013-48 快照上训两个模型——(a) 全局 dedup <em>保留</em> 下来的 ≈ 31B tokens,(b) 把它<em>删掉</em>的 ≈ 460B tokens 在单 dump 内再独立 dedup 一次得到的 171B tokens。结果(b) 训出的模型明显更好——目视核对也确认:被保留的那 10% 其实更差(广告多、关键词堆砌、格式混乱)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Per-snapshot dedup matches RefinedWeb.</strong> We then deduplicated each snapshot independently with the same MinHash parameters, yielding ~20T tokens. Training on a random sample drawn from all snapshots <em>matched</em> RefinedWeb. Our hypothesis: the real win from dedup comes from killing the very large duplicate clusters (hundreds of thousands of docs) that recur across all crawls; pushing further to also kill small clusters (≲ 100 dups, i.e. on the order of the number of crawls) actually <em>hurts</em>, because such "rare cross-crawl repeats" tend to be exactly the canonical, high-quality content. Several lighter global-dedup variants we tried (Appendix E.3) all underperformed per-snapshot dedup.</p>
+          </div>
+          <div class="zh">
+            <p><strong>每个 dump 内独立 dedup 才打平 RefinedWeb。</strong>于是我们改成"每份快照独立去重、其它快照不参与",参数同上,得到 ≈ 20T tokens。从所有快照随机均匀采样训练,聚合分<em>持平</em> RefinedWeb。我们的猜想是:dedup 真正带来收益的,是删除那些"上百万份的大重复簇"(在所有快照里反复出现的 boilerplate);如果继续把规模更小的簇(重复数 ≲ 100,跟快照数相当)也删掉,反而<em>有害</em>——因为这些"跨 dump 偶尔重复的内容"恰恰是经典、被广泛引用的优质内容。我们尝试过若干"更轻量的全局 dedup"(附录 E.3)也都不如单 dump 独立 dedup。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">§3.5 Adding C4's filters / 引入 C4 的启发式过滤</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>At this point our pipeline matched RefinedWeb, but C4 (despite being smaller) still beat us on some benchmarks — notably HellaSwag, the highest-signal task. C4's filters drop lines without terminal punctuation, lines that mention "javascript" or "terms-of-use"/"cookie policy", short documents, and documents containing "lorem ipsum" or a curly bracket. We applied them to the 2019-18 crawl after base filtering + per-snapshot MinHash.</p>
+          </div>
+          <div class="zh">
+            <p>此时我们已与 RefinedWeb 持平,但 C4(虽然总量小得多)仍在我们某些基准上更高,尤其是信噪比最好的 HellaSwag。C4 的启发式规则包括:删掉"行尾没有终止标点"的行、删掉提到"javascript"或"使用条款 / cookie 政策"的行、删掉过短文档,以及包含"lorem ipsum"或花括号 <code>{</code> 的文档。我们将它们叠加到"base filtering + 单 dump MinHash"后的 2019-18 快照上做对比。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Results: applying <em>all</em> C4 filters matches C4's HellaSwag performance; the Curly Bracket filter removes 2.8% of tokens (small boost), Word Length removes 4.3% (small boost), and <strong>Terminal Punctuation alone gives the biggest single boost but removes ~30% of all tokens</strong>. The lorem_ipsum / javascript / policy rules remove &lt; 0.5% each. We adopted all C4 filters <em>except</em> Terminal Punctuation — it deletes too much data for its benefit. "All-but-terminal" removes only ~7% in total.</p>
+          </div>
+          <div class="zh">
+            <p>结果是:全部 C4 过滤器一起上,HellaSwag 才能持平 C4;花括号过滤删 2.8% tokens(小提升),字长过滤删 4.3%(小提升),<strong>单独看"行末终止标点"过滤提升最大,但要删掉约 30% 的 token</strong>;lorem_ipsum / javascript / policy 各删 &lt; 0.5% 太小不单独跑。我们最终采用<em>除终止标点以外</em>的所有 C4 过滤器——终止标点删得太狠不值。"All-but-terminal" 加在一起也只删 ≈ 7%。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">§3.6 Developing additional heuristic filters / 自研启发式过滤</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Past heuristic filters were typically devised by data inspection. We instead use a more systematic approach: collect 50+ high-level statistics — from document-level metrics (number of lines, avg. line/word length, etc.) to inter-document repetition metrics (à la MassiveText) — on both a "high-quality" and a "low-quality" dataset. We took the <em>independently</em> and <em>globally</em> deduplicated 2013-48 snapshot as the high- and low-quality probes, respectively. For each metric, we plot the two distributions and pick a threshold targeting regions where the low-quality density is higher than the high-quality density. This gave 16 candidate metric-threshold pairs.</p>
+          </div>
+          <div class="zh">
+            <p>以往的启发式过滤往往是目视样本得到的。我们改用一套更系统的方法:对一份"高质数据"和一份"低质数据"分别统计 50+ 个文档级指标(行数、平均行/词长)和文档间重复指标(借鉴 MassiveText)。我们用"独立 dedup 的 2013-48 快照"当高质,用"全局 dedup 的同一份快照"当低质(后者前文已论证更差)。对每个指标画两份直方图,然后选一个阈值,精准切到"低质密度明显 ≥ 高质密度"的区段。这样得到 16 个候选的"指标—阈值"对。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We then ran 28B-token ablations for each candidate on the 2019-18 crawl. Three filters were retained, with thresholds notably lighter than past work: (i) remove docs where <em>fraction of lines ending with punctuation &lt; 0.12</em> (removes 10.14% of tokens vs. C4's terminal-punctuation 30%); (ii) remove docs where <em>fraction of characters in duplicated lines ≥ 0.1</em> (removes 12.47%, vs. MassiveText's 0.2); (iii) remove docs where <em>fraction of lines shorter than 30 chars ≥ 0.67</em> (removes 3.73%). Together they remove ~22% of tokens and increase aggregate score by ~1% in 28B ablations — beating C4 while filtering less data.</p>
+          </div>
+          <div class="zh">
+            <p>然后对每个候选在 2019-18 上跑 28B token 消融。最终留下 3 条过滤器,阈值都比已有工作"温和":(i) 删除"<em>行末有终止标点的行占比 &lt; 0.12</em>"的文档,删 10.14% tokens(对比 C4 终止标点的 30%);(ii) 删除"<em>重复行中字符占总字符比例 ≥ 0.1</em>"的文档,删 12.47%(对比 MassiveText 的 0.2);(iii) 删除"<em>短于 30 字符的行占比 ≥ 0.67</em>"的文档,删 3.73%。三条合起来删 ≈ 22% tokens,28B 消融上聚合分 +1% 左右——既超过 C4,又比 C4 少删数据。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3b">
+        <details class="cn-note">
+          <summary>中文导读 · Pipeline 核心结论</summary>
+          <div class="cn-content">
+            <ul>
+              <li><strong>WARC + trafilatura &gt; WET</strong>:CommonCrawl 默认 WET 抽得太脏。</li>
+              <li><strong>MinHash 反直觉:跨 96 dump 全局做反而更差</strong>。理由:全局 dedup 会把"被广泛复制的优质长文"删掉,留下只出现一次的低质长尾。<em>每个 dump 内单独 dedup</em> 才是对的(20T tokens 持平 RefinedWeb)。</li>
+              <li><strong>C4 终止标点过滤"贵在精,凶在量"</strong>:HellaSwag 提升靠它,但删 30% tokens 太狠;FineWeb 用自研更软的"<code>punct_line_ratio &lt; 0.12</code>"代替,只删 10%。</li>
+              <li><strong>阈值挑选法</strong>:不靠目检,用"高质 vs 低质两套数据"直方图差异自动定阈值,先选 16 个候选再各跑 28B ablation,留下 3 条。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3d">
+      <summary>
+        <span>Ablations / 累积消融 + 对比公开数据集<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">§3.7 Final FineWeb pipeline / 最终流水线</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The final FineWeb pipeline composes the choices made in the previous subsections in this exact order: (1) trafilatura text extraction on WARC files; (2) base filtering (URL blocklist + fastText English with score ≥ 0.65 + MassiveText quality/repetition filters at original thresholds); (3) per-snapshot independent MinHash deduplication; (4) all C4 heuristic filters <em>except</em> terminal punctuation; (5) the three custom heuristic filters identified in §3.6; (6) PII anonymisation (email + public IP via regex). Each individual step provides a measurable benchmark uplift on the aggregate of eight tasks. Applied to all 96 CommonCrawl snapshots available at the time of writing, the pipeline produces the <strong>15-trillion-token FineWeb dataset</strong>, large enough to train a Chinchilla-optimal model with more than 500B parameters.</p>
+          </div>
+          <div class="zh">
+            <p>最终 FineWeb 流水线把前面各小节确定下来的设计选择,按以下严格顺序拼接:(1) 在 WARC 文件上用 trafilatura 抽取正文;(2) 基线过滤(URL 屏蔽名单 + fastText 英文 ≥ 0.65 + MassiveText 风格的质量与重复过滤,使用原阈值);(3) 每份快照<em>独立</em>做 MinHash 去重;(4) 除"终止标点"外的全部 C4 启发式过滤;(5) §3.6 中确认的三条自研启发式过滤;(6) PII 匿名化(用正则规则替换邮箱与公网 IP)。每个单独步骤在八基准聚合上都能提供可测得的提升。在写作时可用的全部 96 份 CommonCrawl 快照上跑完整套流水线,得到 <strong>15 万亿 token 的 FineWeb 数据集</strong>——足以以 Chinchilla 最优比训出一个 500B+ 参数的模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">Comparison with public datasets / 对比公开数据集</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To benchmark FineWeb against the open ecosystem, the authors retrain identical 1.71B ablation models on 350B randomly sampled tokens from each candidate dataset and average eight benchmark scores (CommonSenseQA / HellaSwag / OpenBookQA / PIQA / SIQA / WinoGrande / ARC / MMLU). The contenders are: RefinedWeb (500B), C4 (172B), the CommonCrawl-based parts of Dolma 1.6 (3T) and 1.7 (1.2T), The Pile (340B), SlimPajama (627B), the deduplicated RedPajama 2 (20T), the English CommonCrawl slice of Matrix (1.3T), English CC-100 (70B), and Colossal-OSCAR (850B). No upsampling of any individual CC snapshot is performed. On the aggregate score (Figure 10), <strong>FineWeb finishes first among the base web datasets at ≈ 50% accuracy and FineWeb-Edu pushes the score to ≈ 52%</strong>, dominating every other open option; on MMLU specifically (Figure 11), <strong>FineWeb-Edu hits 33.6% accuracy with only 38B training tokens — Matrix needs roughly 300B tokens to reach the same point</strong>, a ≈ 10× token-efficiency gap that headlines the result. Each upstream pipeline step (base filtering → per-snapshot MinHash → C4 filters → custom filters) is independently shown to lift the FineWeb curve in Figure 9, validating that the gains compound rather than being driven by a single trick.</p>
+          </div>
+          <div class="zh">
+            <p>为了把 FineWeb 与开源生态横向对比,作者用同一套 1.71B 消融模型,从每个候选数据集随机采 350B token 训练,在八个 benchmark(CommonSenseQA / HellaSwag / OpenBookQA / PIQA / SIQA / WinoGrande / ARC / MMLU)上取平均。参赛数据集为:RefinedWeb(500B)、C4(172B)、Dolma 1.6(3T)与 1.7(1.2T)的 CommonCrawl 部分、Pile(340B)、SlimPajama(627B)、去重后 RedPajama 2(20T)、Matrix 英文 CC(1.3T)、CC-100 英文(70B)、Colossal-OSCAR(850B);任何单一 CC 快照都不做上采样。聚合分(论文 Figure 10)上,<strong>FineWeb 在"基础 web 数据集"中以 ≈ 50% 居首,FineWeb-Edu 进一步推到 ≈ 52%</strong>,横扫所有公开候选;具体到 MMLU(论文 Figure 11),<strong>FineWeb-Edu 仅用 38B 训练 token 就达到 33.6%,而 Matrix 要 ≈ 300B token 才到同一点</strong>——这意味着大约 <strong>10× 的 token 效率</strong>,是这一节的标志性结论。Figure 9 还展示了流水线的每一步(基线过滤 → 单 dump MinHash → C4 过滤 → 自研过滤)都独立带来 FineWeb 曲线上扬——证明增益是<em>叠加</em>的,不是某个单点 trick 带来的。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Looking at per-benchmark breakdowns in Figure 16: on MMLU FineWeb-Edu hits ≈ 37–38% vs. FineWeb ≈ 33% vs. Matrix ≈ 33% vs. C4 ≈ 30%; on ARC FineWeb-Edu reaches ≈ 56% vs. FineWeb ≈ 46% (an outright 10-point absolute gap that is the largest in the paper); CommonSenseQA spans 30–40% with FineWeb-Edu on top; HellaSwag is the only benchmark where FineWeb-Edu does <em>not</em> dominate — it lands ≈ 55–57% vs. the leaders' ≈ 62%, since highly-educational text is leaner on common-sense narrative. PIQA (70–78%), SIQA (38–42%) and WinoGrande (52–58%) cluster tightly across datasets, signalling these benchmarks are largely saturated at this scale. The Aggregate panel sums these up into the headline ≈ 52% vs. ≈ 50% gap. Importantly, since training compute is fixed at 350B tokens, the FineWeb-Edu lead is genuine token-efficiency — not merely "trained on more data".</p>
+          </div>
+          <div class="zh">
+            <p>看 Figure 16 的<em>单基准</em>分布:MMLU 上 FineWeb-Edu 大约 37–38% vs. FineWeb ≈ 33% vs. Matrix ≈ 33% vs. C4 ≈ 30%;ARC 上 FineWeb-Edu 到 ≈ 56% vs. FineWeb ≈ 46%——绝对值差 10 个点,是全文最大差距;CommonSenseQA 分布在 30–40%,FineWeb-Edu 居首;HellaSwag 是<em>唯一</em>一个 FineWeb-Edu 不占优的项 — 它落在 ≈ 55–57% vs. 领先者的 ≈ 62%,因为"高教育性文本"在常识叙事上偏稀薄。PIQA(70–78%)、SIQA(38–42%)、WinoGrande(52–58%)各数据集挤在一起,提示这些基准在该规模下已经饱和。聚合面板把这些汇成"≈ 52% vs. ≈ 50%"这条标志线。要注意:训练算力固定在 350B token,所以 FineWeb-Edu 的领先是真正的<em>token 效率</em>差距——不是"训了更多数据"。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3d">
+        <details class="cn-note">
+          <summary>中文导读 · Ablations 关键数字</summary>
+          <div class="cn-content">
+            <ul>
+              <li><strong>整体流水线 6 步:</strong>WARC trafilatura → URL/fastText/MassiveText 基线 → 单 dump MinHash → C4 部分过滤 → 3 条自研过滤 → PII 匿名化 → 15T tokens。</li>
+              <li><strong>vs 公开数据集</strong>(同一 1.71B、同 350B token 训练 + 8 benchmark 平均):FineWeb ≈ 50%,FineWeb-Edu ≈ 52% — 第一/第二;Matrix / Dolma 1.7 / RefinedWeb 大约 48% / 47% / 47%。</li>
+              <li><strong>MMLU token 效率:</strong>FineWeb-Edu 38B token 达 33.6% ≈ Matrix 训 ≈ 300B 的水平 → 10× 节省。</li>
+              <li><strong>消融贡献加和:</strong>Figure 9 把每一步的曲线叠加画出来,顺序贡献递增,无"单点决定一切"。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3c">
+      <summary>
+        <span>FineWeb-Edu / 教育子集<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>An interesting approach has recently emerged for filtering LLM training datasets: using synthetic data to develop classifiers for identifying educational content. This technique was notably used in the non-public pretraining datasets of Llama 3 and Phi-3, but its large-scale impact on web data filtering has not been publicly explored. We applied this technique to FineWeb by filtering it with an educational quality classifier developed from synthetic annotations generated by Llama-3-70B-Instruct. The resulting dataset, FineWeb-Edu, contains 1.3 trillion tokens. FineWeb-Edu is specifically optimized for educational content and outperforms all openly accessible web-based datasets on reasoning- and knowledge-intensive benchmarks such as MMLU, ARC, and OpenBookQA by a significant margin.</p>
+          </div>
+          <div class="zh">
+            <p>最近兴起一种过滤 LLM 训练数据的有趣方法:<em>用合成数据训一个识别"教育性"内容的分类器</em>。Llama 3 和 Phi-3 的非公开预训练数据据称用了这招,但它在 web 数据大规模过滤上的影响一直没被公开探究。我们把它套到 FineWeb 上:用 Llama-3-70B-Instruct 产生合成标注,训一个教育质量分类器,然后过滤,得到 <strong>FineWeb-Edu(1.3T tokens)</strong>。它针对教育性优化,在 MMLU / ARC / OpenBookQA 这种推理与知识密集型基准上,显著超过所有公开 web 数据集。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To build the synthetic annotations, we used Llama-3-70B-Instruct to score 460,000 randomly sampled webpages from the FineWeb CC-MAIN-2024-10 snapshot for their educational quality on a scale from 0 to 5. We explored several prompt formats and found that the <em>additive scale</em> (Yuan et al.) worked best — the LLM evaluates each criterion and adds to the score step-by-step, unlike a single-rating scale that locks a category. To avoid favoring highly technical pages like arXiv abstracts, we prompted the model to focus on grade-school and middle-school level knowledge.</p>
+          </div>
+          <div class="zh">
+            <p>合成标注的做法:用 Llama-3-70B-Instruct 对 FineWeb 中 CC-MAIN-2024-10 快照里随机抽的 <strong>46 万</strong>份网页,以 0–5 分给"教育性"打分。我们试了多种 prompt 格式,发现 Yuan 等人的"<em>累加式打分</em>"(additive scale)最好——让 LLM 逐条评分、逐条<em>加分</em>,而不是套用单一类别打一个固定分。为避免模型偏爱 arXiv 摘要那种"过度技术化"的页面,我们 prompt 限定它评估"小学到中学水平"的知识。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To scale to all of FineWeb we trained a small classifier on top of Snowflake-arctic-embed-m (a frozen embedding model): a linear regression head trained on 410,000 of the Llama-3 annotations for 20 epochs at learning rate $3 \times 10^{-4}$. We kept the checkpoint with the highest F1 on a 50,000-sample held-out validation set, treating Llama-3 annotations as ground truth. The model output was rounded to integers 0–5. We then experimented with thresholds; the chosen threshold ≥ 3 gave F1 = 82% on validation and the best trade-off between knowledge/reasoning benchmarks and HellaSwag-style tasks. Running this classifier over all 15T tokens of FineWeb took roughly <strong>6,000 H100 GPU-hours</strong>.</p>
+          </div>
+          <div class="zh">
+            <p>要把分类推到全量 FineWeb,我们在冻结的 <em>Snowflake-arctic-embed-m</em> embedding 之上训一个轻量分类头:在 41 万条 Llama-3 标注上训 20 个 epoch、learning rate $3 \times 10^{-4}$,只训线性回归头。以剩下 5 万条 held-out 集为验证集(把 Llama-3 标注当真值),选 F1 最高的 checkpoint。再把输出四舍五入到 0–5 整数。然后试不同阈值,最终选 <strong>阈值 ≥ 3</strong>:验证集 F1 = 82%,且在"知识/推理 benchmark"与"HellaSwag 类常识"之间权衡最好。把这个分类器跑过 FineWeb 全部 15T tokens,大约用了 <strong>6,000 H100 GPU-小时</strong>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>At a larger ablation (1.71B model trained on 350B tokens) FineWeb-Edu surpasses FineWeb and all other open web datasets. The gains on educational benchmarks are striking: MMLU rises from <strong>33% → 37%</strong> (≈ 12% relative) and ARC from <strong>46% → 57%</strong> (≈ 24% relative). Even more notably, FineWeb-Edu reaches Matrix's final MMLU score with almost <strong>10× fewer tokens</strong> — 38B vs. ~300B — demonstrating the leverage of classifier-based filtering on LLM-annotated data.</p>
+          </div>
+          <div class="zh">
+            <p>在更大的消融(1.71B 模型、350B token)上,FineWeb-Edu 超过 FineWeb 和所有其它公开 web 数据集。<em>教育类基准</em>提升尤其惊人:MMLU 从 <strong>33% → 37%</strong>(相对 +12%),ARC 从 <strong>46% → 57%</strong>(相对 +24%)。更夸张的是:FineWeb-Edu 用 <strong>38B token</strong> 就能达到 Matrix 训 ≈ 300B token 才有的最终 MMLU 分——<strong>≈ 10× 的 token 效率</strong>。这说明"在 LLM 标注的数据上训分类器、再过滤"这套思路在大规模下确实有用。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Topic distribution.</strong> Embedding 50k samples each from FineWeb / FineWeb-Edu with all-MiniLM-L6-v2 + UMAP + DBSCAN yields 100 topic clusters (labelled with Llama-3.1-70B). The classifier heavily up-samples "Education / Learning / Teaching" (+3.2 percentage points more documents in FineWeb-Edu than in FineWeb), "History / Culture / Politics" (+2.2 pp), "Health / Medicine / Biology" (+1.8 pp), and "Wildlife / Animals / Nature", "History / Royalty / Philosophy", "Water / Environment", "Energy / Environment" (each ≈ +1.2 pp). The largest <em>down-samples</em> are "Business / Finance / Law" (-3.2 pp), "Entertainment / Film / Theater" (-2.8 pp), "Places / Travel / Real Estate" (-2.5 pp), "Food / Summer / Recipes" (-2.1 pp), "Sports / Teams / Games" (-2.1 pp), and "Music / Entertainment / Arts" (-2.1 pp). In other words: educational filtering trades away consumer / commercial / entertainment web content in exchange for textbook-flavoured topics, which is exactly why MMLU / ARC jump and why downstream uses that <em>want</em> entertainment knowledge should not blindly use Edu.</p>
+            <p><strong>Domain fit.</strong> On Paloma domains, FineWeb has lower perplexity on broad web sources (C4, mC4, Falcon, Dolma V1.5, RedPajama CC, Twitter AAE, Manosphere, Gab, 100 Subreddits, 4chan). FineWeb-Edu wins on Wikipedia-heavy sources (WikiText-103, M2D2 Wikipedia), academic sources (M2D2 S2ORC, ArXiv subset of RedPajama), and programming content (100 PLs).</p>
+          </div>
+          <div class="zh">
+            <p><strong>主题分布。</strong>对 FineWeb / FineWeb-Edu 各抽 5 万条样本,用 all-MiniLM-L6-v2 求向量 + UMAP 降维 + DBSCAN 聚 100 个簇(Llama-3.1-70B 自动打 label)。教育分类器明显<em>上采样</em>"Education / Learning / Teaching"(在 FineWeb-Edu 里比在 FineWeb 多 +3.2 个百分点)、"History / Culture / Politics"(+2.2 pp)、"Health / Medicine / Biology"(+1.8 pp)以及"Wildlife / Animals / Nature"、"History / Royalty / Philosophy"、"Water / Environment"、"Energy / Environment"(各 ≈ +1.2 pp)。最大的<em>下采样</em>是"Business / Finance / Law"(-3.2 pp)、"Entertainment / Film / Theater"(-2.8 pp)、"Places / Travel / Real Estate"(-2.5 pp)、"Food / Summer / Recipes"(-2.1 pp)、"Sports / Teams / Games"(-2.1 pp)、"Music / Entertainment / Arts"(-2.1 pp)。换言之:教育过滤拿"消费 / 商业 / 娱乐 web"换"教科书风味话题"——这正是 MMLU / ARC 大涨的原因,也是为什么"想要娱乐知识"的下游不能盲目套 Edu。</p>
+            <p><strong>领域适配。</strong>用 Paloma 评 6 个 checkpoint 的 macro 困惑度。FineWeb 在<em>宽泛 web</em> 源上困惑度更低(C4, mC4, Falcon, Dolma V1.5, RedPajama CC, Twitter AAE, Manosphere, Gab, 100 Subreddits, 4chan)。FineWeb-Edu 在 Wikipedia 系(WikiText-103, M2D2 Wikipedia)、学术系(M2D2 S2ORC、RedPajama ArXiv 子集)、代码系(100 PLs)上更好——符合"教育性过滤"的预期。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3c">
+        <details class="cn-note">
+          <summary>中文导读 · 教育子集要点</summary>
+          <div class="cn-content">
+            <ul>
+              <li><strong>三步配方:</strong>① Llama-3-70B 用 additive prompt 给 46 万网页打 0–5 教育分;② 冻结 Snowflake embedding 上训 linear head,F1 = 82%;③ 阈值 ≥ 3 过 15T tokens → 1.3T 教育子集。</li>
+              <li><strong>关键超参:</strong>training samples 41 万 / 20 epoch / lr 3e-4 / 全量推理 ≈ 6000 H100 hour。</li>
+              <li><strong>收益:</strong>MMLU +12% rel, ARC +24% rel;38B token 达到 Matrix 300B 的 MMLU——token efficiency ≈ 10×。</li>
+              <li><strong>代价:</strong>主题分布显著偏向教育/历史,弱化娱乐/商业/旅游——选用时按下游需求权衡。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>Results / 偏见分析 + Paloma 领域困惑度<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">§5 Bias Analyses (excerpt) / 偏见分析(节选)</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Language models are known to reflect the biases present in their pretraining datasets. To provide a brief picture of dataset bias in FineWeb and FineWeb-Edu, we focus on subgroups recognised as "sensitive" or "protected" in English-speaking countries — historically subject to discrimination and disproportionately targeted by negative societal norms reflected in web text. We find that FineWeb has a relative over-representation of words reflecting hegemonic norms over-represented in online text, such as "man" and "christian". Although biases across gender, religion, and age subgroups are not strong, the most skewed associations are between religion words and intimacy, e.g. "christian dating" and "jewish singles". Fittingly, FineWeb-Edu captures associations less tied to intimacy and more expected from educational content of history and health — e.g. "man" being associated with "king" and "woman" with "pregnancy". Further details are in Appendix G.</p>
+          </div>
+          <div class="zh">
+            <p>语言模型会反映其预训练数据中的偏见。为了给 FineWeb / FineWeb-Edu 的偏见画一个简短轮廓,我们聚焦于英语国家公认的"敏感/受保护"子群——历史上曾被歧视、且在 web 文本里更常被负面刻画的群体。我们发现 FineWeb 中,反映主流 hegemonic 规范的词(如 <code>man</code>、<code>christian</code>)在网上文本里被过度代表。性别、宗教、年龄三类子群的偏见整体不强,但偏离最明显的是"宗教词 × 亲密关系词",比如 <em>"christian dating"</em>、<em>"jewish singles"</em>。FineWeb-Edu 上,这种亲密关系的关联减弱,更多体现为教育内容里历史与健康主题的关联,比如 "man" 关联到 "king",而 "woman" 关联到 "pregnancy"。详情见附录 G。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Quantitatively, in a randomly sampled 10B-token slice of each dataset, <em>man</em> accounts for 67.9% of all gender-term occurrences, <em>woman</em> 32.0%, and <em>non-binary</em> only 0.1%; in FineWeb-Edu this skew gets slightly <em>worse</em> (man 70.2% / woman 29.6% / non-binary 0.2%), most likely because educational and historical content over-indexes on male historical figures (kings, scholars). For religion, FineWeb is heavily christianized — christian 46.1%, jewish 25.6%, muslim 16.7%, hindu / buddhist each 4.8%, atheist 1.9% — whereas FineWeb-Edu noticeably rebalances toward minority religions (christian drops to 33.1%, jewish rises to 36.3%, hindu / buddhist roughly double). On age, FineWeb is 64.5% <em>old</em> vs 35.5% <em>young</em>, while FineWeb-Edu lands at a near-even 51.5% / 48.5% — an unintended but positive side-effect of educational filtering, since textbook content uses "young people / young students" more uniformly.</p>
+          </div>
+          <div class="zh">
+            <p>定量上,在两个数据集各自随机抽的 <strong>10B token</strong> 切片里,<em>man</em> 占所有性别词出现量的 <strong>67.9%</strong>,<em>woman</em> 占 32.0%,<em>non-binary</em> 仅 0.1%;FineWeb-Edu 上这个偏置反而<em>更严重</em>(man 70.2% / woman 29.6% / non-binary 0.2%),最可能的原因是教育与历史类语料更多提到男性历史人物(国王、学者)。宗教维度上,FineWeb 严重基督化——christian 46.1%、jewish 25.6%、muslim 16.7%、hindu / buddhist 各 4.8%、atheist 1.9%——而 FineWeb-Edu 明显往少数宗教侧重新平衡(christian 跌到 33.1%,jewish 升到 36.3%,hindu / buddhist 大约翻倍)。年龄上,FineWeb 是 <strong>64.5% old vs 35.5% young</strong>,FineWeb-Edu 几乎是 51.5% / 48.5% —— 这是教育性过滤一个意外却积极的副作用,因为教科书用"young people / young students"的频率更接近均衡。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The TF-IDF association heatmaps (Figs. 22–29 in the appendix) make the structure of these biases concrete: in FineWeb, <em>jewish</em> co-occurs with <em>dating</em> with TF-IDF 0.212 (the largest single cell in the religion grid) and with <em>singles</em> at 0.110; <em>muslim</em> shows muslim+ <em>dating</em> = 0.164; <em>buddhist</em> hits 0.133 with <em>dating</em>; even <em>atheist</em> is dominated by <em>god</em> (0.078) — implying "atheist" web text is mostly debate-style content about god. Outside religion, <em>woman</em> is mildly tied to <em>dating / love / family</em> and <em>non-binary</em> is highly concentrated in LGBTQ-specific vocabulary (gender / trans / queer / transgender with +0.04 to +0.06), so models trained on FineWeb describe non-binary identities in narrower, more stereotyped frames than they describe <em>man</em> or <em>woman</em>. FineWeb-Edu shifts these associations toward less-intimate, more curricular language — woman ↔ pregnancy / mother / children / family, man ↔ god / war / great / king.</p>
+          </div>
+          <div class="zh">
+            <p>附录 G 的 TF-IDF 关联热力图(Fig 22–29)把这些偏见的结构画得很具体:FineWeb 里 <em>jewish</em> 与 <em>dating</em> 的 TF-IDF 高达 <strong>0.212</strong>(整个宗教矩阵里最大的一格),与 <em>singles</em> 也有 0.110;<em>muslim</em> 上 muslim+ <em>dating</em> = 0.164;<em>buddhist</em> 与 <em>dating</em> 达 0.133;甚至 <em>atheist</em> 也被 <em>god</em>(0.078)主导——意味着"无神论"文本几乎都是关于 god 的辩论。宗教之外,<em>woman</em> 与 <em>dating / love / family</em> 弱关联,而 <em>non-binary</em> 高度聚焦在 LGBTQ 特定词汇(gender / trans / queer / transgender 上 +0.04~0.06),所以在 FineWeb 上训出的模型描述 non-binary 群体时,语义半径远比 man / woman 窄、更刻板。FineWeb-Edu 则把这些关联推向"非亲密、更课程化"的方向——woman ↔ pregnancy / mother / children / family,man ↔ god / war / great / king。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">Domain fit on Paloma / Paloma 领域困惑度</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To check how well each dataset covers different text domains, the authors evaluate macro-average perplexity on the Paloma benchmark with six ablation checkpoints, without decontamination. FineWeb generally achieves lower perplexity on <em>broad web</em> sources — C4, mC4, Falcon, Dolma V1.5, the CommonCrawl subset of RedPajama — and on noisy social-media-style sources such as Twitter AAE, Manosphere, Gab, the 100-Subreddits Paloma slice, and 4chan. FineWeb-Edu instead wins on Wikipedia-centric sources (WikiText-103, M2D2 Wikipedia), academic sources (M2D2 S2ORC, the ArXiv subset of RedPajama), and programming content (Paloma's 100 PLs benchmark). The Figure 12 panel shown above traces these curves over 50–350B training tokens: <em>100 Subreddits</em> perplexity drops from ~8.5 down to ~6.0 over training; <em>100 PLs</em> ranges 6–8.5; <em>Twitter AAE</em> 150–350; <em>Manosphere</em> 24–32; <em>Gab</em> 40–60; <em>4chan</em> 15–20. In short, the two datasets divide the web cleanly — FineWeb owns "noisy general web", FineWeb-Edu owns "encyclopedic + technical".</p>
+          </div>
+          <div class="zh">
+            <p>为检查两份数据集对不同文本领域的覆盖,作者在 Paloma 上用六个消融 checkpoint 算 macro 平均困惑度,且<em>不做</em>除污染处理。FineWeb 在<em>宽泛 web</em> 源上普遍困惑度更低——C4、mC4、Falcon、Dolma V1.5、RedPajama 的 CommonCrawl 子集——以及嘈杂的社交媒体源:Twitter AAE、Manosphere、Gab、Paloma 的 100-Subreddits 切片、4chan。FineWeb-Edu 则在 Wikipedia 系(WikiText-103、M2D2 Wikipedia)、学术系(M2D2 S2ORC、RedPajama 的 ArXiv 子集)、代码系(Paloma 的 100 PLs)上胜出。上面 Figure 12 面板把这些曲线在 50–350B 训练 token 范围内画出来:<em>100 Subreddits</em> 困惑度从 ~8.5 一路降到 ~6.0;<em>100 PLs</em> 在 6–8.5;<em>Twitter AAE</em> 150–350;<em>Manosphere</em> 24–32;<em>Gab</em> 40–60;<em>4chan</em> 15–20。一句话:两份数据集把 web 干净地一分为二——FineWeb 拿"嘈杂的一般 web",FineWeb-Edu 拿"百科 + 技术"。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4">
+        <details class="cn-note">
+          <summary>中文导读 · 偏见与困惑度</summary>
+          <div class="cn-content">
+            <ul>
+              <li>FineWeb 在网上常见的"男性/基督教/年长"词上过度代表,但偏见总体不算重;宗教×亲密关系关联最显著。</li>
+              <li>FineWeb-Edu 把"约会/婚恋"类亲密词关联拉走,转向"king / pregnancy / history" 等教育性更强的关联。</li>
+              <li>Paloma 困惑度上呈"分工":FineWeb 通用 web 更低,Edu 在百科 + 学术 + 代码上更低。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>Discussion / 结论与局限<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this paper, we developed the FineWeb datasets, a collection of large-scale LLM pretraining datasets that produce performant LLMs. Specifically, we release FineWeb, a 15-trillion token dataset derived from 96 Common Crawl snapshots, as well as FineWeb-Edu, a 1.3-trillion token dataset of educational content from FineWeb. FineWeb was created through a series of experiments that provided empirical evidence for our choice of text extraction strategy, deduplication procedure, and content filters. Both datasets are publicly released, along with the code and processing library that we used and all of the models we trained during our dataset ablation experiments.</p>
+          </div>
+          <div class="zh">
+            <p>本文构建了 FineWeb 数据集——一组能训出高性能 LLM 的大规模预训练数据集。具体来说,我们释放 <strong>FineWeb</strong>(从 96 份 CommonCrawl 快照得到的 15T tokens),以及 <strong>FineWeb-Edu</strong>(从 FineWeb 中筛出的 1.3T tokens 教育内容)。FineWeb 通过一系列实证实验构建,这些实验为正文抽取、去重(dedup)流程和内容过滤等选择提供了证据。两份数据集都公开释放,同时附带我们使用的代码、数据处理库,以及消融阶段训练的所有模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While FineWeb and FineWeb-Edu attain state-of-the-art performance among public LLM pretraining datasets, we identify various paths to further improvement. First, both datasets are entirely comprised of web content scraped by CommonCrawl. It is possible that augmenting either datasets with other datatypes (books, speech transcripts, etc.) could further improve performance. In addition, most of the experiments we ran were at a smaller scale due to computational constraints. Designing datasets at more realistic scales could provide more reliable guidance. Our evaluation setup was also by necessity limited to performance on academic benchmarks without any further instruction tuning or alignment. An evaluation setup that better reflected current usage patterns of LLMs might also be more reliable. We hope that our released datasets, code, and models help further improve public knowledge and development of performant LLM pretraining datasets.</p>
+          </div>
+          <div class="zh">
+            <p>虽然 FineWeb 与 FineWeb-Edu 在公开 LLM 预训练数据集中拿到了 SOTA,我们也指出几条可进一步改进的路径:首先,两份数据集都是<em>纯 web</em> 内容,来自 CommonCrawl;若混入其它数据类型(图书、语音转写等)可能继续提升。其次,受算力限制我们的实验大多在较小规模做的——在更接近"真实预训练规模"的设定下做数据集设计也许能得到更可靠的指引。再者,我们的评测被迫局限在学术 benchmark,没有进一步的 instruction tuning / 对齐——一个更贴合"LLM 当前使用方式"的评测体系可能更可靠。我们希望释放的数据集、代码、模型有助于推进"公开的 LLM 预训练数据整理"的知识与发展。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Practical takeaways for anyone curating a CommonCrawl-style pretraining corpus: (1) <em>always extract from WARC with a real boilerplate-aware extractor (trafilatura) rather than reusing CC's WET</em> — it is the cheapest single intervention in the entire pipeline; (2) <em>deduplicate each snapshot independently with MinHash; do not run global cross-snapshot MinHash</em>, because the surviving long-tail is often <em>worse</em> than what got removed; (3) <em>do not blindly apply C4's terminal-punctuation rule</em> — it deletes ~30% of tokens for a benefit the authors recover with a much softer 10%-removing alternative; (4) <em>derive heuristic thresholds from histogram-difference between known-good and known-bad slices</em> instead of from manual inspection; (5) <em>scale the LLM-as-annotator pattern by distilling Llama-3-70B scores into a small classifier over a frozen embedding</em> — the resulting FineWeb-Edu reaches Matrix's MMLU at ~10× fewer training tokens, the most striking efficiency result in the paper. Together these recipes account for essentially all of the public-dataset SOTA gap that FineWeb closed.</p>
+          </div>
+          <div class="zh">
+            <p>对于任何要做 CommonCrawl 风格预训练语料整理的人,可直接照搬的实操结论是:(1) <em>务必从 WARC 用一个懂 boilerplate 的抽取器(trafilatura)抽,不要直接用 CC 的 WET</em>——这是整条流水线最便宜的一步干预;(2) <em>每份快照独立做 MinHash,不要跨快照做全局 dedup</em>,因为留下来的长尾常常比被删掉的更差;(3) <em>不要盲目套用 C4 的"行末终止标点"规则</em>——它一刀切删 30% token,论文用一条更软、只删 10% 的过滤就拿回了大部分收益;(4) <em>启发式阈值用"已知好/已知差"两份数据的直方图差异自动选,而不是目视</em>;(5) <em>用 Llama-3-70B 当标注器,再把它的打分蒸馏到一个冻结 embedding 之上的小分类器</em>——FineWeb-Edu 用 ≈ 10× 更少 token 就追平 Matrix 的 MMLU,是论文里最惊艳的效率结论。这五条加在一起,基本就是 FineWeb 抹平公开数据集 SOTA 差距的全部秘密。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="5">
+        <details class="cn-note">
+          <summary>中文导读 · 结论与局限</summary>
+          <div class="cn-content">
+            <ul>
+              <li><strong>贡献:</strong>15T 的 FineWeb + 1.3T 的 FineWeb-Edu,公开数据集 SOTA;同时开源 datatrove 工具链与所有 ablation 模型 — 这是 ablation 最彻底的 web 预训练数据论文之一。</li>
+              <li><strong>局限 1:</strong>纯 web,缺乏书籍/口语数据;<strong>局限 2:</strong>1.71B / 350B token 消融规模偏小;<strong>局限 3:</strong>评测只覆盖学术 benchmark,未做 SFT/对齐。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>References / Appendix<span class="sec-page">p.11+</span></span>
+      </summary>
+      <div class="sec-content">
+        <p>The full reference list and appendices are available in the linked arXiv PDF. This reader page keeps the publishable summary, figure gallery, and curated explanations above instead of duplicating the raw appendix dump.</p>
+        <p>The appendix material most relevant for review is already covered in the article: linked resources and reproducibility notes, ablation setup, deduplication variants, FineWeb-Edu annotation prompt and threshold results, topic distribution, Paloma domain fit, and bias-analysis figures.</p>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

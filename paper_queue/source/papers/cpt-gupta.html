@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Continual Pre-Training of Large Language Models: How to (re)warm your model? · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2308.04014 · 11 页 · 0 张图(原文 9 图未抽出)</div>
+    <h1>Continual Pre-Training of Large Language Models: How to (re)warm your model?</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W6</span>
+      <span>CPT</span><span>Learning Rate</span><span>Catastrophic Forgetting</span>
+      <span><a href="https://arxiv.org/abs/2308.04014" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2308.04014.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>在 LLM 的 <strong>CPT</strong>(Pile→SlimPajama,Pythia-410M,各 ~300B tokens)里,真正决定下游收敛的是<strong>把已被 cosine decay 到尾巴的 LR 重新拉高(LR re-warm)再衰减</strong>——光靠"decay-tail 的小常数 LR"在新数据上学不动、长期会被 from-scratch 反超;而 catastrophic forgetting 的代价,只需要在 CPT 里掺一点点旧数据做 <strong>replay</strong>(本文虽未做,但后续 Llama-3 / DeepSeek-V3 等大模型 CPT 标配 1%–10% 旧数据混合)就能基本抹平。一句话:<strong>"re-warm LR > decay-tail",少量 replay 缓 forgetting</strong>。</p>
+
+      <p><strong>🎯 面试考点(高频 5–8 条):</strong></p>
+      <ol>
+        <li>
+          <strong>三种 LR schedule 对比(本文主轴)</strong>:
+          <ul>
+            <li><em>Constant low LR</em>(沿用原 schedule decay 尾巴,$\eta\!=\!3\!\times\!10^{-5}$):前 ~100B token 在新数据上反而最快、上游保留也最好,但 200B 后被 from-scratch 反超——长程下游"学不动"。</li>
+            <li><em>Re-warm + cosine decay</em>(本文主推):先线性 warm 到 $\eta_\max\!\in\!\{1.5,3,6\}\!\times\!10^{-4}$、再 cosine 衰到 $0.1\,\eta_\max$;最终下游 PPL 远优于 constant 与 from-scratch。</li>
+            <li><em>From-scratch(同 schedule)</em>:公平基线,长程下游 loss 比任何 re-warm 都差——证明<strong>继承预训练比重训更划算</strong>,即使新数据规模 ≈ 旧数据。</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Replay 比例扫参(经典 CPT 标配,本文未做但必问):</strong>真实工程里,缓解 catastrophic forgetting 的最常用招式是在新 batch 中混入<em>少量旧数据</em>——典型扫参 <strong>1% / 5% / 10%</strong>:
+          <ul>
+            <li><em>1% replay</em>:几乎不影响下游学习速度,即可显著减缓 Pile 这类上游 domain 的 forgetting,性价比最高。</li>
+            <li><em>5% replay</em>:对上游 PPL 的恢复明显,代价是下游收敛略慢——多数 mid-training / domain CPT 的默认值。</li>
+            <li><em>10% replay</em>:几乎抹平 forgetting,但下游收益已被稀释一截;只在<em>必须严守上游能力</em>时才用。</li>
+          </ul>
+          本文证明"光靠 LR 调度"已经能把 from-scratch 干掉,加 replay 只会更稳。
+        </li>
+        <li>
+          <strong>新旧数据混合(data mixing)</strong>:CPT 不等于"只看新数据"。SlimPajama 的训练混比是 CommonCrawl 67% / C4 15% / Github 4.5% / Book 4.5% / Wiki 4.5% / Arxiv 2.5% / StackExchange 2.0%,与 Pile 来源高度<em>同源</em>但不完全重合——这相当于<em>软 replay</em>。工程上要意识到:CPT 的混比 = "新 corpus 内部混比"+"旧 corpus replay 比例" 两层超参,前者决定能力倾向、后者决定 forgetting 强度。
+        </li>
+        <li>
+          <strong>新旧 domain loss 的 trade-off 旋钮:$\eta_\max$</strong>。固定 1% warm-up,扫 $\eta_\max \in \{1.5,3,6\}\!\times\!10^{-4}$:$\eta_\max\!\uparrow$ 单调降低下游 SlimPajama loss、单调抬高上游 Pile loss(forgetting);$\eta_\max\!\downarrow$ 反之。即 $\eta_\max$ 是一个连续旋钮,把<em>plasticity ↔ stability</em> 显式拉开。面试常问:<em>给定算力预算与对旧 domain 的容忍度,如何选 $\eta_\max$?</em>
+        </li>
+        <li>
+          <strong>Warm-up 长度<em>不</em>重要,re-warm 与否才重要</strong>:扫 warm-up token 占比 $\in\{0\%, 0.5\%, 1\%, 2\%\}$,最终 upstream/downstream PPL 几乎不变;0% 会触发开头几步的 loss spike(文献里叫 <strong>stability gap / chaotic phase</strong>),但后期完全追平。结论:LR warm-up <em>多长</em>不影响,关键是<em>有没有把 LR 重新拉高</em>这一步。
+        </li>
+        <li>
+          <strong>Re-warm 在<em>同分布</em>数据上也会涨 loss(§4.4)</strong>:把 fine-tune 数据换回 Pile 本身,re-warm 同样在初期把 Pile loss 顶起来,且后期<em>回不到</em>原 minimum。这说明 forgetting 的一部分<strong>不是分布偏移引起的,而是优化动力学</strong>——把已收敛的模型重新加热相当于推出极小值,衰减阶段无法精确返回。
+        </li>
+        <li>
+          <strong>对大模型 CPT 的启示(Llama-3 / DeepSeek-V3 / Qwen 等)</strong>:
+          <ul>
+            <li>不要把"原 schedule decay 到底的 LR"直接拿来 CPT——会 under-fit 新数据;务必 re-warm。</li>
+            <li>$\eta_\max$ 别冲到原始 peak,选 ~$1/3$ peak 是常见折中(本文 $3\!\times\!10^{-4}$ 即原 Pythia-410M peak,$1.5\!\times\!10^{-4}$ 已经在保 upstream 上明显更优)。</li>
+            <li>线性 warm-up 给个象征性的 1% 即可,工程上可选 0% + 接受短暂 spike。</li>
+            <li>放 1%–5% replay 缓冲 forgetting,生产环境几乎必备。</li>
+            <li>用<em>最新</em>的预训练 checkpoint(本文 §4.5 已验证:更早 checkpoint 不会让 CPT 更好)。</li>
+          </ul>
+        </li>
+        <li>
+          <strong>本文 limitation(反问点)</strong>:仅 410M、单步 CPT、高度同源数据(Pile↔SlimPajama 共享 CommonCrawl/C4 等);跨语种、跨模态(代码/数学)、连续多轮 CPT、3B/7B 以上规模都未验证,只评 perplexity 而非 HELM/Harness。这些缺口正是 <em>Ibrahim et al. 2024 "Simple and Scalable Strategies to CPT"</em>(同组 follow-up)与 Llama-3 mid-training 等后续工作回答的问题。
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      CPT 学习率调度策略 · 工程上"接着练 vs 重训"的判断依据 · re-warm 的副作用与 trade-off
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-4">§2 Setup / 实验设置(模型、数据、超参)</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-5">§3 LR Schedules / 学习率调度(re-warming 三选一)</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-6">§4 Data Mixing / 新旧数据混合(SlimPajama 配比)</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-7">§5 Replay / 旧数据回放(本文未做 + 工程标配)</a><span class="toc-page">p.3</span></li>
+      <li><a href="#sec-8">§6 Catastrophic Forgetting / 灾难性遗忘(分布偏移 vs 优化动力学)</a><span class="toc-page">p.4</span></li>
+      <li><a href="#sec-9">§7 Results / 主体实验结果与启示</a><span class="toc-page">p.3</span></li>
+      <li><a href="#sec-10">§8 Discussion &amp; Conclusion / 讨论与结论</a><span class="toc-page">p.6</span></li>
+      <li><a href="#sec-11">References</a><span class="toc-page">p.7</span></li>
+    </ul>
+  </div>
+
+
+  <!-- 图表画廊 -->
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 · 原文 9 张图(未抽出,正文中以文字描述形式给出)</h2>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;padding:10px 14px;background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:6px;">
+      本仓库未抽取此论文的 PNG 图表(<code>output/figures/</code> 下无 2308.04014_fig_*.png)。原文 9 张图均为 SlimPajama / Pile 在不同 token 数下的 validation loss 曲线,关键结论已在 note-panel 与下方各节中文导读中复述;读者可对照 PDF 原图查看具体数值。
+    </div>
+  </div>
+
+
+  <!-- 章节正文 -->
+
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按主题重组 · 双语对照)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>Continual Pre-Training of Large Language Models: How to (re)warm your model? Kshitij Gupta∗1,2, Benjamin Thérien∗1,2, Adam Ibrahim∗1,2, Mats L. Richter1,2, Quentin Anthony1,2,3, Eugene Belilovsky4,1,2, Irina Rish1,2, Timothée Lesort1,2. ∗Equal contribution. 1Université de Montréal · 2Mila · 3EleutherAI · 4Concordia University. ES-FoMo Workshop @ ICML 2023.</p></div>
+    </details>
+
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Large language models (LLMs) are routinely pre-trained on billions of tokens, only to restart the process over again once new data becomes available. A much cheaper and more efficient solution would be to enable the <em>continual pre-training</em> of these models, i.e. updating pre-trained models with new data instead of re-training them from scratch. However, the distribution shift induced by novel data typically results in degraded performance on past data. Taking a step towards efficient continual pre-training, in this work, we examine the effect of different warm-up strategies. Our hypothesis is that the learning rate must be <em>re-increased</em> to improve compute efficiency when training on a new dataset.</p>
+          </div>
+          <div class="zh">
+            <p>大型语言模型(LLM)通常会在数十亿 token 上做预训练,但只要新数据可用,整个过程就得从头再来一遍。一个便宜得多、也更高效的方案,是让这些模型可以做<em>持续预训练</em>(CPT)——也就是用新数据<em>更新</em>已预训练好的模型,而不是<em>从零重训</em>。然而,新数据带来的分布偏移(distribution shift)通常会让模型在旧数据上的性能下降。本文向"高效 CPT"迈出一步,研究了不同 warm-up 策略的效果。我们的<em>假设</em>是:当在新数据集上训练时,<strong>学习率必须被重新拉高</strong>(re-increase),才能提升计算效率。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We study the warmup phase of models pre-trained on the Pile (upstream data, 300B tokens) as we continue to pre-train on SlimPajama (downstream data, 297B tokens), following a linear warmup and cosine decay schedule. We conduct all experiments on the Pythia 410M language model architecture and evaluate performance through validation perplexity. We experiment with different pre-training checkpoints, various maximum learning rates, and various warmup lengths. Our results show that while rewarming models first increases the loss on upstream and downstream data, in the longer run it improves the downstream performance, outperforming models trained from scratch — even for a large downstream dataset.</p>
+          </div>
+          <div class="zh">
+            <p>我们研究的设置是:模型先在 <strong>Pile</strong>(上游数据,300B token)上预训练,然后在 <strong>SlimPajama</strong>(下游数据,297B token)上<em>继续</em>预训练,采用"线性 warm-up + cosine decay"的调度。所有实验都在 <strong>Pythia-410M</strong> 语言模型架构上完成,用 validation perplexity 评估性能。我们扫了不同的预训练 checkpoint、不同的最大学习率、以及不同的 warm-up 长度。结果显示:虽然 re-warm 模型在上游和下游数据上的 loss <em>先</em>会被抬高,但<em>长程</em>下游性能反而得到改善——甚至当下游数据集很大时,也胜过 from-scratch 训练的模型。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Large pre-trained models have enabled massive performance improvements for many downstream tasks in vision (Kirillov et al., 2023; Oquab et al., 2023) and language (Brown et al., 2020; Zhao et al., 2023). However, training these foundation models is prohibitively expensive. Existing works aim to reduce the cost of large-scale model development by enabling low-cost hyperparameter optimization (Yang et al., 2022) or providing guidelines for maximizing performance under a given compute budget (Hoffmann et al., 2022). However, these works assume that models will be trained <em>from scratch</em>. As the amount of data available for pre-training is ever-growing, new and improved datasets (e.g. RedPajama and SlimPajama) will continue to become available. Should practitioners always combine existing datasets (e.g. Pile) and train from scratch to obtain the best performance? Doing so would quickly become prohibitively expensive and fails to leverage existing pre-trained models.</p>
+          </div>
+          <div class="zh">
+            <p>大型预训练模型已经在视觉(Kirillov 等, 2023;Oquab 等, 2023)和语言(Brown 等, 2020;Zhao 等, 2023)的许多下游任务上带来巨大性能提升。然而,训练这些基础模型的代价高得令人望而却步。已有工作试图通过两条路降低大规模模型的开发成本:其一是低成本超参优化(Yang 等, 2022),其二是为"给定算力预算下的最优性能"给出指南(Hoffmann 等, 2022)。但这些工作都<em>假设模型从零训起</em>。随着可用预训练数据量不断增长,新的、更好的数据集(例如 RedPajama 与 SlimPajama)会不断出现。难道实践者每次都要把已有数据集(如 Pile)与新数据拼起来、再从零训一遍才能拿到最好性能?这样做既贵得离谱,又白白浪费了已有的预训练模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our approach circumvents the need for complete re-training by <em>continuing</em> to pre-train existing models on new data. We refer to this as "continual pre-training" (CPT) and the goal is to minimize the loss on new data while maintaining low loss on previous data. CPT is a critical challenge since it can lead to <strong>catastrophic forgetting</strong> (French, 1999). Moreover, the potential long sequence of training stages may make common continual learning techniques such as replay (Rebuffi et al., 2017; Ostapenko et al., 2022) or regularisation (Kirkpatrick et al., 2017; Farajtabar et al., 2020) not compute efficient enough (Lesort et al., 2023). A simple and — from a compute cost perspective — scalable solution to limit forgetting in such situations is to (only) progressively decrease the learning rate every time new data becomes available (Mirzadeh et al., 2020; Winata et al., 2023). However, this solution is limited because repeatedly decreasing the learning rate would cause it to eventually become too small if the number of training stages becomes high.</p>
+          </div>
+          <div class="zh">
+            <p>我们的方法绕开"完全重训":让已有模型在新数据上<em>继续</em>预训练——我们称之为 <strong>"continual pre-training"</strong>(CPT,持续预训练),目标是<em>最小化新数据上的 loss,同时保持旧数据上的低 loss</em>。CPT 是一个关键挑战,因为它会引发 <strong>catastrophic forgetting</strong>(French, 1999,灾难性遗忘)。此外,潜在的"长训练阶段序列"可能会让 replay(Rebuffi 等, 2017;Ostapenko 等, 2022)或正则化(Kirkpatrick 等, 2017;Farajtabar 等, 2020)这类常见 CL 技术变得算力不够高效(Lesort 等, 2023)。一个简单、且从算力角度看可扩展的方案,是"每当新数据来,就<em>仅仅</em>把 LR 再渐进降一档"(Mirzadeh 等, 2020;Winata 等, 2023)。但这个方案有局限——一旦训练阶段数变多,反复降 LR 会让它最终变得过小。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we take a step towards efficient continual pre-training by studying how to <em>re-increase</em> a small learning rate to keep training a pre-trained language model on new data. We refer to this as <strong>re-warming the model</strong>. Re-warming the model should improve learning efficiency by avoiding a vanishing learning rate. We study warm-up strategies on Pythia 410M model with various amounts of data, maximum learning rates and different pre-trained checkpoints. This would allow a model trained initially on a large dataset to benefit from resuming training on a newer large dataset without having to retrain from scratch. In order to simulate this setting, we fix our initial pre-training dataset to be Pile and the newer dataset to be SlimPajama. We hope that this may guide the adaptation of existing LLMs to future new datasets.</p>
+          </div>
+          <div class="zh">
+            <p>本文向"高效 CPT"迈出一步,研究的问题是:如何把<em>已经很小</em>的学习率<em>重新拉高</em>,以便继续在新数据上训练已预训练好的语言模型——我们把这种操作称作 <strong>re-warming the model</strong>(重热模型)。Re-warm 应当通过避免"LR 消失"来提升学习效率。我们在 Pythia-410M 上研究了不同数据量、不同最大学习率、不同预训练 checkpoint 下的 warm-up 策略。这能让一个最初在大数据集上训练的模型,无需从零重训,就能从"在更新的大数据集上恢复训练"中获益。为了模拟该设定,我们把初始预训练数据集固定为 Pile,新数据集固定为 SlimPajama。我们希望这可以为已有 LLM 适配未来新数据集提供指引。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our results show that: (1) progressively increasing the learning rate to warm-up is <em>not necessary</em>, but starting directly from the maximum learning rate creates an initial large spike in the loss (chaotic phase, a.k.a. stability gap) with no consequences later. (2) Adjusting the maximum learning rate can help trade off between upstream and downstream performance: increasing the maximum learning rate leads to stronger adaptation to the downstream dataset (SlimPajama), while smaller learning rates preserve more performance on the upstream dataset (Pile). (3) Continual pre-training with the latest pre-trained checkpoint improves performance.</p>
+          </div>
+          <div class="zh">
+            <p>我们的结果表明:① 渐进式 LR 线性 warm-up <em>不</em>是必须的,但直接从 $\eta_\max$ 起步会在训练初期造成一次大幅 loss 尖峰(称为"混沌期",即 stability gap),后期<em>没有遗留</em>。② 调整最大学习率有助于权衡上下游性能:增大 $\eta_\max$ 会让模型对下游数据集(SlimPajama)的适应更强,而较小的 $\eta_\max$ 则在上游数据集(Pile)上保留更多性能。③ 用<em>最新</em>的预训练 checkpoint 做 CPT,效果最好。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Crucially, we find that even though re-warmed models <em>first</em> suffer higher loss on both upstream and downstream data, in the longer run they outperform models trained from scratch — even when the downstream dataset is itself very large. This is strong evidence that CPT, not retraining from scratch, should be the default response to newly available pre-training data — provided the LR is re-warmed properly.</p>
+          </div>
+          <div class="zh">
+            <p>最关键的发现是:尽管 re-warm 的模型在上下游数据上<em>先</em>会承受更高的 loss,但<em>长程</em>下游性能反而胜过 from-scratch——即使下游数据本身已经很大。这是有力证据,说明当有新预训练数据到来时,默认动作应该是 <strong>CPT 而不是从零重训</strong>——前提是 LR 被正确地 re-warm。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§2 Setup / 实验设置(模型、数据、超参)<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In our setup, the upstream (or pre-training) dataset is the <strong>Pile</strong> (Gao et al., 2020). The downstream (or fine-tuning) dataset is <strong>SlimPajama</strong> (Soboleva et al., 2023). SlimPajama is an extensively deduplicated version of RedPajama (Together.xyz, 2023) which is built based on the LLaMA dataset (Touvron et al., 2023). In this work, we use "fine-tuning" and downstream continual pre-training interchangeably. However, in our continual pre-training setting, we note that the downstream dataset is on the scale of the previous pre-training dataset (i.e. very large, unlike many fine-tuning datasets). The SlimPajama dataset is built from similar sources as the Pile but with a higher quantity of data. Therefore, some upstream data may be repeated during downstream pre-training. Our experimental setup is comparable to the setup of Ash &amp; Adams (2020), where they train a classifier on half of the samples of a dataset first, and fine-tune it later on all samples. They show that warm starting for image classification is challenging. Using a model pre-trained on the Pile and continuing the pre-training on SlimPajama, we follow an analogous setup for causal language modeling.</p>
+          </div>
+          <div class="zh">
+            <p>在我们的设定中,<em>上游</em>(预训练)数据集是 <strong>Pile</strong>(Gao 等, 2020),<em>下游</em>(微调)数据集是 <strong>SlimPajama</strong>(Soboleva 等, 2023)。SlimPajama 是 RedPajama(Together.xyz, 2023)的"大规模去重"版本,而 RedPajama 又是基于 LLaMA 数据集配方(Touvron 等, 2023)构建的。本文里我们把 "fine-tuning" 与 "下游 continual pre-training" 当作可互换词。然而,在我们的 CPT 设定中要注意:<em>下游数据规模与之前预训练数据规模相当</em>(即非常大,与多数 fine-tuning 数据集不同)。SlimPajama 与 Pile 取自相近的来源,但数据量更大;因此 CPT 期间可能会重复看到一些上游数据。我们的实验设定类比 Ash &amp; Adams (2020):他们先在数据集的<em>一半样本</em>上训练分类器,之后再在<em>全部样本</em>上 fine-tune,结果表明"图像分类的 warm-start 颇具挑战"。我们用一个已在 Pile 上预训练的模型、继续在 SlimPajama 上预训练,把这套思路平移到因果语言建模上。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Datasets.</strong> We use the Pile with the same weights as Black et al. (2022) for validation. We shuffle and randomly sample the SlimPajama dataset (Soboleva et al., 2023) to form the ~297B-token training dataset and ~316M validation token dataset. The training mix is: StackExchange 2.0% (9.95B train, 13.08M val), Arxiv 2.5% (13.77B / 22.73M), Wikipedia 4.5% (11.78B / 15.79M), Book 4.5% (14.22B / 22.04M), Github 4.5% (15.41B / 22.42M), C4 15.0% (78.49B / 72.49M), CommonCrawl 67.0% (153.25B / 147.28M) — totaling 100% / 296.86B train / 315.83M validation tokens. We do <em>not</em> use replay. We use the same tokenizer as Black et al. (2022), which was trained specifically on the Pile.</p>
+          </div>
+          <div class="zh">
+            <p><strong>数据。</strong>Pile 验证集的权重照搬 Black 等 (2022)。对 SlimPajama(Soboleva 等, 2023)做 shuffle 与随机抽样,得到约 297B token 的训练集与约 316M token 的验证集。训练混比(采样占比)为:StackExchange 2.0%(训练 9.95B,验证 13.08M)、Arxiv 2.5%(13.77B / 22.73M)、Wikipedia 4.5%(11.78B / 15.79M)、Book 4.5%(14.22B / 22.04M)、Github 4.5%(15.41B / 22.42M)、C4 15.0%(78.49B / 72.49M)、CommonCrawl 67.0%(153.25B / 147.28M)——总计 100% / 296.86B 训练 / 315.83M 验证 token。我们<em>不使用 replay</em>。tokenizer 沿用 Black 等 (2022) 在 Pile 上专门训出的那一份。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Model.</strong> We use the 410M Pythia model pre-trained on the Pile (Biderman et al., 2023), i.e. GPT-NeoX (Black et al., 2022) models. We do not use flash attention (Dao et al., 2022).</p>
+          </div>
+          <div class="zh">
+            <p><strong>模型。</strong>我们使用 Biderman 等 (2023) 在 Pile 上预训练的 <strong>Pythia-410M</strong>,即 GPT-NeoX(Black 等, 2022)系列。我们<em>不</em>使用 flash attention(Dao 等, 2022)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Hyperparameters.</strong> We use the AdamW optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.95$, $\epsilon = 10^{-8}$, and a weight decay of $0.1$. The maximum learning rate is varied in our experiments: $\{1.5{\times}10^{-4},\ 3{\times}10^{-4},\ 6{\times}10^{-4}\}$. We use cosine learning rate decay to a minimum of $0.1 \cdot \eta_\max$. All warmup lengths are calculated based on the full downstream dataset size (297B tokens). We note that our cosine decay schedule reaches the minimum learning rate at 240B tokens and is constant thereafter. We set gradient clipping to $1.0$. Training is conducted at half-precision (FP16), without dropout.</p>
+          </div>
+          <div class="zh">
+            <p><strong>超参。</strong>我们使用 AdamW 优化器,$\beta_1 = 0.9$、$\beta_2 = 0.95$、$\epsilon = 10^{-8}$、weight decay $= 0.1$。最大学习率在实验中被扫:$\{1.5{\times}10^{-4},\ 3{\times}10^{-4},\ 6{\times}10^{-4}\}$。采用 cosine LR decay 到 $0.1 \cdot \eta_\max$。所有 warm-up 长度都按"全量 297B token 下游预算"折算为占比。我们注意到 cosine decay schedule 在 240B token 处达到最小学习率,此后保持常数。gradient clip $= 1.0$。训练采用半精度(FP16),不使用 dropout。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§3 LR Schedules / 学习率调度(re-warming 三选一)<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Three LR strategies in the CPT literature.</strong> LLMs are usually trained with Adam (GPT-3, BLOOM, Gopher, Pythia) or AdamW (Chinchilla, LLaMA); in all of these models, the canonical schedule is a linear warm-up followed by cosine decay to 10% of $\eta_\max$. In continual learning (CL), models are trained on sequences of datasets, the data is not i.i.d., and the model can lose plasticity or forget; in such situations, particular monitoring of the LR schedule can be beneficial. Three families have been tried in CL of LMs: <em>constant LR</em> (Ke et al., 2023a; Scialom et al., 2022), <em>progressive decrease</em> across stages (Winata et al., 2023), and <em>warm-up then decrease</em> at each new stage (Caccia et al., 2021). To the best of our knowledge, no existing work has studied specifically the influence of the warm-up phase in <strong>LLM CPT</strong> — this is our entry point.</p>
+          </div>
+          <div class="zh">
+            <p><strong>CPT 文献里的三种 LR 策略。</strong>LLM 训练通常用 Adam(GPT-3、BLOOM、Gopher、Pythia)或 AdamW(Chinchilla、LLaMA);在所有这些模型里,标准 schedule 都是"线性 warm-up + cosine decay 到 $0.1\,\eta_\max$"。在持续学习(CL)中,模型在<em>数据集序列</em>上训练,数据不是 i.i.d. 的,这可能导致模型失去 plasticity 或发生 forgetting;在这种情形下,对 LR schedule 的<em>专门监控</em>是有益的。在 LM 的 CL 里,文献尝试过三类:<em>常数 LR</em>(Ke 等, 2023a;Scialom 等, 2022)、<em>跨阶段递进降 LR</em>(Winata 等, 2023)、<em>每个新阶段先 warm-up 再 decay</em>(Caccia 等, 2021)。据我们所知,<em>还没有任何工作</em>专门研究 <strong>LLM CPT</strong> 中 warm-up 阶段的影响——这正是本文的切入点。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>How long to warm up? (§4.1)</strong> In the literature, warm-up is usually conducted on at most 1% of the data (Zhao et al., 2023). In this experiment, we investigate if the results are sensitive to this hyper-parameter. <em>Setup:</em> we experiment with different warm-up lengths for a schedule of 297B tokens: $\{0\%, 0.5\%, 1\%, 2\%\}$ of the data, and measure performance after the first 50B tokens. From a different perspective, we could see this as running a 1% warm-up on different amounts of data. We hypothesize that warming up for a larger number of iterations could lead to a smoother transition with subsequent performance improvements.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Warm-up 应当多长?(§4.1)</strong>文献里,warm-up 通常占比最多 1%(Zhao 等, 2023)。在本实验中,我们要看结果是否对这个超参敏感。<em>设定:</em>在 297B token 的 schedule 上,试用不同的 warm-up 长度——占数据的 $\{0\%, 0.5\%, 1\%, 2\%\}$,并在前 50B token 处测量性能。换一个角度看,这相当于"在不同数据量上跑 1% warm-up"。我们的假设是:用更多次迭代来 warm-up,可能会带来更平滑的过渡,从而带来后续性能改善。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Results — warm-up length is a free knob.</strong> The results (Fig. 1) show that the amount of data used for warming up the learning rate <em>does not significantly</em> influence the perplexity on the downstream task (learning) or the upstream task (forgetting). These results invalidate our hypothesis that using more tokens for warm-up can smooth the transition, and show that linear warmup is essentially useless in this setting. Nevertheless, the model trained <em>without any</em> progressive warm-up experiences an initial "chaotic phase" causing a spike in the loss in its first few iterations of training — this phenomenon is also referred to as the <strong>stability gap</strong> (Lange et al., 2023; Caccia et al., 2022). <strong>Takeaway 1:</strong> the length of the warm-up phase does not appear to have a significant effect on the Pile and SlimPajama validation losses.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结果 — warm-up 长度是自由变量。</strong>结果(图 1)显示,用于 warm-up LR 的 token 量<em>不会显著</em>影响下游任务(学习)或上游任务(遗忘)的 perplexity。这些结果<em>否定</em>了我们"更多 token warm-up 能平滑过渡"的假设,并表明在本设定下线性 warmup 几乎是<em>无用</em>的。然而,<em>完全不</em>做渐进 warm-up 的模型会在最初几步训练中经历一个"混沌期",造成 loss 尖峰——这一现象在文献里也被称作 <strong>stability gap</strong>(Lange 等, 2023;Caccia 等, 2022)。<strong>结论 1:</strong>warm-up 阶段的长度对 Pile 和 SlimPajama 的验证 loss 似乎没有显著影响。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>How high to warm up? (§4.2)</strong> One objective of re-warming the learning rate is to enable compute-efficient CPT. A learning rate that is too small may lead to inefficient learning on the downstream dataset, whereas a learning rate that is too large may lead to catastrophic forgetting of the upstream dataset. One important aspect of re-warming the LR is to decide <em>how high to increase it</em>. <em>Setup:</em> we fix the length of the warm-up phase to the default amount of 1% of the training data and vary the maximum learning rate. We experiment with the default value of $3{\times}10^{-4}$ used for pre-training Pythia 410M, $1.5{\times}10^{-4}$, and $6{\times}10^{-4}$. For the post-warmup cosine decay phase, we set the final LR to 10% of $\eta_\max$. The LR schedule decays to the minimum at 240B tokens and is constant thereafter. The runs are reported to the end of 240B tokens (the end of decay period).</p>
+          </div>
+          <div class="zh">
+            <p><strong>Warm-up 拉到多高?(§4.2)</strong>re-warm LR 的一个目标是让 CPT 算力更高效。LR 太小会让下游数据集上学得低效;LR 太大则会导致上游数据集的灾难性遗忘。re-warm LR 的一个关键问题是:<em>到底拉多高</em>?<em>设定:</em>把 warm-up 长度固定为默认的"训练数据的 1%",并变更最大学习率。我们试用三个值:Pythia-410M 预训练默认的 $3{\times}10^{-4}$、$1.5{\times}10^{-4}$、$6{\times}10^{-4}$。warm-up 之后的 cosine decay 阶段,把最终 LR 设为 $0.1\,\eta_\max$。LR schedule 在 240B token 处达到最小、其后保持常数。所有 run 报告到 240B token 末尾(衰减期结束)为止。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Results — $\eta_\max$ is the trade-off knob (Figs. 2–4).</strong> We observe, at the end of training, that <em>larger</em> $\eta_\max$ improves performance on downstream data while hurting performance on upstream data. Conversely, a <em>smaller</em> $\eta_\max$ improves performance on upstream data while limiting adaptation to downstream data — causing decreased downstream performance. These findings show that altering $\eta_\max$ can be an effective way to trade off downstream vs upstream. We also observe a general trend: fine-tuning on SlimPajama causes the model to forget what has been learned on the Pile, leading to an increase in the Pile validation perplexity. Finally, employing <em>early stopping</em> on a model trained from a constant learning rate (similar to traditional fine-tuning) is an economical way of adapting to the new distribution while retaining strong upstream performance. <strong>Takeaway 2:</strong> rewarming then decaying the learning rate appears necessary to learn well on the downstream task; while keeping a constant LR is initially advantageous on Pile, this advantage vanishes when training long enough on SlimPajama. Moreover, a model that <em>only</em> learns on SlimPajama performs worse on SlimPajama than models pre-trained on Pile — despite being optimised solely for the downstream task — highlighting positive transfer between the two datasets.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结果 — $\eta_\max$ 是 trade-off 旋钮(图 2–4)。</strong>在训练末端观察到:<em>更大</em>的 $\eta_\max$ 改善下游性能、却<em>损害</em>上游性能;反之,<em>更小</em>的 $\eta_\max$ 改善上游性能、却<em>限制</em>下游适应——导致下游表现下降。这表明调整 $\eta_\max$ 是<em>下游↔上游 trade-off 的一条有效旋钮</em>。我们还观察到一个普遍趋势:在 SlimPajama 上 fine-tune,会让模型遗忘 Pile 上学到的内容,导致 Pile 验证 PPL 升高。最后,我们注意到对"constant LR 训练的模型"做<em>早停</em>(类似传统 fine-tuning)是一种经济方案——既能适应新分布,又能保留较强的上游性能。<strong>结论 2:</strong>要在下游任务上学好,re-warm 再 decay LR 似乎是必要的;保持 constant LR 一开始在 Pile 上更占优,但在 SlimPajama 上训练足够久后这个优势就会消失。此外,一个<em>只</em>在 SlimPajama 上学习的模型,在 SlimPajama 上的表现反而比 Pile 预训过的模型差——尽管前者是<em>专为</em>下游优化的——这凸显了两数据集之间的<em>正向迁移</em>。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§4 Data Mixing / 新旧数据混合(SlimPajama 配比)<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Why mixing matters in CPT.</strong> The "new corpus" in CPT is rarely a single homogeneous source — it is itself a weighted mixture of sub-domains. The CPT outcome therefore depends on <em>two</em> mixing decisions: (a) the internal mix of the new corpus, which determines what new capabilities the model picks up; and (b) the proportion of <em>old corpus replayed</em>, which determines how strongly catastrophic forgetting is buffered (covered in §5). This paper fixes (a) to the standard SlimPajama mix and turns off (b) entirely — making it the cleanest possible isolation of the LR-schedule axis. We describe (a) here in detail.</p>
+          </div>
+          <div class="zh">
+            <p><strong>为什么 CPT 里混比重要。</strong>CPT 的"新语料"很少是单一同质来源,它本身就是若干子 domain 的<em>加权混合</em>。因此 CPT 结果由<em>两层</em>混合决策决定:(a) 新语料的<em>内部混比</em>——决定模型新学到哪些能力;(b) 旧语料的 <em>replay 比例</em>——决定灾难性遗忘被缓冲的强度(在 §5 详谈)。本文把 (a) 固定为 SlimPajama 标准混比、把 (b) 完全关掉——这使本文成为"对 LR schedule 轴最干净的隔离实验"。此处先把 (a) 详细说清楚。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>SlimPajama training mix (this paper).</strong> The 297B-token SlimPajama training set is sampled with the following weights, almost a 1:1 mirror of the original SlimPajama release: CommonCrawl 67.0% (153.25B), C4 15.0% (78.49B), Github 4.5% (15.41B), Book 4.5% (14.22B), Wikipedia 4.5% (11.78B), Arxiv 2.5% (13.77B), StackExchange 2.0% (9.95B). Roughly $82\%$ of the corpus is general web text (CommonCrawl + C4), while the remaining $18\%$ is code / STEM / encyclopedic / Q&amp;A content. The validation split (~316M tokens) follows the same proportions.</p>
+          </div>
+          <div class="zh">
+            <p><strong>本文 SlimPajama 训练混比。</strong>297B token 的 SlimPajama 训练集按以下权重采样,与 SlimPajama 官方发布几乎 1:1 一致:CommonCrawl 67.0%(153.25B)、C4 15.0%(78.49B)、Github 4.5%(15.41B)、Book 4.5%(14.22B)、Wikipedia 4.5%(11.78B)、Arxiv 2.5%(13.77B)、StackExchange 2.0%(9.95B)。其中约 $82\%$ 是通用 web 文本(CommonCrawl + C4),余下 $18\%$ 是代码 / STEM / 百科 / 问答类内容。验证集(约 316M token)按相同比例划分。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Implicit "soft replay" through source overlap.</strong> Because SlimPajama and Pile draw from the same families of sources (CommonCrawl, Wikipedia, GitHub, Books, Arxiv, StackExchange, etc.), CPT on SlimPajama already <em>passively</em> revisits a non-trivial fraction of the Pile distribution. The authors call this out explicitly: "the SlimPajama dataset is built from similar sources as the Pile but with a higher quantity of data. Therefore, some upstream data may be repeated during downstream pre-training." This is, in effect, free implicit replay through provenance overlap — and it is the most plausible explanation for the positive transfer observed in §4.3.</p>
+          </div>
+          <div class="zh">
+            <p><strong>来源重叠 = 隐式"软 replay"。</strong>由于 SlimPajama 与 Pile 来源同族(CommonCrawl、Wikipedia、GitHub、Book、Arxiv、StackExchange 等),在 SlimPajama 上做 CPT 实际上已经被动地复习了 Pile 分布里相当一部分内容。作者明说:"SlimPajama 与 Pile 取自相近来源、数据量更大,因此 CPT 期间可能会重复见到一些上游数据。"——这相当于"通过来源重叠获得的免费隐式 replay",也是 §4.3 中观察到正向迁移最合理的解释。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Positive transfer in numbers.</strong> A model pre-trained on Pile and then CPT'd on SlimPajama outperforms, at convergence, a model trained <em>only</em> on SlimPajama from scratch on the very same SlimPajama validation set — even though the latter is optimised purely for the downstream task. This is one of the most striking results of the paper: under similar-provenance distribution shift, the Pile-pretrained prior is <em>net positive</em> for a downstream task evaluation, not just an artefact to be unlearned. The conclusion only inverts for the <em>constant low LR</em> baseline: it gives up on adaptation and is overtaken by from-scratch after ~200B tokens.</p>
+          </div>
+          <div class="zh">
+            <p><strong>正向迁移的数字。</strong>Pile 预训 + SlimPajama CPT 的模型,在收敛时,于<em>同一个</em> SlimPajama 验证集上的表现胜过<em>只在 SlimPajama 上从零训</em>的模型——即便后者是专门为下游任务优化的。这是本文最醒目的结论之一:在"同源分布偏移"下,Pile 预训得到的先验对下游评测是<em>净正</em>的,而不是"需要被遗忘的伪迹"。唯一倒过来的情形是 <em>constant 小 LR</em> 基线——它放弃了对新数据的适应,在 ~200B token 之后就被 from-scratch 反超。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>What this paper does <em>not</em> sweep.</strong> The authors fix this mix and do not study how varying it (e.g. up-weighting code, or injecting a math / legal / biomedical domain subset) affects forgetting and downstream gains. This is the gap later filled by domain-CPT works such as DAPT (Gururangan et al., 2020), code-CPT, and math-CPT — and by the mid-training recipes in Llama-3 / DeepSeek-V3 / Qwen-2.5, which simultaneously <em>shift</em> the new-corpus mix toward the target domain <em>and</em> add explicit replay of the original pre-training distribution. <strong>Takeaway.</strong> CPT data design is a two-axis decision: <em>new-corpus internal mix</em> (capability tilt) + <em>old-corpus replay ratio</em> (forgetting buffer). This paper isolates the LR-schedule axis by holding both data axes fixed; consider this paper a clean unit-test on top of which all later mixing/replay work composes.</p>
+          </div>
+          <div class="zh">
+            <p><strong>本文<em>没</em>扫的轴。</strong>作者固定了上述混比,没有研究"加重代码"、"注入数学 / 法律 / 生医 domain 子集"等变化对 forgetting 与下游收益的影响。这一缺口由后续 domain-CPT 工作填补——DAPT(Gururangan 等, 2020)、code-CPT、math-CPT——以及 Llama-3 / DeepSeek-V3 / Qwen-2.5 等大模型的 mid-training 配方。这些后续工作<em>同时</em>把"新语料混比"向目标 domain 倾斜,<em>并且</em>加入"原始预训练分布的显式 replay"。<strong>结论。</strong>CPT 的数据设计是<em>两轴</em>决策:<em>新语料内部混比</em>(能力倾向)+ <em>旧语料 replay 比例</em>(forgetting 缓冲)。本文把两个数据轴都固定,以隔离出 LR 调度轴单独分析——可以把本文视作"一组干净的 unit-test",后续所有 mixing / replay 工作都在它之上叠加。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5 Replay / 旧数据回放(本文未做 + 工程标配)<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>What replay is.</strong> Replay (a.k.a. rehearsal) is the canonical CL trick: when training on a new stage, mix a small fraction of <em>old</em> data into each batch so the model never fully drops the previous distribution. Classical references are Rebuffi et al. (2017, iCaRL) and Ostapenko et al. (2022, latent replay). In LLMs it shows up as "mix some general pre-training data back into your domain CPT". Mathematically, the per-step batch becomes a mixture $B_t = (1-\rho)\,B_{\text{new}} + \rho\,B_{\text{old}}$, where $\rho$ is the replay ratio; gradient is taken on the mixture instead of on $B_{\text{new}}$ alone, so the optimizer cannot move into a region that catastrophically increases loss on the old distribution.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Replay 是什么。</strong>Replay(也叫 rehearsal,"复习")是持续学习的经典招式:在新阶段训练时,把一小部分<em>旧</em>数据混进每个 batch,使模型不至于完全丢掉之前的分布。经典引用是 Rebuffi 等 (2017, iCaRL) 和 Ostapenko 等 (2022, latent replay)。在 LLM 里它的体现是"把一部分通用预训练数据混回 domain CPT"。形式化来说,每步的 batch 变成 $B_t = (1-\rho)\,B_{\text{new}} + \rho\,B_{\text{old}}$,其中 $\rho$ 是 replay 比例;梯度在这个混合 batch 上计算,而不是单独在 $B_{\text{new}}$ 上,这样优化器就不会走到"会让旧分布上的 loss 灾难性恶化"的区域。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>This paper's stance: no replay, on purpose.</strong> The authors explicitly write <em>"We do not use replay."</em> in §2, and motivate it in §1: in a potentially long sequence of CPT stages, the bookkeeping and compute overhead of replay (Lesort et al., 2023) can become a bottleneck, and existing CL techniques like replay or regularisation "may make … not compute efficient enough" in that regime. They therefore isolate the LR-schedule effect, and crucially demonstrate that re-warm alone — <em>without any replay</em> — already beats from-scratch training. This is a strong claim: it says the simplest LR trick is competitive with, and often better than, the entire combinatorial space of replay-based CL methods at LLM scale.</p>
+          </div>
+          <div class="zh">
+            <p><strong>本文立场:特意不做 replay。</strong>作者在 §2 明确写 <em>"We do not use replay."</em>,并在 §1 给出动机:在一个潜在很长的 CPT 阶段序列里,replay 的数据 bookkeeping 与算力开销(Lesort 等, 2023)可能成为瓶颈,而 replay / 正则化这类常见 CL 技术 "在该规模下可能算力不够高效"。于是他们关掉 replay,以隔离出 LR schedule 本身的效应,并且<em>关键性地</em>证明:<em>只靠 re-warm、不靠 replay</em>,CPT 已经能击败 from-scratch。这是个相当强的主张:它说明在 LLM 规模上,最简单的 LR 调度技巧已经能与"整个 replay-based CL 方法组合空间"竞争——并且通常更好。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Standard production sweep: 1% / 5% / 10% replay.</strong> In real LLM pipelines (Llama-3 mid-training, DeepSeek-V3 / V3.1 long-context CPT, Qwen-2.5 code-CPT, etc.) the typical replay ratio is swept in $\{1\%, 5\%, 10\%\}$ of total batch tokens drawn from the original pre-training distribution. <em>1%</em> negligibly slows downstream learning while clearly slowing forgetting — the highest cost / benefit point. <em>5%</em> is the common default for mid-training and domain-CPT — there is visible recovery of upstream PPL at a small downstream cost. <em>10%</em> almost eliminates forgetting but already dilutes downstream gains; this is reserved for the case where upstream capability is a hard product requirement (e.g. preserving instruction-following or safety alignment after a heavy CPT).</p>
+          </div>
+          <div class="zh">
+            <p><strong>工业界常见扫参:1% / 5% / 10% replay。</strong>真实 LLM 流水线里(Llama-3 mid-training、DeepSeek-V3 / V3.1 长上下文 CPT、Qwen-2.5 code-CPT 等),典型 replay 比例从原始预训练分布中以 $\{1\%, 5\%, 10\%\}$ 的 batch token 占比扫:<em>1%</em>:几乎不拖慢下游学习,却能明显减缓 forgetting——性价比最高。<em>5%</em>:mid-training 与 domain-CPT 的常见默认值——上游 PPL 明显恢复、下游代价不大。<em>10%</em>:几乎抹平 forgetting,但下游收益已被稀释一截;通常只在"上游能力是硬性产品要求"时才用(比如重度 CPT 后还要保住 instruction-following 或安全对齐)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Replay ↔ LR re-warm interaction.</strong> Replay and re-warm are <em>complementary</em>, not redundant. Re-warm fixes "LR too small to actually learn the new distribution"; replay fixes "the gradient direction is biased entirely toward the new distribution". Re-warm without replay (this paper) still beats from-scratch but pays a transient upstream loss spike. Replay without re-warm (constant-LR + 5% old data) avoids the spike but learns the new data too slowly. The full combination is what production systems converge to: $\eta_\max \approx 1/3$ of the original peak, 1% linear warm-up (or skip and accept the spike), cosine decay to $0.1\,\eta_\max$, plus $1\%\text{–}5\%$ replay of the original mix.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Replay 与 LR re-warm 的耦合。</strong>Replay 与 re-warm 是<em>互补</em>而非替代。Re-warm 解决"LR 太小,学不动新分布";replay 解决"梯度方向被新分布完全主导"。"只 re-warm、不 replay"(本文)能击败 from-scratch,但会承受短暂的上游 loss 尖峰;"只 replay、不 re-warm"(constant LR + 5% 旧数据)能避开尖峰,但新数据学得太慢。完整组合是生产系统共同收敛的做法:$\eta_\max \approx$ 原 peak 的 $1/3$、1% 线性 warm-up(或跳过、接受短暂 spike)、cosine decay 到 $0.1\,\eta_\max$,再叠加 $1\%\text{–}5\%$ 原始混比的 replay。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Takeaway.</strong> This paper proves LR re-warm is <em>sufficient</em> to beat from-scratch even without replay; in production, adding a few-percent replay on top is essentially free insurance against catastrophic forgetting — and is what every large-scale CPT recipe in 2024–2025 ends up doing. As a corollary: if you only have budget to tune <em>one</em> knob, tune $\eta_\max$ (this paper, §4.2); if you have budget for two, add a small replay ratio on top; only then consider checkpoint selection or regularisation.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论。</strong>本文证明<em>只靠</em> LR re-warm 就<em>足以</em>击败 from-scratch,无需 replay;但在生产环境里,在 re-warm 之上再加几个百分点的 replay,基本是"免费保险"——这也是 2024–2025 年所有大规模 CPT 配方共同收敛到的做法。一个推论是:如果只能调<em>一个</em>旋钮,调 $\eta_\max$(本文 §4.2);如果有两个预算,在它之上加少量 replay;只有这之后再考虑 checkpoint 选择或正则化。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>§6 Catastrophic Forgetting / 灾难性遗忘(分布偏移 vs 优化动力学)<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>The forgetting picture in CPT.</strong> When the Pythia-410M model is CPT'd on SlimPajama, the validation perplexity on Pile — the upstream dataset it was originally trained on — <em>increases</em> during the warm-up and early decay phases, then partially recovers. The size of this increase scales monotonically with $\eta_\max$ — the same knob that controls downstream gains. This is the textbook signature of <strong>catastrophic forgetting</strong> (French, 1999) in CPT. Importantly the from-scratch baseline, which is being trained on SlimPajama from random init, <em>consistently improves</em> its performance on Pile during training — showing the significant synergy between the two datasets and that "forgetting" is specifically the loss of the prior CPT model's advantage, not a violation of the synergy itself.</p>
+          </div>
+          <div class="zh">
+            <p><strong>CPT 中的 forgetting 全貌。</strong>当 Pythia-410M 在 SlimPajama 上做 CPT 时,模型在 Pile 上(它最初被预训练的上游数据集)的验证 PPL 在 warm-up 与衰减前期会<em>上升</em>,之后部分恢复;上升幅度<em>随</em> $\eta_\max$ 单调增大——和决定下游收益的是<em>同一个</em>旋钮。这是 CPT 中 <strong>catastrophic forgetting</strong>(French, 1999)的教科书式表现。值得注意的是,from-scratch 基线(在 SlimPajama 上从随机初始化训练)的 Pile 表现却<em>持续改善</em>——这说明两个数据集存在显著协同,所谓的 "forgetting" 特指"CPT 模型相对优势的损失",而不是"协同关系本身被破坏"。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Two candidate causes.</strong> Two plausible mechanisms could explain the upstream loss spike. (a) <em>Distribution shift</em>: SlimPajama's mix is not identical to Pile's, so optimizing on it pulls the parameters away from Pile's optimum. (b) <em>Optimization dynamics</em>: simply re-warming a previously decayed learning rate can perturb any minimum, regardless of whether the data distribution actually changed. The two stories make different predictions for the case "CPT a Pile-pretrained model back on Pile itself" — distribution-shift theory predicts no spike, dynamics theory predicts the spike persists. The authors disentangle them with a clean ablation.</p>
+          </div>
+          <div class="zh">
+            <p><strong>两种候选原因。</strong>上游 loss 抬升的可能机制有两个:(a) <em>分布偏移</em>——SlimPajama 与 Pile 的混合不完全相同,在 SlimPajama 上优化会把参数从 Pile 的最优点拉走;(b) <em>优化动力学</em>——把<em>已被衰减</em>的学习率重新拉高,本身就足以扰动任何 minimum,不管数据分布是否真的变了。在"把 Pile 预训模型再 CPT 回 Pile 自己"这种情形下,两套理论预测<em>不同</em>:分布偏移说预测<em>不会</em>有尖峰,动力学说预测<em>仍然</em>有尖峰。作者用一个干净的 ablation 把两者分开。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Result of the ablation (§4.4).</strong> Setup: replace the downstream data with 50B tokens of Pile (the same dataset the model was already pre-trained on), apply the same re-warm policy as §4.2, and watch the Pile validation loss. Result: even with zero distribution shift, the Pile validation loss <em>still</em> spikes up during re-warm and the model never fully recovers to its pre-CPT minimum (Figs. 5–6). Therefore <em>at least part</em> of the forgetting in §4.2 is not caused by SlimPajama-vs-Pile differences, but by re-warm itself: it pushes the parameters out of a local minimum, and cosine decay does not land back at the exact same point. <strong>Takeaway 3:</strong> rewarming the learning rate appears to be a significant cause of the performance degradation; and the models do not appear able to recover from the rewarm-induced hit, even when training on the same dataset.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Ablation 结果(§4.4)。</strong>设定:把下游数据换成 50B token 的 Pile(模型本来就预训练在它之上),沿用 §4.2 的 re-warm 策略,看 Pile 验证 loss。结果:即便分布偏移为零,Pile 验证 loss 在 re-warm 期间<em>仍然</em>会先涨,且<em>无法完全</em>回到 CPT 前的 minimum(图 5–6)。因此 §4.2 中观察到的 forgetting,至少<em>部分</em>不是由 SlimPajama vs Pile 的差异引起,而是 re-warm 本身造成的:它把参数推出当前的局部极小值,而 cosine 衰减阶段并不能精确回到同一个点。<strong>结论 3:</strong>"重热 LR"看起来是性能退化的<em>显著原因</em>;并且即便是在同一数据集上训练,模型也<em>无法</em>从这次重热引发的性能 hit 中完全恢复。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Interesting fingerprint.</strong> When fine-tuning on Pile, Pile-PPL and SlimPajama-PPL move along a near-<em>linear</em> trajectory (Fig. 6); when fine-tuning on SlimPajama, they do not (Fig. 4). A plausible interpretation: same-distribution re-warm climbs out and returns to the same basin (linear in PPL space — the two PPL measures co-vary), whereas distribution-shifted re-warm lands in a <em>different</em> basin (non-linear, asymmetric trade-off curve). This is a useful diagnostic — if you see a non-linear Pile-PPL vs new-PPL curve during CPT, that is direct evidence that the new data is pulling you into a genuinely different optimum, not just temporarily perturbing the current one.</p>
+          </div>
+          <div class="zh">
+            <p><strong>一个有趣的指纹。</strong>在 Pile 上 fine-tune 时,Pile-PPL 与 SlimPajama-PPL 沿一条几乎<em>线性</em>的轨迹移动(图 6);在 SlimPajama 上 fine-tune 时,两者就<em>不再</em>线性(图 4)。一种合理解释:同分布 re-warm 是"爬出极小值再回到同一个 basin"——在 PPL 空间里看,两个 PPL 度量是<em>共动</em>的、所以呈线性;而跨分布 re-warm 会降落到<em>另一个</em> basin,呈非线性的非对称 trade-off 曲线。这是个很有用的诊断:在 CPT 过程中,如果你看到 "上游 PPL vs 下游 PPL" 曲线<em>非线性</em>,就是<em>直接证据</em>——新数据把你拉进了真正不同的最优点,而不仅仅是把当前的最优点暂时扰动一下。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Implications for forgetting mitigation.</strong> Because forgetting has both a <em>data component</em> and an <em>optimization component</em>, no single fix is sufficient: (i) shrink $\eta_\max$ to reduce the optimization-dynamics piece; (ii) add replay to attack the distribution-shift piece; (iii) avoid earlier (less-converged) checkpoints — §4.5 confirms they hurt both upstream and downstream. The recipe is multi-pronged, and this paper makes the case that the LR axis alone is already <em>first-order</em> important. The Lange et al. (2023) and Caccia et al. (2022) "stability gap" framing is the deeper theoretical backdrop here: any transition between training regimes provokes a transient capability drop, and the magnitude of that drop is mostly governed by how aggressively the optimizer is perturbed.</p>
+          </div>
+          <div class="zh">
+            <p><strong>对 forgetting 缓解的启示。</strong>由于 forgetting 同时含<em>数据成分</em>与<em>优化成分</em>,没有任何单一招式能彻底解决:(i) 缩小 $\eta_\max$,缓解"优化动力学"那部分;(ii) 加 replay,攻击"分布偏移"那部分;(iii) 不要用更早(更未收敛)的 checkpoint——§4.5 已证实更早的 checkpoint 在上下游都更差。完整配方是<em>多管齐下</em>,而本文要论证的是:<em>仅 LR 一轴</em>就已经是一阶重要的旋钮。Lange 等 (2023)、Caccia 等 (2022) 提出的 "stability gap" 框架是这里更深的理论背景:任何训练制度的切换都会引发一次<em>瞬态能力下降</em>,而下降的幅度主要由"优化器被扰动得多激进"决定。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>§7 Results / 主体实验结果与启示<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Result 1 — warm-up length is a free knob (Fig. 1).</strong> Sweeping warm-up over $\{0\%, 0.5\%, 1\%, 2\%\}$ of the 297B-token budget leaves the final Pile and SlimPajama validation losses essentially unchanged. The only visible artefact at $0\%$ is an initial loss spike (the stability gap / chaotic phase), which is gone within a few hundred steps. Takeaway 1: <em>"how long to warm up" is not where the leverage is</em> — pick anything from 0% (and accept a brief spike) to 1%–2% (clean curves), it does not matter for the eventual loss.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论 1 — warm-up 长度是自由变量(图 1)。</strong>在 297B 总预算上扫 warm-up 占比 $\{0\%, 0.5\%, 1\%, 2\%\}$,最终 Pile 与 SlimPajama 的验证 loss 几乎完全相同。$0\%$ 唯一可见的痕迹是开头几步的一个 loss 尖峰(stability gap / 混沌期),数百 step 后就消失。<strong>结论 1:</strong>"warm-up 多长"<em>不是</em>杠杆所在——从 0%(接受短暂 spike)到 1%–2%(曲线干净)随便选,对最终 loss 都没有影响。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Result 2 — $\eta_\max$ is the trade-off knob (Figs. 2–4).</strong> At a fixed 1% warm-up, increasing $\eta_\max$ from $1.5{\times}10^{-4}$ to $6{\times}10^{-4}$ monotonically improves SlimPajama PPL and monotonically degrades Pile PPL. The Pareto frontier in (downstream-PPL, upstream-PPL) space is precisely traced out by $\eta_\max$. The constant low LR baseline ($3{\times}10^{-5}$, the decay-tail value) is best on Pile early on but is overtaken on SlimPajama after ~100B tokens. Takeaway 2: if you only have budget to tune one thing in CPT, tune $\eta_\max$ — it is the master plasticity-vs-stability dial.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论 2 — $\eta_\max$ 才是 trade-off 旋钮(图 2–4)。</strong>固定 1% warm-up,$\eta_\max$ 从 $1.5{\times}10^{-4}$ 升到 $6{\times}10^{-4}$,SlimPajama PPL <em>单调下降</em>、Pile PPL <em>单调上升</em>;(下游 PPL,上游 PPL)平面上的 Pareto 前沿被 $\eta_\max$ <em>精确</em>划出。constant 小 LR 基线(decay 尾巴对应的 $3{\times}10^{-5}$)在前期 Pile 上表现最佳,但在 ~100B token 之后被 SlimPajama 反超。<strong>结论 2:</strong>如果只能调一个 CPT 参数,就调 $\eta_\max$——它是 plasticity ↔ stability 的主旋钮。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Result 3 — CPT beats from-scratch even when downstream is huge (Figs. 2–3).</strong> A model trained from random init on the same 297B-token SlimPajama with the same cosine schedule loses to <em>every</em> re-warmed CPT model on SlimPajama at convergence — even though the downstream dataset is on the same scale as the upstream pre-training and overlaps with it in source. After ~200B tokens, the <em>constant low-LR</em> CPT model is even <em>overtaken</em> by from-scratch, confirming that "just sit at the decay-tail LR" is the wrong choice in the long run. This is the practical headline of the paper: <em>do not retrain from scratch when new data arrives — CPT with re-warmed LR is strictly better, even at full pre-training scale.</em></p>
+          </div>
+          <div class="zh">
+            <p><strong>结论 3 — 即使下游数据极大,CPT 仍胜过 from-scratch(图 2–3)。</strong>在同样 297B SlimPajama、同样 cosine schedule 下从随机初始化训出的模型,在 SlimPajama 收敛时输给<em>每一个</em>带 warm-up 的 CPT 模型——即使下游数据规模与上游预训练相当、来源也有重叠。在 ~200B token 之后,<em>constant 小 LR</em> 的 CPT 模型甚至被 from-scratch <em>反超</em>,确证"沿用 decay 尾巴的 constant LR"在长程下是错的。这就是本文最实用的头条:<em>有新数据时不要重训,re-warm LR 的 CPT 在完整预训规模下都<em>严格更优</em>。</em></p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Result 4 — same-data re-warm still hurts (Figs. 5–6).</strong> Replicating the §4.2 setup on 50B tokens of Pile (no distribution shift) produces a similar upstream loss spike as in §4.2's SlimPajama setting, and the model never fully recovers to its pre-CPT minimum. Moreover, Pile-PPL and SlimPajama-PPL move along a near-<em>linear</em> trajectory during this same-data re-warm — which was <em>not</em> the case during SlimPajama-CPT. A possible explanation: models trained on Pile climb out of a minimum during warm-up and return towards the same minimum as the LR is decayed (yielding the linear trend); under distribution shift, decay lands them in a different basin. This is the smoking-gun evidence that re-warm is partly an optimization-dynamics effect, independent of distribution shift.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论 4 — 同数据上 re-warm 仍然害(图 5–6)。</strong>把 §4.2 的设定平移到 50B token 的 Pile(无分布偏移),也会出现与 SlimPajama 情形<em>类似</em>的上游 loss 尖峰,且模型<em>无法</em>完全回到 CPT 前的 minimum。此外,在同数据 re-warm 期间,Pile-PPL 与 SlimPajama-PPL 沿一条几乎<em>线性</em>的轨迹移动——而在 SlimPajama-CPT 时<em>并非</em>如此。一种解释:Pile 训练的模型在 warm-up 期"爬出 minimum",在 decay 期"回到同一个 minimum"(因而呈线性);存在分布偏移时,decay 把它们送进了<em>另一个</em> basin。这是 re-warm 至少部分是<em>优化动力学</em>效应、与分布偏移无关的直接证据。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Result 5 — use the latest checkpoint (Fig. 7, §4.5).</strong> Three checkpoints are compared as CPT starting points: the fully-converged Pythia-410M at iter 143k, an early checkpoint near the maximum Pile validation loss attained across all Fig. 1 runs (~2.5), and a third one in between. Starting CPT from earlier (less-converged) Pile checkpoints gives <em>no improvement</em> on SlimPajama and actively hurts Pile. The pre-trained model has <em>not</em> lost plasticity at convergence; there is no reason to back off to an earlier checkpoint just for CPT. <strong>Takeaway 4:</strong> using an earlier checkpoint when pretraining on the Pile does not lead to learning faster on SlimPajama. Practical guidance: always start CPT from the latest, fully-decayed pre-training checkpoint, and re-warm the LR from there.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论 5 — 用最新 checkpoint(图 7,§4.5)。</strong>实验比较了三个 CPT 起点:已完全收敛的 Pythia-410M iter 143k;一个<em>很早</em>的 checkpoint(其 Pile 验证 loss 接近图 1 所有 run 里的最大值 ~2.5);以及夹在两者之间的第三个。从更早(更未收敛)的 Pile checkpoint 起 CPT,既<em>不会</em>让 SlimPajama 学得更快,反而把 Pile 表现拉差。预训练收敛点处的模型并<em>没有</em>失去 plasticity,没必要为了 CPT 退回到更早的 checkpoint。<strong>结论 4:</strong>用<em>更早</em>的 Pile 预训 checkpoint,并不会让 SlimPajama 学得更快。工程建议:始终从<em>最新</em>、衰减完的预训练 checkpoint 起步,然后把 LR 重新 warm 起来。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-10">
+      <summary>
+        <span>§8 Discussion &amp; Conclusion / 讨论与结论<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Data similarity and overlapping.</strong> In our experimental setup, upstream and downstream data have a high similarity, notably because of data overlap — Pile and SlimPajama share CommonCrawl / C4 / Wikipedia / Arxiv / GitHub sources. Since in continual learning, different types of shifts can lead to variations in performance (Lesort et al., 2021), our results may not generalize to setups with different distribution shifts, such as language domain adaptation pre-training setups (Xu et al., 2019; Gururangan et al., 2020; Ke et al., 2023a; Chakrabarty et al., 2019; Ke et al., 2023b). Nevertheless, comparing Fig. 4 and Fig. 6, we see that the results are <em>not</em> identical when fine-tuning on the Pile vs on SlimPajama. A possible explanation is that even a slight shift in data distribution can lead to a significant perturbation of the learning dynamics — as also observed for image classification, where Igl et al. (2020) show that a sudden transition of 10%–20% of the labels in the dataset can have a significant impact on downstream performance.</p>
+          </div>
+          <div class="zh">
+            <p><strong>数据相似度与重叠。</strong>在本文的实验设定中,上下游数据高度相似,尤其因为数据有重叠——Pile 与 SlimPajama 共享 CommonCrawl / C4 / Wikipedia / Arxiv / GitHub 等来源。在持续学习中,不同类型的 shift 会导致性能变化(Lesort 等, 2021),因此我们的结论<em>未必</em>能推广到分布偏移不同的设定,比如经典的 language domain adaptation 预训练设定(Xu 等, 2019;Gururangan 等, 2020;Ke 等, 2023a;Chakrabarty 等, 2019;Ke 等, 2023b)。不过,对比图 4 与图 6 可以看到:在 Pile 上 fine-tune 与在 SlimPajama 上 fine-tune 的结果<em>并不相同</em>。一种可能解释是:即使数据分布发生<em>轻微</em>偏移,也会对学习动力学造成显著扰动——这一点在图像分类中也被 Igl 等 (2020) 观察到:数据集中 10%–20% 标签的突变就能对下游性能产生显著影响。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Experiments scale.</strong> As described in §2, our investigation explores models of size 410M and a fine-tuning dataset of size 297B tokens. While this is a preliminary study, in future work, we plan to verify whether our conclusions hold at different model scales (e.g. 3B and 7B) and different dataset scales (e.g. 100B and 600B). Moreover, we plan to test our models throughout using benchmarks such as HELM (Liang et al., 2022) or Harness (Gao et al., 2021) instead of only loss or perplexity, as these benchmarks can provide important insight into the evolution of model capabilities. This is non-trivial: perplexity averages over all of a corpus and tends to <em>hide</em> domain-specific capability drops (e.g. coding accuracy, multi-step reasoning) that a benchmark suite would catch immediately.</p>
+          </div>
+          <div class="zh">
+            <p><strong>实验规模。</strong>如 §2 所述,我们只研究了 410M 模型与 297B token 的 fine-tune 数据集。这只是初步研究,在未来工作中我们计划验证以下问题:这些结论在不同模型规模(例如 3B、7B)与不同数据规模(例如 100B、600B)下是否仍成立。此外,我们计划在整个训练过程中用 HELM(Liang 等, 2022)或 Harness(Gao 等, 2021)等 benchmark 测评,而不只是看 loss 或 PPL——因为这些 benchmark 能提供模型能力演化的重要洞察。这一点不可轻视:PPL 是在整个语料上做平均的,容易<em>掩盖</em>某些 domain 特定的能力下降(例如代码准确率、多步推理),而一个 benchmark suite 会立刻把这些抓出来。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Conclusion.</strong> Our experiments demonstrate that warming up to higher maximum learning rates helps models pre-trained on the Pile adapt to SlimPajama, while a smaller maximum learning rate preserves performance on the Pile. In both cases, however, models that are rewarmed improve over models trained from scratch. These results motivate the use of continual pre-training on new datasets rather than restarting training from scratch. More research is needed, however, to establish similar results for larger model scales, different distribution shifts, and to verify that this strategy can be applied repeatedly to update models.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结论。</strong>我们的实验表明:把 LR re-warm 到<em>更高</em>的 $\eta_\max$ 能帮助 Pile 预训的模型适应 SlimPajama,而<em>更小</em>的 $\eta_\max$ 则能保留 Pile 上的性能。但<em>无论哪种情形</em>,re-warm 的 CPT 模型都优于 from-scratch 训练的模型。这些结果为"在新数据集上用 CPT 而不是从零重训"提供了动机。当然,要把这套图景推到更大模型规模、更大分布偏移上,以及验证这一策略能否在多次模型更新中被<em>反复</em>应用,仍需更多研究。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Reading-time editorial.</strong> The lasting contribution of this paper is not any single number; it is the <em>conceptual decoupling</em> of three CPT knobs that the community had been conflating: (i) warm-up length (free), (ii) $\eta_\max$ (the Pareto trade-off), (iii) checkpoint choice (always latest). Once decoupled, the practical rule of thumb collapses to: "pick $\eta_\max$ on the Pareto frontier you care about, give it any 0–2% warm-up, decay cosine to $0.1\,\eta_\max$, start from the latest pre-training checkpoint." Subsequent work — including Ibrahim et al. 2024 "Simple and Scalable Strategies to Continually Pre-train LLMs" (a direct follow-up by the same group), Llama-3 mid-training, DeepSeek-V3 long-context CPT, and Qwen-2.5 code-CPT — adopts this decomposition essentially verbatim and adds explicit replay on top.</p>
+          </div>
+          <div class="zh">
+            <p><strong>读到这里的编辑按。</strong>本文最持久的贡献不是某个具体数字,而是把过去常被混为一谈的三个 CPT 旋钮在概念上<em>解耦</em>:(i) warm-up 长度(自由)、(ii) $\eta_\max$(Pareto trade-off)、(iii) checkpoint 选择(永远选最新)。一旦解耦,实用经验法则就简化成一句话:"在你关心的 Pareto 前沿上挑一个 $\eta_\max$,给它 0–2% 任意 warm-up,cosine 衰到 $0.1\,\eta_\max$,从最新预训练 checkpoint 起步。"后续工作——同组的 follow-up Ibrahim 等 2024 "Simple and Scalable Strategies to Continually Pre-train LLMs"、Llama-3 mid-training、DeepSeek-V3 长上下文 CPT、Qwen-2.5 code-CPT——几乎<em>一字不差</em>地沿用了这个分解,并在其上叠加了显式 replay。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-11">
+      <summary>
+        <span>References<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content"><p>(References stub — 完整参考文献请见原文 PDF p.7–10。本文核心引用包含:Pythia (Biderman et al., 2023)、Pile (Gao et al., 2020)、SlimPajama (Soboleva et al., 2023)、RedPajama (Together.xyz, 2023)、LLaMA (Touvron et al., 2023)、Chinchilla (Hoffmann et al., 2022)、Catastrophic Forgetting (French, 1999)、Stability Gap (Lange et al., 2023; Caccia et al., 2022)、Don't Stop Pretraining / DAPT (Gururangan et al., 2020)、Continual PT of LMs (Ke et al., 2023a)、Warm-Start NN Training (Ash &amp; Adams, 2020)、Mirzadeh et al., 2020、Winata et al., 2023、iCaRL replay (Rebuffi et al., 2017)、latent replay (Ostapenko et al., 2022) 等。)</p></div>
+    </details>
+
+  </div>
+
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

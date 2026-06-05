@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAPO: An Open-Source LLM Reinforcement Learning · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2503.14476 · 16 页 · 1 张图</div>
+    <h1>DAPO: An Open-Source LLM Reinforcement Learning</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W8</span>
+      <span>DAPO</span><span>GRPO</span><span>RL</span><span>long-CoT</span><span>ByteDance</span>
+      <span><a href="https://arxiv.org/abs/2503.14476" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2503.14476.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>DAPO 把 GRPO 在长 CoT 推理 RL 场景下暴露的四个工程坑——上 clip 抑制探索导致 entropy 塌缩、整组对/错样本带来零梯度、sample-level loss 对长序列打权重不公、超长样本被一刀切惩罚——用 <strong>Clip-Higher / Dynamic Sampling / Token-Level Loss / Overlong Reward Shaping</strong> 四件套依次打补丁,在 Qwen2.5-32B 上用 DeepSeek-R1-Zero-Qwen-32B 一半训练步就在 AIME 2024 上拿到 50 分(R1-Zero 是 47 分)。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>DAPO 损失(必默写)</strong>:GRPO 的样本级 mean 改成 <em>token 级</em> mean,并把 PPO 的对称 clip 解耦成上下两个阈值:
+          $$\mathcal{J}_{\text{DAPO}}(\theta)=\mathbb{E}_{(q,a)\sim\mathcal{D},\,\{o_i\}_{i=1}^G\sim\pi_{\theta_\text{old}}(\cdot|q)}\!\left[\tfrac{1}{\sum_{i=1}^{G}|o_i|}\sum_{i=1}^{G}\sum_{t=1}^{|o_i|}\min\!\bigl(r_{i,t}(\theta)\hat A_{i,t},\;\text{clip}(r_{i,t}(\theta),1-\varepsilon_\text{low},1+\varepsilon_\text{high})\hat A_{i,t}\bigr)\right]$$
+          约束 $0 < |\{o_i\mid\text{is\_equivalent}(a,o_i)\}| < G$ 即动态采样过滤掉全对/全错组;优势用组内均值方差归一化 $\hat A_{i,t}=\frac{R_i-\text{mean}(\{R_i\})}{\text{std}(\{R_i\})}$;不再含 KL 项。
+        </li>
+        <li><strong>Clip-Higher / Entropy Collapse</strong>:PPO 的对称 clip $1\pm\varepsilon$ 会让原概率 0.01 的 exploration token 最多被推到 0.012,而 0.9 的 exploitation token 能推到 1.08——结果熵塌缩。DAPO 拆成 $\varepsilon_\text{low}=0.2,\varepsilon_\text{high}=0.28$,只放宽上 clip,保留下 clip 防止把 token 压到 0。</li>
+        <li><strong>Dynamic Sampling 为什么能加速</strong>:GRPO 用组内归一化时,若一组 G 个 rollout 全对(或全错)则 advantage 全为 0,梯度为 0——这种 prompt 在训练后期越来越多,batch 有效样本变少、方差变大。DAPO 过采样并过滤掉"准确率 0 或 1"的 prompt,保证每个 batch 的有效 prompt 数恒定;由于长尾生成才是瓶颈,wall-time 几乎不增反而收敛更快。</li>
+        <li><strong>Token-Level Loss 为什么重要</strong>:GRPO 原版先在每条序列内对 token loss 取平均,再在样本间取平均(sample-level)——长序列内的每个 token 权重被稀释,既学不到长高质 reasoning 的有用模式,也无法惩罚长序列里的胡言乱语/复读模式。DAPO 直接对所有 token 求和后再除以总 token 数,长序列对梯度的贡献正比于其长度,长度增长更"健康"。</li>
+        <li><strong>Overlong Reward Shaping</strong>:截断样本若一律给 $-1$ 会引入噪声(把"思路对、只是太长"的样本也惩罚)。先用 Overlong Filtering 把截断样本 mask 掉损失;再用 Soft Overlong Punishment——超过 $L_\text{max}-L_\text{cache}$ 之后线性递减,完全超过 $L_\text{max}$ 才给 $-1$。$L_\text{max}=16{,}384,L_\text{cache}=4{,}096$。</li>
+        <li><strong>消融递增 (Table 1)</strong>:Naive GRPO 30 → +Overlong Filtering 36 → +Clip-Higher 38 → +Soft Overlong Punishment 41 → +Token-level Loss 42 → +Dynamic Sampling = <strong>50</strong>(超过 DeepSeek-R1-Zero-Qwen-32B 的 47),用其 50% 训练步。</li>
+        <li><strong>为什么去掉 KL 项</strong>:RLHF 里 KL 是为了不偏离 SFT 风格;但在 long-CoT reasoning RL 里,模型分布本就需要大幅偏离 base,KL 反而是束缚——直接丢掉。Reward 也换成基于规则的二值答案对错,$R=+1/-1$,规避 reward hacking。</li>
+        <li><strong>工程口径</strong>:基础模型 Qwen2.5-32B,框架 verl,prompt batch 512、每个 prompt 采 G=16 个 rollout,$\varepsilon_\text{low}=0.2,\varepsilon_\text{high}=0.28$,无 KL,优化器 AdamW lr=1e-6 + 20 步 warm-up。数据集 DAPO-Math-17K,把答案统一转换成整数以便规则评分。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      字节出品,GRPO 的工程级 4 件套补丁;必默写 DAPO 损失与四个技巧
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-3b">§2 Preliminary / 预备(PPO &amp; GRPO)</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-3c">§3 DAPO / 算法 & 四个关键技巧</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-4">§4 Experiments / 实验</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-5">§5 Conclusion / 结论</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-6">References</a><span class="toc-page">p.13</span></li>
+
+      <li><a href="#sec-7">Appendix / 附录</a><span class="toc-page">p.15</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (1 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2503.14476_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.1 · 5186×584</div>
+          <div class="fig-caption">Figure 1: AIME 2024 scores of DAPO on Qwen2.5-32B base, outperforming DeepSeek-R1-Zero-Qwen-32B with 50% training steps. 横轴是 gradient update steps,纵轴是 AIME 2024 准确率。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>论文的"门面图",展示 Qwen2.5-32B base 在 DAPO 训练下的 AIME 2024 表现曲线,与 DeepSeek-R1-Zero-Qwen-32B 横向对比。三条 DAPO 曲线分别是 <code>avg@32</code>、<code>pass@32</code>、<code>cons@32</code>——同一组评测重复 32 次后的平均、any-pass、majority-vote 三种聚合方式。</p>
+          <p><strong>② 关键数据 / 对照:</strong>DAPO <code>avg@32</code> 从近 0% 起步,在约 5,000 步 gradient update 后突破 50%,而 DeepSeek-R1-Zero-Qwen-32B 在大约 10,000 步才达 47%——<em>50% 训练步、超过 SoTA 3 个点</em>。<code>pass@32</code> 接近 70%,说明上限远未到顶,采样多样性留住了正确答案。</p>
+          <p><strong>③ 启示:</strong>RL 训练 long-CoT reasoning 不是黑箱炼丹——DAPO 用四件套(Clip-Higher / Dynamic Sampling / Token-Level Loss / Overlong Reward Shaping)把 naive GRPO 的 30 分逐步抬到 50 分(见 Table 1)。曲线的"线性上升 + 高 pass@32"暗示:RL 真正在做的是"把策略推向已知好答案的区域",而非凭空发现新解;因此 base 模型质量 + 探索能力(熵)是关键。这也是 Clip-Higher 必要性的实证根据——一旦熵塌掉,曲线就会平。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>DAPO: An Open-Source LLM Reinforcement Learning System at Scale 1ByteDance Seed 2Institute for AI Industry Research (AIR), Tsinghua University 3The University of Hong Kong 4SIA-Lab of Tsinghua AIR and ByteDance Seed Full author list in Contributions</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Inference scaling empowers LLMs with unprecedented reasoning ability, with reinforcement learning as the core technique to elicit complex reasoning. However, key technical details of state-of-the-art reasoning LLMs are concealed (such as in OpenAI o1 blog and DeepSeek R1 technical report), thus the community still struggles to reproduce their RL training results. We propose the Decoupled Clip and Dynamic sAmpling Policy Optimization (DAPO) algorithm, and fully open-source a state-of-the-art large-scale RL system that achieves 50 points on AIME 2024 using Qwen2.5-32B base model. Unlike previous works that withhold training details, we introduce four key techniques of our algorithm that make large-scale LLM RL a success. In addition, we open-source our training code, which is built on the verl framework, along with a carefully curated and processed dataset. These components of our open-source system enhance reproducibility and support future research in large-scale LLM RL.</p>
+          </div>
+          <div class="zh">
+            <p>推理时扩展(inference scaling)赋予 LLM 前所未有的推理能力,而<em>强化学习</em>是激发复杂推理的核心技术。然而,SOTA 推理 LLM 的关键技术细节是被遮蔽的(如 OpenAI o1 博客与 DeepSeek R1 技术报告),社区因此一直难以复现它们的 RL 训练结果。我们提出 Decoupled Clip and Dynamic sAmpling Policy Optimization(DAPO)算法,并将一个 SoTA 大规模 RL 系统完全开源——它在 Qwen2.5-32B base 模型上、在 AIME 2024 上取得 50 分。与以往隐瞒训练细节的工作不同,我们公开了让大规模 LLM RL 跑通的四项关键技巧。此外,我们开源了基于 verl 框架的训练代码,以及精心整理处理过的数据集。这套开源系统旨在增强可复现性并支撑未来的大规模 LLM RL 研究。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Test-time scaling such as OpenAI's o1 and DeepSeek's R1 brings a profound paradigm shift to Large Language Models (LLMs). Test-time scaling enables longer Chain-of-Thought thinking and induces sophisticated reasoning behaviors, which makes the models superior in competitive math and coding tasks like AIME and Codeforces. The central technique driving the revolution is large-scale Reinforcement Learning (RL), which elicits complex reasoning behaviors such as self-verification and iterative refinement. However, the actual algorithm and key recipe for scalable RL training remains a myth, hidden from technical reports of existing reasoning models. In this paper, we reveal significant obstacles in large-scale RL training and open-source a scalable RL system with fully open-sourced algorithm, training code and dataset that provides democratized solutions with industry-level RL results.</p>
+          </div>
+          <div class="zh">
+            <p>测试时扩展(test-time scaling),如 OpenAI 的 o1 与 DeepSeek 的 R1,为大语言模型(LLM)带来深刻的范式转变。测试时扩展允许更长的 Chain-of-Thought 思考,并诱发复杂的推理行为,让模型在 AIME、Codeforces 等竞赛级数学与编程任务上更出色。驱动这场革命的核心技术是<em>大规模强化学习</em>(RL):它能激发自我验证、迭代精修等复杂推理行为。然而,可扩展 RL 训练的<em>实际算法与关键配方</em>仍是个谜,被现有推理模型的技术报告所遮蔽。本文揭示了大规模 RL 训练中的若干重大障碍,并开源一个可扩展的 RL 系统(算法、训练代码、数据集全开源),提供具有工业级 RL 效果的"平民化"方案。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We experiment over Qwen2.5-32B as the pretrained model for RL. In our initial GRPO run, we achieved only 30 points on AIME — a performance significantly below DeepSeek's RL (47 points). A thorough analysis reveals that the naive GRPO baseline suffers from several key issues such as entropy collapse, reward noise, and training instability. The broader community has encountered similar challenges in reproducing DeepSeek's results, suggesting that critical training details may have been omitted in the R1 paper that are required to develop an industry-level, large-scale, and reproducible RL system.</p>
+          </div>
+          <div class="zh">
+            <p>我们使用 Qwen2.5-32B 作为 RL 的预训练基模型。在最初的 GRPO 跑分中,我们在 AIME 上只拿到 30 分——显著低于 DeepSeek 的 RL(47 分)。深入分析发现 naive GRPO 基线存在多个关键问题:熵塌缩(entropy collapse)、奖励噪声、训练不稳定。社区其它复现 DeepSeek 结果的尝试也遇到类似挑战,表明 R1 论文里很可能省略了打造工业级、大规模、可复现 RL 系统所必需的关键训练细节。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To close this gap, we release an open-source state-of-the-art system for large-scale LLM RL, which achieves 50 points on AIME 2024 based on Qwen2.5-32B model, outperforming previous state-of-the-art results achieved by DeepSeek-R1-Zero-Qwen-32B (47 points) using 50% training steps (Figure 1). We propose the Decoupled Clip and Dynamic sAmpling Policy Optimization (DAPO) algorithm, and introduce 4 key techniques to make RL shine in the long-CoT RL scenario:</p>
+            <ol>
+              <li><strong>Clip-Higher</strong>, which promotes the diversity of the system and avoids entropy collapse;</li>
+              <li><strong>Dynamic Sampling</strong>, which improves training efficiency and stability;</li>
+              <li><strong>Token-Level Policy Gradient Loss</strong>, which is critical in long-CoT RL scenarios;</li>
+              <li><strong>Overlong Reward Shaping</strong>, which reduces reward noise and stabilizes training.</li>
+            </ol>
+            <p>Our implementation is based on verl. By fully releasing our state-of-the-art RL system including training code and data, we aim to reveal valuable insights to large-scale LLM RL that benefit the larger community.</p>
+          </div>
+          <div class="zh">
+            <p>为弥合这一差距,我们发布了一个大规模 LLM RL 的开源 SoTA 系统:基于 Qwen2.5-32B 在 AIME 2024 上取得 50 分,超过此前 SoTA DeepSeek-R1-Zero-Qwen-32B 的 47 分,且只用了它 <em>50%</em> 的训练步数(图 1)。我们提出 Decoupled Clip and Dynamic sAmpling Policy Optimization(DAPO)算法,并引入 4 项关键技巧,让 RL 在 long-CoT 推理 RL 场景下大放光彩:</p>
+            <ol>
+              <li><strong>Clip-Higher</strong>:提升系统多样性、避免熵塌缩;</li>
+              <li><strong>Dynamic Sampling</strong>:提升训练效率与稳定性;</li>
+              <li><strong>Token-Level Policy Gradient Loss</strong>:在 long-CoT RL 场景下至关重要;</li>
+              <li><strong>Overlong Reward Shaping</strong>:减少奖励噪声、稳定训练。</li>
+            </ol>
+            <p>我们的实现基于 verl。通过完整开源训练代码与数据,我们希望把大规模 LLM RL 的宝贵经验带给更大的社区。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3b">
+      <summary>
+        <span>§2 Preliminary / 预备(PPO &amp; GRPO)<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>2.1 Proximal Policy Optimization (PPO).</strong> PPO introduces a clipped surrogate objective for policy optimization. By constraining the policy updates within a proximal region of the previous policy using clip, PPO stabilizes training and improves sample efficiency. Specifically, PPO updates the policy by maximizing the following objective:</p>
+            <div class="bi-eq">$$\mathcal{J}_{\text{PPO}}(\theta)=\mathbb{E}_{(q,a)\sim\mathcal{D},\,o_{\le t}\sim\pi_{\theta_\text{old}}(\cdot|q)}\!\left[\min\!\left(\frac{\pi_\theta(o_t\mid q,o_{<t})}{\pi_{\theta_\text{old}}(o_t\mid q,o_{<t})}\hat A_t,\;\text{clip}\!\left(\frac{\pi_\theta(o_t\mid q,o_{<t})}{\pi_{\theta_\text{old}}(o_t\mid q,o_{<t})},1-\varepsilon,1+\varepsilon\right)\hat A_t\right)\right] \quad (1)$$</div>
+            <p>where $(q,a)$ is a question-answer pair from the data distribution $\mathcal{D}$, $\varepsilon$ is the clipping range of the importance sampling ratio, and $\hat A_t$ is an estimator of the advantage at time step $t$. Given the value function $V$ and the reward function $R$, $\hat A_t$ is computed using the Generalized Advantage Estimation (GAE).</p>
+          </div>
+          <div class="zh">
+            <p><strong>2.1 近端策略优化(PPO)。</strong>PPO 引入了一个<em>带 clip 的代理目标</em>用于策略优化。它用 clip 把策略更新限制在旧策略的近端区域内,从而稳定训练并提升样本效率。具体地,PPO 通过最大化公式 (1) 的目标来更新策略,其中 $(q,a)$ 是来自数据分布 $\mathcal{D}$ 的问答对,$\varepsilon$ 是重要性采样比的 clip 范围,$\hat A_t$ 是在时间步 $t$ 的优势估计。给定值函数 $V$ 与奖励函数 $R$,$\hat A_t$ 用 Generalized Advantage Estimation(GAE)计算。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>2.2 Group Relative Policy Optimization (GRPO).</strong> Compared to PPO, GRPO eliminates the value function and estimates the advantage in a group-relative manner. For a specific question-answer pair $(q,a)$, the behavior policy $\pi_{\theta_\text{old}}$ samples a group of $G$ individual responses $\{o_i\}_{i=1}^G$. Then, the advantage of the $i$-th response is calculated by normalizing the group-level rewards $\{R_i\}_{i=1}^G$:</p>
+            <div class="bi-eq">$$\hat A_{i,t}=\frac{r_i-\text{mean}(\{R_i\}_{i=1}^G)}{\text{std}(\{R_i\}_{i=1}^G)} \quad (4)$$</div>
+            <p>Similar to PPO, GRPO adopts a clipped objective, together with a directly imposed KL penalty term:</p>
+            <div class="bi-eq">$$\mathcal{J}_{\text{GRPO}}(\theta)=\mathbb{E}_{(q,a)\sim\mathcal{D},\,\{o_i\}_{i=1}^G\sim\pi_{\theta_\text{old}}(\cdot|q)}\!\left[\tfrac{1}{G}\sum_{i=1}^{G}\tfrac{1}{|o_i|}\sum_{t=1}^{|o_i|}\min\!\bigl(r_{i,t}(\theta)\hat A_{i,t},\,\text{clip}(r_{i,t}(\theta),1-\varepsilon,1+\varepsilon)\hat A_{i,t}\bigr)-\beta\,D_\text{KL}(\pi_\theta\|\pi_\text{ref})\right] \quad (5)$$</div>
+            <p>where $r_{i,t}(\theta)=\frac{\pi_\theta(o_{i,t}\mid q,o_{i,<t})}{\pi_{\theta_\text{old}}(o_{i,t}\mid q,o_{i,<t})}$. It is also worth noting that GRPO computes the objective at the <em>sample-level</em>. To be exact, GRPO first calculates the mean loss within each generated sequence, before averaging the loss of different samples. As we will be discussing in Section 3.3, such difference may have an impact on the performance of the algorithm.</p>
+          </div>
+          <div class="zh">
+            <p><strong>2.2 组相对策略优化(GRPO)。</strong>与 PPO 相比,GRPO <em>去掉了值函数</em>,以"组内相对"的方式估计优势。对一对具体的 $(q,a)$,行为策略 $\pi_{\theta_\text{old}}$ 采样一组 $G$ 个回复 $\{o_i\}_{i=1}^G$,第 $i$ 个回复的优势由组内奖励 $\{R_i\}_{i=1}^G$ 归一化得到——见公式 (4)。与 PPO 类似,GRPO 也采用带 clip 的目标,并额外加上 KL 惩罚项,见公式 (5),其中 $r_{i,t}(\theta)$ 即重要性采样比。值得注意的是,GRPO 是在<em>样本级</em>(sample-level)计算目标:先对每条生成序列内部按 token 平均损失,再对不同样本之间取平均。如 §3.3 将讨论的,这种聚合方式会影响算法的表现。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>2.3 Removing KL Divergence.</strong> The KL penalty term is used to regulate the divergence between the online policy and the frozen reference policy. In the RLHF scenario, the goal of RL is to align the model behavior without diverging too far from the initial model. However, during training the long-CoT reasoning model, the model distribution can diverge significantly from the initial model, thus this restriction is not necessary. Therefore, we will exclude the KL term from our proposed algorithm.</p>
+            <p><strong>2.4 Rule-based Reward Modeling.</strong> The use of reward model usually suffers from the reward hacking problem. Instead, we directly use the final accuracy of a verifiable task as the outcome reward, computed using the following rule: $R(\hat y, y) = +1$ if $\text{is\_equivalent}(\hat y, y)$, else $-1$, where $y$ is the ground-truth answer and $\hat y$ is the predicted answer. This is proved to be an effective approach to activating the base model's reasoning capability, as shown in multiple domains such as automated theorem proving, computer programming, and mathematics competition.</p>
+          </div>
+          <div class="zh">
+            <p><strong>2.3 去掉 KL 散度。</strong>KL 惩罚项用来调节在线策略与冻结参考策略之间的分布差异。在 RLHF 场景下,RL 的目标是对齐模型行为,且不要偏离初始模型太远;但在训练 long-CoT 推理模型时,模型分布本就需要相对初始模型<em>大幅偏移</em>,因此这种约束没有必要。所以我们在所提算法中<em>剔除 KL 项</em>。</p>
+            <p><strong>2.4 基于规则的奖励建模。</strong>使用奖励模型通常会有 reward hacking 问题。我们改为直接用可验证任务的最终正确率作为<em>结果奖励</em>:若 $\text{is\_equivalent}(\hat y, y)$ 则 $R=+1$,否则 $R=-1$,其中 $y$ 是真值答案、$\hat y$ 是预测答案。已有多项工作表明,这种方式在自动定理证明、计算机编程、数学竞赛等领域,都是激活 base 模型推理能力的有效途径。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3c">
+      <summary>
+        <span>§3 DAPO / 算法 &amp; 四个关键技巧<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We propose the Decoupled Clip and Dynamic sAmpling Policy Optimization (DAPO) algorithm. DAPO samples a group of outputs $\{o_i\}_{i=1}^G$ for each question $q$ paired with the answer $a$, and optimizes the policy via the following objective:</p>
+            <div class="bi-eq">$$\mathcal{J}_{\text{DAPO}}(\theta)=\mathbb{E}_{(q,a)\sim\mathcal{D},\,\{o_i\}_{i=1}^G\sim\pi_{\theta_\text{old}}(\cdot|q)}\!\left[\tfrac{1}{\sum_{i=1}^{G}|o_i|}\sum_{i=1}^{G}\sum_{t=1}^{|o_i|}\min\!\bigl(r_{i,t}(\theta)\hat A_{i,t},\,\text{clip}(r_{i,t}(\theta),1-\varepsilon_\text{low},1+\varepsilon_\text{high})\hat A_{i,t}\bigr)\right]$$
+$$\text{s.t.}\quad 0 < |\{o_i\mid\text{is\_equivalent}(a,o_i)\}| < G \quad (8)$$</div>
+            <p>where $r_{i,t}(\theta)=\frac{\pi_\theta(o_{i,t}\mid q,o_{i,<t})}{\pi_{\theta_\text{old}}(o_{i,t}\mid q,o_{i,<t})}$ and $\hat A_{i,t}=\frac{R_i-\text{mean}(\{R_i\}_{i=1}^G)}{\text{std}(\{R_i\}_{i=1}^G)}$. In this section, we will introduce the key techniques associated with DAPO.</p>
+          </div>
+          <div class="zh">
+            <p>我们提出 Decoupled Clip and Dynamic sAmpling Policy Optimization(DAPO)算法。DAPO 为每对带答案的问题 $(q,a)$ 采样一组输出 $\{o_i\}_{i=1}^G$,并通过最大化公式 (8) 的目标来优化策略,其中重要性采样比为 $r_{i,t}(\theta)$,优势 $\hat A_{i,t}$ 由组内均值方差归一化得到。约束 $0 < |\{o_i\mid\text{is\_equivalent}(a,o_i)\}| < G$ 即 Dynamic Sampling:每个 batch 里都必须既不是全对、也不是全错。本节将介绍 DAPO 关联的四个关键技巧。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.1 Raise the Ceiling: Clip-Higher.</strong> In our initial experiments using naive PPO or GRPO, we observed the entropy collapse phenomenon: the entropy of the policy decreases quickly as training progresses (Figure 2b). The sampled responses of certain groups tend to be nearly identical. This indicates limited exploration and early deterministic policy, which can hinder the scaling process. We propose the Clip-Higher strategy to address this issue.</p>
+            <p>Concretely, when $\varepsilon=0.2$ (the default value of most algorithms) and $\hat A_{i,t}>0$ (the system tries to increase the probability), consider two actions with probabilities $\pi_{\theta_\text{old}}(o_i\mid q)=0.01$ and $0.9$. The upper bounds of the increased probabilities $\pi_\theta(o_i\mid q)$ are $0.012$ and $1.08$, respectively. This implies that 'exploitation' tokens with a higher probability (e.g., 0.9) are not constrained to get even extremely larger probabilities like 0.999. Conversely, for low-probability 'exploration' tokens, achieving a non-trivial increase in probability is considerably more challenging. Empirically, we also observe that the mean probability of up-clipped tokens is low: $\pi_\theta(o_i\mid q)<0.2$ (Figure 3a).</p>
+            <p>Adhering to the Clip-Higher strategy, we decouple the lower and higher clipping range as $\varepsilon_\text{low}$ and $\varepsilon_\text{high}$. We increase the value of $\varepsilon_\text{high}$ to leave more room for the increase of low-probability tokens. As shown in Figure 2, this adjustment effectively enhances the policy's entropy and facilitates the generation of more diverse samples. We keep $\varepsilon_\text{low}$ as it is, because increasing it will suppress the probability of these tokens to 0, resulting in the collapse of the sampling space.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.1 抬高上限:Clip-Higher。</strong>在用 naive PPO 或 GRPO 的初步实验中,我们观察到<em>熵塌缩</em>现象:训练越往后,策略的熵越快地下降(图 2b),某些组采出的回复趋于<em>几乎一致</em>。这意味着探索受限、策略过早趋于确定性,会阻碍 scaling。我们提出 Clip-Higher 策略来应对它。</p>
+            <p>具体地,当 $\varepsilon=0.2$(多数算法的默认值)且 $\hat A_{i,t}>0$(系统试图提高某 token 概率)时,考虑两个 token,旧概率分别为 $\pi_{\theta_\text{old}}(o_i\mid q)=0.01$ 与 $0.9$。它们经过 clip 后能涨到的上限分别只有 $0.012$ 与 $1.08$。这意味着原本就高概率(如 0.9)的 "exploitation" token 完全不会被卡住——它甚至能涨到 0.999;而低概率的 "exploration" token 想要获得有意义的提升,反而<em>更困难</em>。我们也实证地观察到:被上 clip 掉的 token,其平均概率非常低,$\pi_\theta(o_i\mid q)<0.2$(图 3a)。</p>
+            <p>遵循 Clip-Higher 策略,我们把下、上 clip 范围解耦为 $\varepsilon_\text{low}$ 与 $\varepsilon_\text{high}$,并<em>提高</em> $\varepsilon_\text{high}$,为低概率 token 的上升留更多空间。如图 2 所示,这一调整有效地提升了策略的熵、促进了更多样的样本生成。我们保持 $\varepsilon_\text{low}$ 不变,因为提高它反而会把这些 token 的概率压到 0,导致采样空间坍塌。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.2 The More the Merrier: Dynamic Sampling.</strong> Existing RL algorithms suffer from the gradient-decreasing problem when some prompts have accuracy equal to 1. For example for GRPO, if all outputs $\{o_i\}_{i=1}^G$ of a particular prompt are correct and receive the same reward, the resulting advantage for this group is zero. A zero advantage results in zero policy gradients, shrinking the magnitude and increasing the noise sensitivity of the batch gradient, thereby degrading sample efficiency. Empirically, the number of samples with accuracy equal to 1 continues to increase, as shown in Figure 3b.</p>
+            <p>To this end, we propose to over-sample and filter out prompts with the accuracy equal to 1 and 0, leaving all prompts in the batch with effective gradients and keeping a consistent number of prompts. Before training, we keep sampling until the batch is fully filled with samples whose accuracy is neither 0 nor 1. Note that this strategy does not necessarily impede training efficiency, because the generation time is typically dominated by the generation of long-tail samples if the RL system is synchronized and the generation stage is not pipelined. Besides, we find that with dynamic sampling the experiment achieves the same performance faster as shown in Figure 6.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.2 多多益善:Dynamic Sampling。</strong>当某些 prompt 的准确率等于 1 时,现有 RL 算法会出现<em>梯度衰减</em>问题。以 GRPO 为例,如果一组 $\{o_i\}_{i=1}^G$ 全部回答正确、奖励完全相同,则该组的 advantage 全为 0;零 advantage 意味着策略梯度也为 0——batch 梯度的幅度缩水、对噪声的敏感性增大,样本效率退化。实证上,准确率等于 1 的样本占比会持续增长(图 3b)。</p>
+            <p>为此,我们提出<em>过采样并过滤掉准确率为 0 或 1 的 prompt</em>,让 batch 里所有 prompt 都有有效梯度,并保持有效 prompt 数恒定。训练前我们不断采样,直到 batch 里都是"既不全对、也不全错"的样本。这一策略并不必然损害训练效率——若 RL 系统是同步的、生成阶段没有 pipeline,生成时间通常被长尾样本主导。此外我们发现,用 dynamic sampling,实验<em>更快</em>达到相同性能(图 6)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.3 Rebalancing Act: Token-Level Policy Gradient Loss.</strong> The original GRPO algorithm employs a sample-level loss calculation, which involves first averaging the losses by token within each sample and then aggregating the losses across samples. In this approach, each sample is assigned an equal weight in the final loss computation. However, we find that this method of loss reduction introduces several challenges in the context of long-CoT RL scenarios.</p>
+            <p>Since all samples are assigned the same weight in the loss calculation, tokens within longer responses (which contain more tokens) may have a disproportionately lower contribution to the overall loss, which can lead to two adverse effects. First, for high-quality long samples, this effect can impede the model's ability to learn reasoning-relevant patterns within them. Second, we observe that excessively long samples often exhibit low-quality patterns such as gibberish and repetitive words. Thus, sample-level loss calculation, due to its inability to effectively penalize those undesirable patterns in long samples, leads to an unhealthy increase in entropy and response length (Figure 4a, 4b).</p>
+            <p>We introduce a Token-Level Policy Gradient Loss in the long-CoT RL scenario. In this setting, longer sequences can have more influence on the overall gradient update compared to shorter sequences. Moreover, from the perspective of individual tokens, if a particular generation pattern can lead to an increase or decrease in reward, it will be equally prompted or suppressed, regardless of the length of the response in which it appears.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.3 再平衡:Token-Level Policy Gradient Loss。</strong>原版 GRPO 采用<em>样本级</em>损失:先对每条生成序列内部按 token 求平均,再对不同样本之间求平均——每个样本最终被赋予相同权重。我们发现,这种损失聚合方式在 long-CoT RL 场景下带来若干麻烦。</p>
+            <p>由于所有样本权重相同,<em>长回复</em>(token 多)里的每个 token 对总损失的贡献被不成比例地稀释。这会带来两个不良效应:其一,对高质量长样本,这种效应妨碍模型学到其中与推理相关的有用模式;其二,我们观察到过长样本常带有 gibberish、复读等低质量模式,而样本级损失无法有效惩罚长样本里的这些坏模式,导致熵与回复长度<em>不健康地</em>增长(图 4a、4b)。</p>
+            <p>我们在 long-CoT RL 场景下引入 <em>Token-Level Policy Gradient Loss</em>:把所有 token 的损失先求和、再除以总 token 数。这样长序列对整体梯度更新的贡献正比于其长度;从单个 token 的视角看,某种生成模式若能带来奖励增减,无论它出现在多长的回复里,都会被等价地鼓励或抑制。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.4 Hide and Seek: Overlong Reward Shaping.</strong> In RL training, we typically set a maximum length for generation, with overlong samples truncated accordingly. We find that improper reward shaping for truncated samples can introduce reward noise and significantly disrupt the training process. By default, we assign a punitive reward to truncated samples. This approach may introduce noise into the training process, as a sound reasoning process can be penalized solely due to its excessive length.</p>
+            <p>To investigate the impact of this reward noise, we first apply an Overlong Filtering strategy which masks the loss of truncated samples. We find that this approach significantly stabilizes training and enhances performance (Figure 5). Furthermore, we propose Soft Overlong Punishment, a length-aware penalty mechanism designed to shape the reward for truncated samples. Specifically, when the response length exceeds the predefined maximum value, we define a punishment interval. Within this interval, the longer the response, the greater the punishment it receives. This penalty is added to the original rule-based correctness reward:</p>
+            <div class="bi-eq">$$R_\text{length}(y)=\begin{cases} 0, & |y|\le L_\text{max}-L_\text{cache} \\ \frac{(L_\text{max}-L_\text{cache})-|y|}{L_\text{cache}}, & L_\text{max}-L_\text{cache} < |y|\le L_\text{max} \\ -1, & L_\text{max} < |y| \end{cases} \quad (13)$$</div>
+          </div>
+          <div class="zh">
+            <p><strong>3.4 捉迷藏:Overlong Reward Shaping。</strong>RL 训练里我们通常设置一个生成最大长度,过长样本会被截断。我们发现,对截断样本的<em>奖励整形不当</em>会引入奖励噪声并严重扰乱训练过程。默认我们给截断样本一个惩罚性奖励,这可能引入噪声——一个推理过程本身是<em>合理</em>的,却仅因为太长被惩罚。</p>
+            <p>为研究这种奖励噪声的影响,我们先采用 <em>Overlong Filtering</em>:把截断样本的损失 mask 掉。这一做法显著稳定了训练并提升了性能(图 5)。在此之上我们提出 <em>Soft Overlong Punishment</em>(公式 13)——一个长度感知的惩罚机制:当回复长度超过预设最大值,我们定义一个"惩罚区间",区间内越长惩罚越大。这个惩罚加到原本基于规则的正确性奖励上,从而<em>信号化</em>地告诉模型避免过长的回复。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.5 Dataset Transformation.</strong> Our dataset is sourced from the web and official competition homepages through a combination of web scraping and manual annotation. The answers of math datasets typically come in a variety of formats, such as expression, formula and number, which makes it challenging to design comprehensive rules to parse them. To provide accurate reward signals using rules and minimize errors introduced by formula parsers, inspired by AIME, we select and transform the answers into integers, which are easy to parse. For example, if the original answer is expressed in the form of $\frac{a+\sqrt{b}}{c}$, we instruct the LLM to modify the question so that the expected answer becomes $a+b+c$. After selection and transformation, we obtained the DAPO-Math-17K dataset, which consists of 17K prompts, each paired with an integer as the answer.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.5 数据集变换。</strong>我们的数据集通过网页抓取与人工标注相结合的方式,来自互联网与官方比赛主页。数学数据集的答案通常形式多样——表达式、公式、数字——这让"用规则全面解析"变得困难。为了用规则提供准确的奖励信号、并最小化公式解析器引入的误差,受 AIME 启发,我们<em>挑选并把答案变换成整数</em>,因为整数易于解析。例如,若原答案形如 $\frac{a+\sqrt{b}}{c}$,我们指示 LLM 修改题面,使期望答案变成 $a+b+c$。经过筛选与变换后,我们得到 DAPO-Math-17K 数据集,包含 17K 条 prompt,每条配一个整数答案。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§4 Experiments / 实验<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.1 Training Details.</strong> In this work, we focus specifically on mathematical tasks to evaluate our algorithm, which can be readily transferred to other tasks. We adopt the verl framework for training. We use naive GRPO as our baseline algorithm and estimate advantages using group reward normalization. For hyper-parameters, we utilize the AdamW optimizer with a constant learning rate of $1\times10^{-6}$, incorporating a linear warm-up over 20 rollout steps. For rollout, the prompt batch size is 512 and we sample 16 responses for each prompt. For training, the mini-batch size is set to 512, i.e., 16 gradient updates for each rollout step. For Overlong Reward Shaping, we set the expected maximum length as 16,384 tokens and allocate additional 4,096 tokens as the soft punish cache; therefore, the maximum number of tokens for generation is 20,480. As for the Clip-Higher mechanism, we set $\varepsilon_\text{low}=0.2$ and $\varepsilon_\text{high}=0.28$, which effectively balance the trade-off between exploration and exploitation. For evaluation on AIME, we repeat the evaluation set for 32 times and report avg@32 for results stability. The inference hyperparameters of evaluation are set to temperature 1.0 and top-$p$ 0.7.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.1 训练细节。</strong>本工作专注于用<em>数学任务</em>评估算法,所提方法可以容易地迁移到其它任务。我们用 verl 框架训练,以 naive GRPO 为基线算法,优势由组内奖励归一化估计。超参数上,我们用 AdamW 优化器,常数学习率 $1\times10^{-6}$,在前 20 个 rollout 步做线性 warm-up。Rollout 时 prompt batch size 为 512,每个 prompt 采 16 个回复;训练时 mini-batch 也是 512,即每个 rollout 步执行 16 次梯度更新。对 Overlong Reward Shaping,我们将期望最大长度设为 16,384 tokens,另外分配 4,096 tokens 作为软惩罚缓冲;因此生成的最大 token 数为 20,480。对 Clip-Higher 机制,我们设 $\varepsilon_\text{low}=0.2$,$\varepsilon_\text{high}=0.28$,有效平衡探索与利用之间的取舍。AIME 评测上,我们将评测集重复 32 次,报 avg@32 以稳定结果;推理超参为 temperature 1.0、top-$p$ 0.7。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.2 Main Results.</strong> Experiments on AIME 2024 demonstrate that DAPO has successfully trained the Qwen-32B Base model into a powerful reasoning model, achieving performance superior to DeepSeek's experiments on Qwen2.5-32B using the R1 approach. In Figure 1, we observe a substantial improvement of performance on AIME 2024, with accuracy increasing from near 0% to 50%. Notably, this improvement is achieved with only 50% of the training steps required by DeepSeek-R1-Zero-Qwen-32B. We analyze the contributions of each training technique in our methodology, as detailed in Table 1: Naive GRPO 30 -> +Overlong Filtering 36 -> +Clip-Higher 38 -> +Soft Overlong Punishment 41 -> +Token-level Loss 42 -> +Dynamic Sampling (DAPO) 50. The observed improvements demonstrate the effectiveness of these techniques in RL training, each contributing several accuracy points in AIME 2024. Notably, given the vanilla GRPO setting, only 30% accuracy can be reached by training from a Qwen2.5-32B base model.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.2 主要结果。</strong>AIME 2024 上的实验表明,DAPO 已经把 Qwen-32B Base 训成了一个强大的推理模型,性能超过 DeepSeek 在 Qwen2.5-32B 上用 R1 方法的实验。在图 1 中,我们看到 AIME 2024 上准确率从近 0% 提升到 50%;尤其是,这一提升<em>只用了</em> DeepSeek-R1-Zero-Qwen-32B 所需训练步数的 50%。我们对方法中每项训练技巧的贡献做消融,详见表 1:Naive GRPO 30 → +Overlong Filtering 36 → +Clip-Higher 38 → +Soft Overlong Punishment 41 → +Token-level Loss 42 → +Dynamic Sampling(DAPO)50。这一递增展示了各技巧在 RL 训练中的有效性,每个都为 AIME 2024 贡献了若干准确率百分点。值得注意的是,在 vanilla GRPO 设置下,从 Qwen2.5-32B base 训练只能达到 30% 的准确率。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>For token-level loss, although it brings less performance improvement, we find it enhances training stability and makes the length increase more healthily. When applying Dynamic Sampling, although more data needs to be sampled due to the filtering out of zero-gradient data, the overall training time is not significantly affected. As shown in Figure 6, although the number of sampling instances increases, the model's convergence time is even reduced, due to fewer training steps required.</p>
+          </div>
+          <div class="zh">
+            <p>对 token-level loss,虽然其单项性能提升较小,但我们发现它<em>提升了训练稳定性</em>,使长度的增长更加健康。在应用 Dynamic Sampling 时,虽然由于过滤掉零梯度数据需要采样更多数据,但整体训练时间没有显著受影响。如图 6 所示,虽然采样实例数增加了,模型的收敛时间反而<em>缩短</em>,因为所需的训练步数变少。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.3 Training Dynamics.</strong> Reinforcement learning on large language models is not only a cutting-edge research direction but also an intrinsically complex systems engineering challenge, characterized by the interdependence of its various subsystems. Modifications to any single subsystem can propagate through the system, leading to unforeseen consequences. Even seemingly minor changes in initial conditions, such as variations in data and hyperparameters, can amplify through iterative reinforcement learning processes, yielding substantial deviations in outcomes. Therefore, monitoring of key intermediate results during experimentation is essential for swiftly identifying the sources of discrepancies and, ultimately, for refining the system.</p>
+            <p>The Length of Generated Responses is a metric closely related to training stability and performance. The increase in length provides the model with a larger space for exploration, allowing more complex reasoning behaviors to be sampled and gradually reinforced. However, length does not always maintain a continuous upward trend during training; it can exhibit stagnation or even decline. We typically use length in conjunction with validation accuracy as indicators to assess whether an experiment is deteriorating.</p>
+            <p>The Dynamics of Reward during training is one of the crucial monitoring indicators. In most of our experiments, the trend of reward increase is relatively stable. However, we find that the final reward on the training set often exhibits little correlation with the accuracy on the validation set, which indicates overfitting to the training set. The Entropy of the Actor Model and Generation Probability are related to the model's exploration capability. An excessively low entropy indicates a sharp distribution and loss of exploration; an excessively high entropy is often associated with over-exploration such as gibberish and repetitive generation. By applying the Clip-Higher strategy, we effectively addressed entropy collapse; we find that maintaining a slow upward trend in entropy is conducive to performance improvement.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.3 训练动态。</strong>在大语言模型上做 RL 不仅是前沿研究方向,也是一项内在复杂的系统工程挑战——其各个子系统相互依赖。对任意单个子系统的改动都可能在系统中传播,带来不可预见的后果。即便是初始条件中看似微小的改变(如数据与超参的细微变化),也会在迭代式的 RL 过程中被放大,产生显著偏差。因此,实验中对关键中间结果的监控,对于<em>快速定位差异源</em>并最终改进系统至关重要。</p>
+            <p><em>生成回复的长度</em>是一个与训练稳定性和性能密切相关的指标。长度的增加为模型提供了更大的探索空间,允许更复杂的推理行为被采样并通过训练逐步强化。然而,长度并不总是持续上升,有时会停滞甚至下降。我们通常把长度与<em>验证集准确率</em>一起作为评估实验是否在恶化的指标。</p>
+            <p><em>奖励的动态</em>是 RL 中最关键的监控指标之一。多数实验里,奖励上升的趋势相对稳定。但我们发现,训练集上最终奖励与验证集准确率<em>相关性很弱</em>——这暗示在训练集上发生了过拟合。<em>Actor 模型的熵与生成概率</em>关系到模型的探索能力:熵过低,分布过尖,失去探索能力;熵过高则常常伴随 gibberish、复读等过度探索现象。通过 Clip-Higher 策略,我们有效解决了熵塌缩——后续实验中我们发现,让熵保持<em>缓慢上升</em>有助于性能提升。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.4 Case Study.</strong> During the RL training process, we observe an interesting phenomenon: the reasoning patterns of the actor model evolve dynamically over time. Specifically, the algorithm not only reinforces existing reasoning patterns that facilitate correct problem-solving but also gradually gives rise to entirely new modes of reasoning that were initially absent. This finding reveals the adaptability and exploration capability of RL algorithms and offers new insights into the learning mechanisms of the model. For example, in the early stages of model training, there was virtually no occurrence of checking and reflecting on previous reasoning steps. However, as training progresses, the model exhibits distinct behaviors of reflection and backtracking, as shown in Table 2. This observation sheds light on further exploration into interpreting the emergence of reasoning abilities during RL.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.4 案例研究。</strong>在 RL 训练过程中,我们观察到一个有趣的现象:Actor 模型的<em>推理模式</em>会随时间动态演化。具体地,算法不仅强化了那些有助于正确解题的现有推理模式,还<em>逐步生发出全新的、最初并不存在的推理方式</em>。这一发现揭示了 RL 算法的适应性与探索能力,也为我们理解模型学习机制提供了新视角。例如,在训练早期模型几乎不会"检查、反思之前的推理步骤";但随着训练推进,模型展现出明显的反思与回溯行为(见表 2)。这一现象为后续研究"RL 过程中推理能力的涌现"提供了启示——我们将其留作未来的工作。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§5 Conclusion / 结论<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this paper, we release a fully open-sourced system for large-scale LLM RL, including algorithm, code infrastructure, and dataset. The system achieves state-of-the-art large-scale LLM RL performance (AIME 50 using Qwen-32B pretrained model). We propose the Decoupled Clip and Dynamic sAmpling Policy Optimization (DAPO) algorithm, and introduce 4 key techniques to make RL powerfully effective and efficient in the long-CoT RL scenario. Additionally, by open-sourcing the training code and dataset, we provide the broader research community and society with practical access to a scalable reinforcement learning solution, enabling all to benefit from these advancements.</p>
+          </div>
+          <div class="zh">
+            <p>本文发布一个面向大规模 LLM RL 的<em>完全开源系统</em>,包括算法、代码基础设施与数据集。该系统取得了大规模 LLM RL 的 SoTA 表现——基于 Qwen-32B 预训练模型在 AIME 上达到 50 分。我们提出 Decoupled Clip and Dynamic sAmpling Policy Optimization(DAPO)算法,并引入 4 个关键技巧,让 RL 在 long-CoT RL 场景下既<em>强效</em>又<em>高效</em>。此外,通过开源训练代码与数据集,我们为更广大的研究社区与社会提供了可扩展 RL 方案的实际入口,让所有人都能从这些进展中受益。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>References<span class="sec-page">p.13</span></span>
+      </summary>
+      <div class="sec-content"><p>[1] OpenAI. Learning to reason with llms, 2024. [2] Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Ruoyu Zhang, Runxin Xu, Qihao Zhu, Shirong Ma, Peiyi Wang, Xiao Bi, et al. Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning. arXiv preprint arXiv:2501.12948, 2025. [3] OpenAI. GPT4 technical report. arXiv preprint arXiv:2303.08774, 2023. [4] Anthropic. Claude 3.5 sonnet, 2024. [5] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, et al. Language models are few-shot learners. Advances in neural information processing systems, 33:1877–1901, 2020. [6] Aakanksha Chowdhery, Sharan Narang, Jacob Devlin, Maarten Bosma, Gaurav Mishra, Adam Roberts, Paul Barham, Hyung Won Chung, Charles Sutton, Sebastian Gehrmann, et al. Palm: Scaling language modeling with pathways. Journal of Machine Learning Research, 24(240):1–113, 2023. [7] Aixin Liu, Bei Feng, Bing Xue, Bingxuan Wang, Bochao Wu, Chengda Lu, Chenggang Zhao, Chengqi Deng, Chenyu Zhang, Chong Ruan, et al. Deepseek-v3 technical report. arXiv preprint arXiv:2412.19437, 2024. [8] XAI. Grok 3 beta — the age of reasoning agents, 2024. [9] Google DeepMind. Gemini 2.0 flash thinking, 2024. [10] Qwen. Qwq-32b: Embracing the power of reinforcement learning, 2024. [11] Kimi Team, Angang Du, Bofei Gao, Bowei Xing, Changjiu Jiang, Cheng Chen, Cheng Li, Chenjun Xiao, Chenzhuang Du, Chonghua Liao, et al. Kimi k1. 5: Scaling reinforcement learning with llms. arXiv preprint arXiv:2501.12599, 2025. [12] An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chengyuan Li, Dayiheng Liu, Fei Huang, Haoran Wei, et al. Qwen2. 5 technical report. arXiv preprint arXiv:2412.15115, 2024. [13] Zhipeng Chen, Yingqian Min, Beichen Zhang, Jie Chen, Jinhao Jiang, Daixuan Cheng, Wayne Xin Zhao, Zheng Liu, Xu Miao, Yang Lu, et al. An empirical study on eliciting and improving r1-like reasoning models. arXiv preprint arXiv:2503.04548, 2025. [14] Jingcheng Hu, Yinmin Zhang, Qi Han, Daxin Jiang, and Heung-Yeung Shum Xiangyu Zhang. Open-reasonerzero: An open source approach to scaling reinforcement learning on the base model. https://github.com/ Open-Reasoner-Zero/Open-Reasoner-Zero, 2025. [15] Jian Hu. Reinforce++: A simple and efficient approach for aligning large language models. arXiv preprint arXiv:2501.03262, 2025. [16] Ganqu Cui, Lifan Yuan, Zefan Wang, Hanbin Wang, Wendi Li, Bingxiang He, Yuchen Fan, Tianyu Yu, Qixin Xu, Weize Chen, et al. Process reinforcement through implicit rewards. arXiv preprint arXiv:2502.01456, 2025. [17] Jung Hyun Lee, June Yong Yang, Byeongho Heo, Dongyoon Han, and Kang Min Yoo. Token-supervised value models for enhancing mathematical reasoning capabilities of large language models. arXiv preprint arXiv:2407.12863, 2024. [18] Amirhossein Kazemnejad, Milad Aghajohari, Eva Portelance, Alessandro Sordoni, Siva Reddy, Aaron Courville, and Nicolas Le Roux. Vineppo: Unlocking rl potential for llm reasoning through refined credit assignment. arXiv preprint arXiv:2410.01679, 2024. [19] Yufeng Yuan, Yu Yue, Ruofei Zhu, Tiantian Fan, and Lin Yan. What’s behind ppo’s collapse in long-cot? value optimization holds the secret. arXiv preprint arXiv:2503.01491, 2025. [20] Guangming Sheng, Chi Zhang, Zilingfeng Ye, Xibin Wu, Wang Zhang, Ru Zhang, Yanghua Peng, Haibin Lin, and Chuan Wu. Hybridflow: A flexible and efficient rlhf framework. arXiv preprint arXiv:2409.19256, 2024. [21] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347, 2017. 13 [22] John Schulman, Philipp Moritz, Sergey Levine, Michael Jordan, and Pieter Abbeel. High-dimensional continuous control using generalized advantage estimation, 2018. [23] Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul F Christiano, Jan Leike, and Ryan Lowe. Training language models to follow instructions with human feedback. In S. Koyejo, S. Mohamed, A. Agarwal, D. Belgrave, K. Cho, and A. Oh, editors, Advances in Neural Information Processing Systems, volume 35, pages 27730–27744. Curran Associates, Inc., 2022. [24] Dario Amodei, Chris Olah, Jacob Steinhardt, Paul Christiano, John Schulman, and Dan Mané. Concrete problems in ai safety, 2016. [25] Tom Everitt, Victoria Krakovna, Laurent Orseau, Marcus Hutter, and Shane Legg. Reinforcement learning with a corrupted reward channel, 2017. [26] Victoria Krakovna, Jonathan Uesato, Vladimir Mikulik, Matthew Rahtz, Tom Everitt, Ramana Kumar, Zac Kenton, Jan Leike, and Shane Legg. Specification gaming: the flip side of ai ingenuity, 2020. [27] Tom Everitt, Marcus Hutter, Ramana Kumar, and Victoria Krakovna. Reward tampering problems and solutions in reinforcement learning: A causal influence diagram perspective, 2021. [28] Leo Gao, John Schulman, and Jacob Hilton. Scaling laws for reward model overoptimization, 2022. [29] Lilian Weng. Reward hacking in reinforcement learning. lilianweng.github.io, Nov 2024. [30] Stanislas Polu and Ilya Sutskever. Generative language modeling for automated theorem proving, 2020. [31] Trieu H Trinh, Yuhuai Wu, Quoc V Le, He He, and Thang Luong. Solving olympiad geometry without human demonstrations. Nature, 625(7995):476–482, 2024. [32] Trieu Trinh and Thang Luong. Alphageometry: An olympiad-level ai system for geometry, 2024. [33] AlphaProof and AlphaGeometry Teams. Ai achieves silver-medal standard solving international mathematical olympiad problems, 2024. [34] Hung Le, Yue Wang, Akhilesh Deepak Gotmare, Silvio Savarese, and Steven Chu Hong Hoi. Coderl: Mastering code generation through pretrained models and deep reinforcement learning. Advances in Neural Information Processing Systems, 35:21314–21328, 2022. [35] Noah Shinn, Federico Cassano, Edward Berman, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao. Reflexion: Language agents with verbal reinforcement learning, 2023. [36] Xinyun Chen, Maxwell Lin, Nathanael Schärli, and Denny Zhou. Teaching large language models to self-debug, 2023. [37] Jonas Gehring, Kunhao Zheng, Jade Copet, Vegard Mella, Quentin Carbonneaux, Taco Cohen, and Gabriel Synnaeve. Rlef: Grounding code llms in execution feedback with reinforcement learning, 2025. [38] Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Mingchuan Zhang, YK Li, Y Wu, and Daya Guo. Deepseekmath: Pushing the limits of mathematical reasoning in open language models. arXiv preprint arXiv:2402.03300, 2024. [39] Ilya Loshchilov and Frank Hutter. Decoupled weight decay regularization. In International Conference on Learning Representations, 2019. 14</p></div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+    
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>Appendix / 附录<span class="sec-page">p.15</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>A. Dataset Transformation.</strong> The appendix provides a worked example of how DAPO-Math-17K is built: take the original problem "Let $x,y$ be reals with $x^2+y^2-22x-16y+113=0$; determine the smallest possible value of $x$" with answer $11-2\sqrt{6}$, and ask the LLM to rewrite the prompt so the new expected answer is the integer $k+m+n=11+2+6=19$ (matching the format $k-m\sqrt{n}$). The LLM follows a four-step CoT: extract the answer format, rewrite the problem statement, solve the modified problem, output an integer. Few-shot solutions and detailed guidelines are provided for each step, and the authors report that the LLM produces satisfactory reformulations in most cases.</p>
+            <p><strong>B. Supplementary Case.</strong> A second case illustrates the emergence of reflective behavior: an AIME-style inclusion-exclusion problem about 900 Aimeville residents owning combinations of 4 items. The model first tries a direct inclusion-exclusion derivation, gets a non-integer $a_4=54.75$, recognizes that the count must be a whole number, and explicitly says "our current approach needs to be reconsidered" — then switches to a different decomposition. This kind of self-checked back-tracking did not exist at the start of RL training and emerged through DAPO RL.</p>
+          </div>
+          <div class="zh">
+            <p><strong>A. 数据集变换。</strong>附录给出 DAPO-Math-17K 构造方式的完整例子:原题"设实数 $x,y$ 满足 $x^2+y^2-22x-16y+113=0$,求 $x$ 的最小值",原答案 $11-2\sqrt{6}$;要求 LLM 把题面改写成"原答案形如 $k-m\sqrt{n}$,求 $k+m+n$"——新答案是整数 $11+2+6=19$。LLM 遵循一套四步 CoT:抽取答案格式、改写题面、求解新题、输出整数。每步都配有 few-shot 解或详细 guideline;作者报告,绝大多数情况下 LLM 能给出格式与质量都令人满意的重写。</p>
+            <p><strong>B. 补充案例。</strong>第二个案例展示了"反思行为"的<em>涌现</em>:一道 AIME 风格的容斥原理题——900 名 Aimeville 居民拥有 4 种物品的组合数。模型先用直接的容斥公式推导,得到 $a_4=54.75$(非整数),意识到"四样都有的人数必须是整数",显式说出"<em>当前思路需要重新考虑</em>",然后切换到不同的拆分方式。这种自检后回溯的行为在 RL 训练初期是<em>不存在</em>的,是 DAPO RL 训练过程中涌现出来的。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

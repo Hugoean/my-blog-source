@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A General Theoretical Paradigm to Understand Learning from · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2310.12036 · 13 页 · 0 张图</div>
+    <h1>A General Theoretical Paradigm to Understand Learning from</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W5</span>
+      <span>IPO</span><span>DPO theory</span>
+      <span><a href="https://arxiv.org/abs/2310.12036" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2310.12036.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>IPO = <strong>Ψ-PO</strong> 框架在 <code>Ψ = identity</code> 时的实例化——把 DPO 的 sigmoid-logistic loss 换成对 <em>log-likelihood ratio 差</em> 的<strong>平方损失</strong>,从而在 Bradley-Terry 假设不成立或经验偏好取 $\{0,1\}$ 时,仍能让 KL 正则真正生效、避免 DPO 把 $\pi(y_l)$ 推到 0 的过拟合崩溃。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>Ψ-PO 一般框架(必记)</strong>:对非降映射 $\Psi:[0,1]\!\to\!\mathbb{R}$、参考策略 $\pi_\mathrm{ref}$、正则系数 $\tau>0$,定义
+          $$\max_{\pi}\ \mathbb{E}_{x\sim\rho,\,y\sim\pi(\cdot|x),\,y'\sim\mu(\cdot|x)}\bigl[\Psi(p^*(y\succ y'|x))\bigr] - \tau\,D_\mathrm{KL}(\pi\,\|\,\pi_\mathrm{ref}).$$
+          闭式最优解 $\pi^*(y)\propto \pi_\mathrm{ref}(y)\,\exp\!\bigl(\tau^{-1}\,\mathbb{E}_{y'\sim\mu}[\Psi(p^*(y\succ y'))]\bigr)$。
+        </li>
+        <li><strong>DPO 是 Ψ-PO 的退化:</strong>取 $\Psi(q)=\log\!\tfrac{q}{1-q}$(logit 函数),在 BT 模型 $p^*(y\succ y')=\sigma(r(y)-r(y'))$ 下,$\mathbb{E}_{y'\sim\mu}[\Psi(p^*)]=r(y)-\mathrm{const}$,Ψ-PO / RLHF / DPO 三者最优解重合(Prop. 1)。</li>
+        <li><strong>BT + deterministic preference → reward 发散:</strong>若 $p^*(y\succ y')=1$,BT 要求 $r(y)-r(y')\to+\infty$,代入闭式解得 $\pi^*(y')/\pi^*(y)=0$,与 $\tau$ 无关——<em>KL 正则被偏好的非线性变换吃掉了</em>。有限样本下 $\hat p=1$ 经常出现,DPO 必然过拟合。</li>
+        <li><strong>RLHF 为何更稳:</strong>显式 reward model 在 $\{0,1\}$ 偏好下会<em>欠拟合</em>(常用 weight decay / 早停),意外地提供了对策略的隐式正则;DPO 把 reward 折叠掉的同时也丢了这层保护。</li>
+        <li>
+          <strong>IPO 损失(必默写)</strong>:取 $\Psi=I$(identity),令 $h_\pi(y,y')=\log\!\tfrac{\pi(y)\pi_\mathrm{ref}(y')}{\pi(y')\pi_\mathrm{ref}(y)}$,population loss 为 $\mathbb{E}_{y,y'\sim\mu}\bigl[(h_\pi(y,y')-\tau^{-1}\,I(y,y'))^2\bigr]$。对成对数据集做对称化后,得到可实操的<strong>采样 IPO loss</strong>:
+          $$\mathcal{L}_{\text{IPO}}=\mathbb{E}_{(y_w,y_l)\sim\mathcal{D}}\!\left[\left(h_\pi(y_w,y_l)-\tfrac{\tau^{-1}}{2}\right)^{2}\right]=\mathbb{E}_{(y_w,y_l)\sim\mathcal{D}}\!\left[\left(\log\tfrac{\pi(y_w)\pi_\mathrm{ref}(y_l)}{\pi(y_l)\pi_\mathrm{ref}(y_w)}-\tfrac{1}{2\tau}\right)^{2}\right].$$
+          直观:把 log-likelihood ratio 差 <em>回归</em> 到一个由 $\tau$ 决定的有限 margin,而不是像 DPO 那样一路推到无穷。
+        </li>
+        <li><strong>KL 与正则角色:</strong>$\tau\!\uparrow$ → margin $\tfrac{1}{2\tau}\!\downarrow$ → IPO 更贴近 $\pi_\mathrm{ref}$;$\tau\!\to 0$ 才退化为贪心策略。对比 DPO:$\tau$ 在 deterministic 偏好下完全失效,这是 IPO 相对 DPO 的核心修复。</li>
+        <li><strong>等价性 / 唯一性(Thm 2):</strong>当 $\mathrm{Supp}(\mu)=\mathrm{Supp}(\pi_\mathrm{ref})$ 时,IPO loss 关于 logits 是 PSD 二次型,$\pi^*$ 是唯一局部 / 全局极小。若支撑集不重合则解不唯一(App. A.2 反例)。</li>
+        <li><strong>实验结论:</strong>3-arm bandit 上,数据集 $D_1$(全胜)与 $D_3$(某动作完全未观测)两种极端下,DPO 对任意 $\tau$ 都收敛到退化的确定性 / 零概率策略;IPO 则随 $\tau$ 平滑插值回 $\pi_\mathrm{ref}$。后续社区也把 IPO 当作"DPO 稳健替代"的标准 baseline。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      DPO 过拟合分析,写论文必引
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3b">§2 Notations / 记号(预备)</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-3c">§3 Background / RLHF 与 DPO</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-3d">§4 Ψ-PO 一般框架 + DPO/RLHF 失效分析</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-3e">§5 IPO 推导(损失 + 唯一性)</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-3f">§5.3–5.4 + §6 实验与结论</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-4">References</a><span class="toc-page">p.10</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 · 本文为纯理论论文,正文图为 bandit 实验示意图(原 PDF 未导出)</h2>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;padding:6px 4px;">
+      原文 Figure 1 / Figure 2 为 3-arm bandit 上 IPO vs DPO 的学习曲线对比(数据集 $D_1$ 全胜序、$D_3$ 缺失观测);本仓库未导出图像文件。文字描述见 §5.3–5.4 实验段。
+    </div>
+  </div>
+
+
+  <!-- 章节正文 -->
+
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>A General Theoretical Paradigm to Understand Learning from Human Preferences. Mohammad Gheshlaghi Azar, Mark Rowland, Bilal Piot, Daniel Guo, Daniele Calandriello, Michal Valko, Rémi Munos — Google DeepMind.</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2" open>
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The prevalent deployment of learning from human preferences through reinforcement learning (RLHF) relies on two important approximations: the first assumes that pairwise preferences can be substituted with pointwise rewards. The second assumes that a reward model trained on these pointwise rewards can generalize from collected data to out-of-distribution data sampled by the policy. Recently, Direct Preference Optimisation (DPO) has been proposed as an approach that bypasses the second approximation and learn directly a policy from collected data without the reward modelling stage. However, this method still heavily relies on the first approximation.</p>
+            <p>In this paper we try to gain a deeper theoretical understanding of these practical algorithms. In particular we derive a new general objective called ΨPO for learning from human preferences that is expressed in terms of pairwise preferences and therefore bypasses both approximations. This new general objective allows us to perform an in-depth analysis of the behavior of RLHF and DPO (as special cases of ΨPO) and to identify their potential pitfalls. We then consider another special case for ΨPO by setting Ψ simply to Identity, for which we can derive an efficient optimisation procedure, prove performance guarantees and demonstrate its empirical superiority to DPO on some illustrative examples.</p>
+          </div>
+          <div class="zh">
+            <p>当前主流的"通过强化学习从人类偏好中学习"(RLHF)依赖两个重要近似:第一个近似假设成对偏好可以被替换为逐点奖励;第二个近似假设在这些逐点奖励上训练得到的奖励模型,能从所收集的数据外推到由策略采样得到的分布外数据。最近,Direct Preference Optimisation(DPO)被提出作为一种绕过第二个近似的方法——它直接从收集到的数据学习一个策略,而不再经过奖励建模阶段。然而,这种方法仍然严重依赖于第一个近似。</p>
+            <p>在本文中,我们试图对这些实用算法获得更深入的理论理解。具体而言,我们推导了一个新的、用于从人类偏好中学习的一般目标,称之为 ΨPO;它仅以成对偏好的形式表达,因此<em>同时</em>绕过了上述两个近似。这一新的一般目标使我们得以对 RLHF 与 DPO(作为 ΨPO 的特例)的行为进行深入分析,并识别出它们潜在的失效模式。随后我们考虑 ΨPO 的另一个特例——直接把 Ψ 取为恒等映射(Identity),由此我们可以推导出一种高效的优化过程,证明其性能保证,并在若干说明性例子上展示它相对 DPO 的经验优势。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Learning from human preferences (Christiano et al., 2017) is a paradigm adopted in the natural language processing literature to better align pretrained (Radford et al., 2018; Ramachandran et al., 2016) and instruction-tuned (Wei et al., 2022) generative language models to human desiderata. It consists in first collecting large amounts of data where each datum is composed of a context, pairs of continuations of the context, also called generations, and a pairwise human preference that indicates which generation is the best. Then, a policy generating good generations given a context is learnt from the collected data. We frame the problem of learning from human preferences as an offline contextual bandit problem (Lu et al., 2010). The goal of this bandit problem is that given a context, to choose an action (playing the role of the generation) which is most preferred by a human rater under the constraint that the resulting bandit policy should be close to some known reference policy. The constraint of staying close to a known reference policy can be satisfied e.g., by using KL regularisation (Geist et al., 2019) and its role is to avoid model drift (Lazaridou et al., 2020; Lu et al., 2020).</p>
+          </div>
+          <div class="zh">
+            <p>从人类偏好中学习(Christiano 等,2017)是 NLP 文献中广为采纳的范式,用以让预训练(Radford 等,2018;Ramachandran 等,2016)与指令微调(Wei 等,2022)后的生成式语言模型更好地对齐人类期望。其做法是:先收集大量数据,其中每条数据由一个 context、对该 context 的两份续写(也称 generations)以及一个表示哪份续写更好的成对人类偏好组成;然后,从收集到的数据中学出一个"给定 context 时能生成好 generations"的策略。我们把"从人类偏好学习"问题刻画为一个<em>离线上下文 bandit</em> 问题(Lu 等,2010):给定 context,选择一个动作(扮演 generation 的角色)使其最被人评者偏好,同时受约束:由此得到的 bandit 策略应当与某个已知参考策略足够接近。这种"贴近参考策略"的约束可以通过 KL 正则化(Geist 等,2019)来满足,作用是避免模型漂移(Lazaridou 等,2020;Lu 等,2020)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>A prominent approach to tackle the problem of learning from human preferences is through reinforcement learning from human feedback (RLHF, Ouyang et al., 2022; Stiennon et al., 2020) in which first a reward model is trained in the form of a classifier of preferred and dispreferred actions. Then the bandit policy is trained through RL to maximize this learned reward model while minimizing the distance with the reference policy. Recently RLHF has been used successfully in solving the problem of aligning generative language models with human preferences (Ouyang et al., 2022). Furthermore recent works such as direct preference optimisation (DPO, Rafailov et al., 2023) and (SLiC-HF, Zhao et al., 2023) have shown that it is possible to optimize the bandit policy directly from human preferences without learning a reward model. They also have shown that on a selection of standard language tasks they are competitive with the state of the art RLHF while they are simpler to implement and require less resources.</p>
+          </div>
+          <div class="zh">
+            <p>处理"从人类偏好学习"的一种主流路径是<em>基于人类反馈的强化学习</em>(RLHF,Ouyang 等,2022;Stiennon 等,2020):先以"偏好/非偏好动作分类器"的形式训练一个奖励模型;然后通过 RL 训练 bandit 策略,使其最大化所学奖励模型,同时最小化与参考策略的距离。近期 RLHF 在让生成式语言模型对齐人类偏好上取得了成功(Ouyang 等,2022)。此外,近期工作如<em>直接偏好优化</em>(DPO,Rafailov 等,2023)与 SLiC-HF(Zhao 等,2023)表明:可以<em>不</em>学习奖励模型,直接从人类偏好优化 bandit 策略;并且在若干标准语言任务上,它们与 SOTA 的 RLHF 性能相当,而实现更简单、所需资源更少。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Despite this practical success, little is known regarding theoretical foundations of these practical methods. Notable exceptions, that consider specific special cases, are (Wang et al., 2023; Chen et al., 2022) and prior work on preference-based (Busa-Fekete et al., 2014, 2013) and dueling bandits and RL (Novoseller et al., 2020; Pacchiano et al., 2023). However, these theoretical works focus on providing theoretical guarantees in terms of regret bounds in the standard bandit setting and they do not deal with the practical setting of RLHF, DPO and SLiC-HF. In this work, our focus is on bridging the gap between theory and practice by introducing a simple and general theoretical representation of the practical algorithms for learning from human preferences. In particular, we show that it is possible to characterise the objective functions of RLHF and DPO as special cases of a more general objective exclusively expressed in terms of pairwise preferences. We call this objective Ψ-preference optimisation (ΨPO) objective, where Ψ is an arbitrary non-decreasing mapping.</p>
+          </div>
+          <div class="zh">
+            <p>尽管在实践上取得了成功,这些实用方法的<em>理论基础</em>却所知甚少。值得一提的例外——它们考虑了一些特定的特例——包括(Wang 等,2023;Chen 等,2022)以及关于<em>基于偏好的</em> bandit(Busa-Fekete 等,2014, 2013)与对偶 bandit / RL(Novoseller 等,2020;Pacchiano 等,2023)的前期工作。然而,这些理论工作聚焦于在标准 bandit 设定下给出后悔界的理论保证,并不处理 RLHF、DPO、SLiC-HF 的实际设定。在本工作中,我们的关注点是<em>弥合理论与实践之间的鸿沟</em>:为这些从人类偏好学习的实用算法引入一个简单且通用的理论表达。具体而言,我们证明可以把 RLHF 与 DPO 的目标函数刻画为一个<em>更一般目标</em>的特例——这个更一般的目标完全以成对偏好的形式表达。我们称该目标为 <strong>Ψ-偏好优化</strong>(ΨPO)目标,其中 Ψ 是一个任意的非降映射。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We then analyze this objective function in the special cases of RLHF and DPO and investigate its potential pitfalls. Our theoretical investigation of RLHF and DPO reveals that in principle they can be both vulnerable to overfitting. This is due to the fact that those methods rely on the strong assumption that pairwise preferences can be substituted with Elo-scores (pointwise rewards) via a Bradley-Terry (BT) modelisation (Bradley and Terry, 1952). In particular, this assumption could be problematic when the (sampled) preferences are deterministic or nearly deterministic as it leads to over-fitting to the preference dataset at the expense of ignoring the KL-regularisation term (see Sec. 4.2). We then present a simple solution to avoid the problem of overfitting, namely by setting Ψ to identity in the ΨPO. This method is called Identity-PO (IPO) and by construction bypasses the BT modelisation assumption for preferences (see Sec. 5). Finally, we propose a practical solution, via a sampled loss function (see Sec. 5.2), to optimize this simplified version of ΨPO empirically and, we compare its performance with DPO on simple bandit examples, providing empirical support for our theoretical findings (see Sec. 5.3 and Sec. 5.4).</p>
+          </div>
+          <div class="zh">
+            <p>随后我们在 RLHF 与 DPO 这两个特例上分析该目标函数,并考察它的潜在陷阱。我们对 RLHF 与 DPO 的理论考察揭示:原则上两者都可能<em>易于过拟合</em>。原因在于:这些方法依赖一条很强的假设——成对偏好可以通过 Bradley-Terry(BT)建模(Bradley & Terry,1952)被替换为 Elo 分数(逐点奖励)。这条假设在(采样到的)偏好是确定性或接近确定性时尤其会出问题:它会让模型对偏好数据集过拟合,同时<em>无视 KL 正则项</em>(见 §4.2)。我们随后给出一个简单方案来规避过拟合——把 ΨPO 中的 Ψ 取为<em>恒等映射</em>。该方法称为 <strong>Identity-PO</strong>(IPO),按其构造它<em>无需</em> BT 偏好建模假设(见 §5)。最后,我们通过一个采样损失函数(见 §5.2)给出经验上可行的优化方案,在简单 bandit 示例上与 DPO 比较其表现,为理论发现提供实证支持(见 §5.3 与 §5.4)。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3"></div>
+    </details>
+
+    <details class="sec" id="sec-3b">
+      <summary>
+        <span>§2 Notations / 记号<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In the remaining, we build on the notations of DPO (Rafailov et al., 2023). Given a context $x \in \mathcal{X}$, where $\mathcal{X}$ is the finite space of contexts, we assume a finite action space $\mathcal{Y}$. A policy $\pi \in \Delta_\mathcal{Y}^\mathcal{X}$ associates to each context $x \in \mathcal{X}$ a discrete probability distribution $\pi(\cdot|x) \in \Delta_\mathcal{Y}$ where $\Delta_\mathcal{Y}$ is the set of discrete distributions over $\mathcal{Y}$. We denote $\mu \in \Delta_\mathcal{Y}^\mathcal{X}$ the behavior policy. From a given context $x$, let $y, y' \sim \mu(x)$ be two actions generated independently by the reference policy. These are then presented to human raters who express preferences for one of the generations, denoted as $y_w \succ y_l$ where $y_w$ and $y_l$ denote the preferred and dispreferred actions amongst $\{y, y'\}$ respectively.</p>
+          </div>
+          <div class="zh">
+            <p>在下文中,我们沿用 DPO(Rafailov 等,2023)的记号。给定 context $x \in \mathcal{X}$,其中 $\mathcal{X}$ 是有限的 context 空间;我们假设有限动作空间 $\mathcal{Y}$。策略 $\pi \in \Delta_\mathcal{Y}^\mathcal{X}$ 把每个 context $x \in \mathcal{X}$ 映射到 $\mathcal{Y}$ 上的一个离散概率分布 $\pi(\cdot|x) \in \Delta_\mathcal{Y}$,其中 $\Delta_\mathcal{Y}$ 是 $\mathcal{Y}$ 上的全体离散分布。我们记 $\mu \in \Delta_\mathcal{Y}^\mathcal{X}$ 为<em>行为策略</em>。对给定 context $x$,设 $y, y' \sim \mu(x)$ 是由参考策略独立产出的两个动作;然后把它们呈现给人评者表达偏好,记作 $y_w \succ y_l$,其中 $y_w$、$y_l$ 分别表示 $\{y, y'\}$ 中被偏好与被非偏好的动作。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We then write true human preference $p^*(y \succ y' | x)$ the probability of $y$ being preferred to $y'$ knowing the context $x$. The probability comes from the randomness of the choice of the human we ask for their preference. So $p^*(y \succ y' | x) = \mathbb{E}_h[\mathbb{I}\{h \text{ prefers } y \text{ to } y' \text{ given } x\}]$, where the expectation is over humans $h$. We also introduce the expected preference of a generation $y$ over a distribution $\mu$ knowing $x$, noted $p^*(y \succ \mu | x)$, via the following equation:</p>
+            <div class="bi-eq">$$p^*(y \succ \mu | x) = \mathbb{E}_{y' \sim \mu(\cdot|x)}\bigl[p^*(y \succ y' | x)\bigr].$$</div>
+            <p>For any two policies $\pi, \mu \in \Delta_\mathcal{Y}^\mathcal{X}$ and a context distribution $\rho$ we denote the total preference of policy $\pi$ over $\mu$ as</p>
+            <div class="bi-eq">$$p^*_\rho(\pi \succ \mu) = \mathbb{E}_{x \sim \rho,\,y \sim \pi(\cdot|x)}\bigl[p^*(y \succ \mu | x)\bigr].$$</div>
+          </div>
+          <div class="zh">
+            <p>我们记<em>真实</em>人类偏好 $p^*(y \succ y' | x)$ 为:在已知 context $x$ 时,$y$ 相对 $y'$ 被偏好的概率。这一概率源自我们询问偏好的那个人本身的随机性,即 $p^*(y \succ y' | x) = \mathbb{E}_h[\mathbb{I}\{h \text{ 在 } x \text{ 下偏好 } y \text{ 胜 } y'\}]$,期望是对人 $h$ 取的。我们再引入"在已知 $x$ 时,生成 $y$ 相对分布 $\mu$ 的<em>期望偏好</em>" $p^*(y \succ \mu | x)$,定义如上式。对任意两个策略 $\pi, \mu \in \Delta_\mathcal{Y}^\mathcal{X}$ 与 context 分布 $\rho$,我们记 $\pi$ 相对 $\mu$ 的<em>总体偏好</em>为上述第二式。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In practice, we do not observe $p^*$ directly, but samples $I(y, y'|x)$ from a Bernoulli distribution with mean $p^*(y \succ y' | x)$ (i.e., $I(y, y'|x)$ is $1$ with probability $p^*(y \succ y' | x)$ and $0$ otherwise). In particular, we assume we have access to the preferences through a dataset of rated generations $\mathcal{D} = (x_i, y_i, y'_i)_{i=1}^N = (x_i, y_{w,i} \succ y_{l,i})_{i=1}^N$, where $N$ is the dataset size. In addition, for a general finite set $S$, a discrete probability distribution $\eta \in \Delta_S$ and a real function $f \in \mathbb{R}^S$, we note the expectation of $f$ under $\eta$ as $\mathbb{E}_{s \sim \eta}[f(s)] = \sum_{s \in S} f(s)\eta(s)$. For a finite dataset $\mathcal{D} = (s_i)_{i=1}^N$ with $s_i \in S$, we denote the empirical expectation as $\mathbb{E}_{s \sim \mathcal{D}}[f(s)] = \frac{1}{N}\sum_{i=1}^N f(s_i)$.</p>
+          </div>
+          <div class="zh">
+            <p>实践中我们无法直接观测 $p^*$,只能拿到样本 $I(y, y'|x)$——它从均值为 $p^*(y \succ y' | x)$ 的 Bernoulli 分布抽出(即以概率 $p^*(y \succ y' | x)$ 取 $1$,否则取 $0$)。具体地,我们假设可以通过带标注的生成数据集 $\mathcal{D} = (x_i, y_i, y'_i)_{i=1}^N = (x_i, y_{w,i} \succ y_{l,i})_{i=1}^N$ 访问偏好,$N$ 为数据集规模。此外,对于一般有限集 $S$、其上的离散分布 $\eta \in \Delta_S$ 与实函数 $f \in \mathbb{R}^S$,我们记 $f$ 关于 $\eta$ 的期望为 $\mathbb{E}_{s \sim \eta}[f(s)] = \sum_{s \in S} f(s)\eta(s)$;对有限数据集 $\mathcal{D} = (s_i)_{i=1}^N$,记经验期望为 $\mathbb{E}_{s \sim \mathcal{D}}[f(s)] = \frac{1}{N}\sum_{i=1}^N f(s_i)$。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3b"></div>
+    </details>
+
+    <details class="sec" id="sec-3c">
+      <summary>
+        <span>§3 Background / RLHF 与 DPO<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.1 Reinforcement Learning from Human Feedback (RLHF).</strong> The standard RLHF paradigm (Christiano et al., 2017; Stiennon et al., 2020) consists of two main stages: (i) learning the reward model; (ii) policy optimisation using the learned reward. <strong>3.1.1 Learning the Reward Model.</strong> Learning a reward model consists in training a binary classifier to discriminate between the preferred and dispreferred actions using a logistic regression loss. For the classifier, a popular choice is the Bradley-Terry model: for a given context $x$ and action $y$, we denote the pointwise reward, which can also be interpreted as an Elo score, of $y$ given $x$ by $r(x, y)$. The Bradley-Terry model represents the preference function $p(y \succ y'|x)$ (classifier) as a sigmoid of the difference of rewards:</p>
+            <div class="bi-eq">$$p(y \succ y' | x) = \sigma\bigl(r(x, y) - r(x, y')\bigr), \quad (1)$$</div>
+            <p>where $\sigma(\cdot)$ denotes the sigmoid function and plays the role of normalisation. Given the dataset $\mathcal{D} = (x_i, y_{w,i} \succ y_{l,i})_{i=1}^N$ one can learn the reward function by optimizing the following logistic regression loss</p>
+            <div class="bi-eq">$$\mathcal{L}(r) = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\bigl[\log p(y_w \succ y_l | x)\bigr]. \quad (2)$$</div>
+            <p>Assuming that $p^*(y \succ y' | x)$ conforms to the Bradley-Terry model, one can show that as the size of $\mathcal{D}$ grows, $p(y \succ y'|x)$ becomes a more and more accurate estimate of the true $p^*(y \succ y'|x)$ and in the limit converges to it.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.1 基于人类反馈的强化学习(RLHF)。</strong>标准 RLHF 范式(Christiano 等,2017;Stiennon 等,2020)包含两大阶段:①学奖励模型;②用所学奖励做策略优化。<strong>3.1.1 学奖励模型。</strong>学奖励模型即用 logistic 回归损失训练一个区分"偏好/非偏好动作"的二分类器。一种流行的分类器选择是 Bradley-Terry 模型:对给定 context $x$ 与动作 $y$,记 $y$ 在 $x$ 下的<em>逐点奖励</em>(也可理解为 Elo 分数)为 $r(x, y)$。BT 模型把偏好函数 $p(y \succ y'|x)$(分类器)写成"奖励之差"的 sigmoid——见公式 (1),其中 $\sigma(\cdot)$ 是 sigmoid,起归一化作用。给定数据集 $\mathcal{D} = (x_i, y_{w,i} \succ y_{l,i})_{i=1}^N$,可以通过优化 logistic 回归损失(公式 (2))学奖励函数。假设 $p^*(y \succ y'|x)$ 服从 BT 模型,可以证明:随 $\mathcal{D}$ 规模增长,$p(y \succ y'|x)$ 会越来越精确地估计真实 $p^*(y \succ y'|x)$,极限收敛到它。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.1.2 Policy Optimisation with the Learned Reward.</strong> Using the reward (Elo-score) $r(x, y)$ the RLHF objective is simply to optimize for the policy $\pi \in \Delta_\mathcal{Y}^\mathcal{X}$ that maximizes the expected reward while minimizing the distance between $\pi$ and some reference policy $\pi_\mathrm{ref} \in \Delta_\mathcal{Y}^\mathcal{X}$ through the following KL-regularised objective:</p>
+            <div class="bi-eq">$$J(\pi) = \mathbb{E}_\pi[r(x, y)] - \tau\,D_\mathrm{KL}(\pi \,\|\, \pi_\mathrm{ref}), \quad (3)$$</div>
+            <p>in which the context $x$ is drawn from $\rho$ and the action $y$ is drawn from $\pi(\cdot|x)$. The divergence $D_\mathrm{KL}(\pi\,\|\,\pi_\mathrm{ref})$ is defined as $D_\mathrm{KL}(\pi\,\|\,\pi_\mathrm{ref}) = \mathbb{E}_{x\sim\rho}[\mathrm{KL}(\pi(\cdot|x)\,\|\,\pi_\mathrm{ref}(\cdot|x))]$ where $\mathrm{KL}(\pi(\cdot|x)\,\|\,\pi_\mathrm{ref}(\cdot|x)) = \mathbb{E}_{y\sim\pi(\cdot|x)}[\log(\pi(y|x)/\pi_\mathrm{ref}(y|x))]$. The objective in Equation (3) is essentially optimized by PPO (Schulman et al., 2017) or similar approaches. The combination of RLHF + PPO has been used with great success in practice (e.g., InstructGPT and GPT-4; Ouyang et al., 2022; OpenAI, 2023).</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.1.2 用所学奖励做策略优化。</strong>用奖励(Elo 分数)$r(x, y)$,RLHF 的目标就是寻找策略 $\pi \in \Delta_\mathcal{Y}^\mathcal{X}$,使得期望奖励最大、同时让 $\pi$ 与某个参考策略 $\pi_\mathrm{ref}$ 之间的距离最小——通过如下 KL 正则化目标实现,即公式 (3),其中 $x$ 由 $\rho$ 抽样、$y$ 由 $\pi(\cdot|x)$ 抽样。这里散度 $D_\mathrm{KL}(\pi\,\|\,\pi_\mathrm{ref})$ 定义为 $\mathbb{E}_{x\sim\rho}[\mathrm{KL}(\pi(\cdot|x)\,\|\,\pi_\mathrm{ref}(\cdot|x))]$,$\mathrm{KL}$ 项为 $\mathbb{E}_{y\sim\pi(\cdot|x)}[\log(\pi(y|x)/\pi_\mathrm{ref}(y|x))]$。公式 (3) 的目标本质上由 PPO(Schulman 等,2017)或类似方法优化。RLHF + PPO 的组合在实践中已被极为成功地使用(如 InstructGPT、GPT-4;Ouyang 等,2022;OpenAI,2023)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.2 Direct Preference Optimisation.</strong> An alternative approach to the RL paradigm described above is direct preference optimisation (DPO; Rafailov et al., 2023), which avoids the training of a reward model altogether. The loss that DPO optimises, given an empirical dataset $\mathcal{D}$, as a function of $\pi$, is given by</p>
+            <div class="bi-eq">$$\min_{\pi}\;\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\!\left[ -\log\sigma\!\left(\tau\log\frac{\pi(y_w|x)}{\pi(y_l|x)} - \tau\log\frac{\pi_\mathrm{ref}(y_w|x)}{\pi_\mathrm{ref}(y_l|x)}\right)\right]. \quad (4)$$</div>
+            <p>In its population form, the loss takes on the form</p>
+            <div class="bi-eq">$$\min_{\pi}\;\mathbb{E}_{x\sim\rho,\,y,y'\sim\mu}\!\left[ -p^*(y \succ y' | x)\log\sigma\!\left(\tau\log\frac{\pi(y|x)}{\pi(y'|x)} - \tau\log\frac{\pi_\mathrm{ref}(y|x)}{\pi_\mathrm{ref}(y'|x)}\right)\right]. \quad (5)$$</div>
+            <p>Rafailov et al. (2023) show that when (i) the Bradley-Terry model in Equation (1) perfectly fits the preference data and (ii) the optimal reward function $r$ is obtained from the loss in Equation (2), then the global optimisers of the RLHF objective in Equation (3) and the DPO objective in Equation (5) perfectly coincide. In fact, this correspondence is true more generally; see Proposition 4 in Appendix B.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.2 直接偏好优化(DPO)。</strong>除上述 RL 范式外,另一种做法是直接偏好优化(DPO;Rafailov 等,2023),它<em>完全</em>免去奖励模型训练。给定经验数据集 $\mathcal{D}$,DPO 关于 $\pi$ 优化的损失见公式 (4);其总体(population)形式见公式 (5)。Rafailov 等(2023)证明:当 ①公式 (1) 的 BT 模型完美拟合偏好数据,且 ②最优奖励函数 $r$ 由公式 (2) 的损失求得时,RLHF 目标(公式 (3))与 DPO 目标(公式 (5))的<em>全局最优解完全重合</em>。事实上这一对应在更一般情形下也成立,详见附录 B 的命题 4。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3c"></div>
+    </details>
+
+    <details class="sec" id="sec-3d">
+      <summary>
+        <span>§4 ΨPO 一般框架 + DPO/RLHF 失效分析<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>A central conceptual contribution of the paper is to propose a general objective for RLHF, based on maximising a non-linear function of preferences. To this end, we consider a general non-decreasing function $\Psi : [0, 1] \to \mathbb{R}$, a reference policy $\pi_\mathrm{ref} \in \Delta_\mathcal{Y}^\mathcal{X}$, and a real positive regularisation parameter $\tau \in \mathbb{R}^*_+$, and define the Ψ-preference optimisation objective (ΨPO) as</p>
+            <div class="bi-eq">$$\max_{\pi}\;\mathbb{E}_{x\sim\rho,\,y\sim\pi(\cdot|x),\,y'\sim\mu(\cdot|x)}\bigl[\Psi(p^*(y \succ y' | x))\bigr] - \tau\,D_\mathrm{KL}(\pi\,\|\,\pi_\mathrm{ref}). \quad (6)$$</div>
+            <p>This objective balances the maximisation of a potentially non-linear function of preference probabilities with the KL regularisation term which encourages policies to be close to the reference $\pi_\mathrm{ref}$. This is motivated by the form of Equation (3), and we will see in the next subsection that it strictly generalises both RLHF and DPO, when the BT model holds.</p>
+          </div>
+          <div class="zh">
+            <p>本文一个核心的概念性贡献,是为 RLHF 提出一个<em>一般化目标</em>:它最大化"偏好的一个非线性函数"。为此,我们考虑任意非降函数 $\Psi:[0,1]\to\mathbb{R}$、参考策略 $\pi_\mathrm{ref}\in\Delta_\mathcal{Y}^\mathcal{X}$ 与一个正的实数正则系数 $\tau\in\mathbb{R}^*_+$,定义 <strong>Ψ-偏好优化目标</strong>(ΨPO)为公式 (6)。该目标在"偏好概率的非线性函数最大化"与"鼓励策略贴近参考 $\pi_\mathrm{ref}$ 的 KL 正则项"之间取平衡。这一形式受公式 (3) 启发;下一小节我们将看到:当 BT 模型成立时,它<em>严格地推广</em>了 RLHF 与 DPO。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.1 A Deeper Analysis of DPO and RLHF.</strong> In the remaining, we omit the dependency on $x$ for ease of notation. This is without losing generality and all the following results are true for all $x \in \mathrm{Supp}(\rho)$. We first connect DPO and RLHF with the Ψ-preference objective in Equation (6), under the special choice of $\Psi(q) = \log(q/(1-q))$. More precisely, the following proposition establishes this connection.</p>
+            <p><strong>Proposition 1.</strong> Suppose $\Psi(q) = \log(q/(1-q))$. When the Bradley-Terry model holds for $p^*$, that is, there exists $r : \mathcal{Y} \to \mathbb{R}$ such that $p^*(y \succ y') = \sigma(r(y) - r(y'))$, then the optimal policies for Equation (6), for the RLHF objective in Equation (3), and for the standard DPO objective in Equation (5) are identical.</p>
+            <p><strong>Proof.</strong> Under the Bradley-Terry assumption, $\mathbb{E}_{y'\sim\mu}[\Psi(p^*(y \succ y'))] = \mathbb{E}_{y'\sim\mu}[\log(e^{r(y)}/e^{r(y')})] = r(y) - \mathbb{E}_{y'\sim\mu}[r(y')]$. This is equal to the reward in Equation (3) up to an additive constant, so the optimal policies for Equation (6) and Equation (3) coincide. By Rafailov et al. (2023) the optimal policies for Equation (5) and Equation (3) also coincide, which proves the claim.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.1 对 DPO 与 RLHF 的更深入分析。</strong>为简化记号,在下文中省略对 $x$ 的依赖。这并不失一般性,所有结论对所有 $x \in \mathrm{Supp}(\rho)$ 都成立。我们先在 $\Psi(q) = \log(q/(1-q))$ 的特别取值下,把 DPO、RLHF 与公式 (6) 的 Ψ-偏好目标联系起来——以下命题给出这一联系。</p>
+            <p><strong>命题 1。</strong>设 $\Psi(q) = \log(q/(1-q))$。当 $p^*$ 服从 Bradley-Terry 模型——即存在 $r:\mathcal{Y}\to\mathbb{R}$ 使得 $p^*(y\succ y') = \sigma(r(y) - r(y'))$ ——则公式 (6) 的最优策略、公式 (3) 的 RLHF 最优策略与公式 (5) 的标准 DPO 最优策略<em>相同</em>。</p>
+            <p><strong>证明。</strong>在 BT 假设下,$\mathbb{E}_{y'\sim\mu}[\Psi(p^*(y\succ y'))] = \mathbb{E}_{y'\sim\mu}[\log(e^{r(y)}/e^{r(y')})] = r(y) - \mathbb{E}_{y'\sim\mu}[r(y')]$。该量与公式 (3) 中的奖励相差一个仅依赖于他变量的可加常数,因此公式 (6) 与公式 (3) 的最优策略一致。再由 Rafailov 等(2023),公式 (5) 与公式 (3) 的最优策略也一致,故命题成立。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Applying this proposition to the objective function of Equation (6), for which there exists an analytical solution, reveals that under the BT assumption the closed-form solution to DPO and RLHF can be written as</p>
+            <div class="bi-eq">$$\pi^*(y) \propto \pi_\mathrm{ref}(y)\,\exp\!\Bigl(\tau^{-1}\,\mathbb{E}_{y'\sim\mu}\bigl[\Psi(p^*(y\succ y'))\bigr]\Bigr). \quad (7)$$</div>
+            <p>The derivation leading to Equation (7) is a well known result and is provided in App. A.1 for completeness.</p>
+          </div>
+          <div class="zh">
+            <p>把该命题用到公式 (6) 的目标上——它存在解析解——可知:在 BT 假设下,DPO 与 RLHF 的闭式解可写成公式 (7) 的形式。导出公式 (7) 的推导是熟知结果,为完整性放在附录 A.1。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.2 Weak Regularisation and Overfitting.</strong> It is worth taking a step back, and asking what kinds of policies the above objective leads us to discover. This highly non-linear transformation of the preference probabilities means that small increases in preference probabilities already close to 1 are just as incentivised as larger increases in preference probabilities around 50%, which may be undesirable. The maximisation of logit-preferences, or Elo score in game-theoretic terminology, can also have counter-intuitive effects, even in transitive settings (Bertrand et al., 2023).</p>
+            <p>Consider the simple example where we have two actions $y$ and $y'$ such that $p^*(y \succ y') = 1$, i.e., $y$ is always preferred to $y'$. Then the Bradley-Terry model would require that $(r(y) - r(y')) \to +\infty$ to satisfy (1). If we plug this into the optimal policy (7) then we would get that $\pi^*(y')/\pi^*(y) = 0$ (i.e., $\pi^*(y') = 0$) irrespective of what constant $\tau$ is used for the KL-regularisation. Thus the strength of the KL-regularisation becomes weaker and weaker the more deterministic the preferences.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.2 弱正则化与过拟合。</strong>退一步问:上面这个目标会引导我们找到什么样的策略?对偏好概率施加这种高度非线性的变换意味着——"把已经接近 1 的偏好概率再小幅推高"会和"把 50% 附近的偏好概率大幅推高"得到<em>同样</em>的鼓励,这未必是我们想要的。最大化 logit 偏好——博弈论里的 Elo 分数——即便在<em>传递性</em>设定下也可能产生反直觉的效果(Bertrand 等,2023)。</p>
+            <p>考虑简单例子:两动作 $y$、$y'$ 满足 $p^*(y\succ y') = 1$,即 $y$ 总被偏好于 $y'$。那么 BT 模型为满足公式 (1) 必须 $(r(y)-r(y'))\to+\infty$。把它代入最优策略 (7),得到 $\pi^*(y')/\pi^*(y) = 0$(即 $\pi^*(y') = 0$),<em>不论</em> KL 正则系数 $\tau$ 取多大。也就是说,偏好越确定,KL 正则的强度就越弱。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The weakness of the KL-regularisation becomes even more pronounced in the finite data regime, where we only have access to a sample estimate of the preference $\hat{p}(y \succ y')$. Even if the true preference is, e.g., $p^*(y \succ y') = 0.8$, empirically it can be very possible when we only have a few data points to estimate $\hat{p}(y \succ y') = 1$, in which case the empirical optimal policy would make $\pi(y') = 0$ for any $\tau$. This means that overfitting can be a substantial empirical issue, especially when the context and action spaces are extremely large as it is for large language models.</p>
+            <p><strong>Why may standard RLHF be more robust to this problem in practice?</strong> While a purported advantage of DPO is that it avoids the need to fit a reward function, we observe that in practice when empirical preference probabilities are in the set $\{0, 1\}$, the reward function ends up being underfit. The optimal rewards in the presence of $\{0, 1\}$ preference probabilities are infinite, but these values are avoided, and indeed regularisation of the reward function has been observed to be an important aspect of RLHF training in practice (Christiano et al., 2017). This underfitting of the reward function is thus crucial in obtaining a final policy that is sufficiently regularised towards the reference policy $\pi_\mathrm{ref}$, and DPO, in avoiding the training of the reward function, loses the regularisation of the policy that the underfitted reward function affords.</p>
+            <p>While standard empirical practices such as early-stopping can still be used as an additional form of regularisation to curtail this kind of overfitting, in the next section, we will introduce a modification of the ΨPO objective such that the optimal empirical policy can be close to $\pi_\mathrm{ref}$ even when preferences are deterministic.</p>
+          </div>
+          <div class="zh">
+            <p>在<em>有限数据</em>下,KL 正则的失效会更明显——我们只能用样本估计 $\hat{p}(y\succ y')$。即便真实偏好为 $p^*(y\succ y') = 0.8$,在数据点很少时也很可能经验上估到 $\hat{p}(y\succ y') = 1$,此时无论 $\tau$ 取多大,经验最优策略都会令 $\pi(y') = 0$。这意味着过拟合在经验上是一个相当严重的问题,尤其在大语言模型这种 context、动作空间都极大的场景下。</p>
+            <p><strong>为什么实践中标准 RLHF 似乎对此更稳健?</strong>DPO 号称的一个优点是免去拟合奖励函数;但我们观察到:实践中当经验偏好概率落在 $\{0,1\}$ 集合内时,奖励函数会被<em>欠拟合</em>——理论上 $\{0,1\}$ 偏好对应的最优奖励是无穷大,但训练中这些值被避开;事实上,对奖励函数施加正则在 RLHF 训练中已被视为重要(Christiano 等,2017)。奖励函数的这种欠拟合,反而是"得到一个对 $\pi_\mathrm{ref}$ 充分正则化的最终策略"的关键;而 DPO 因为<em>免去</em>奖励函数训练,也丢掉了欠拟合奖励所提供的隐式策略正则。</p>
+            <p>虽然早停等标准经验做法仍可作为额外正则来抑制过拟合,但下一节我们将给出对 ΨPO 目标的一种改造,使得即便偏好是确定性的,经验上的最优策略仍能接近 $\pi_\mathrm{ref}$。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3d"></div>
+    </details>
+
+    <details class="sec" id="sec-3e">
+      <summary>
+        <span>§5 IPO 推导(损失 + 唯一性)<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We have observed in the previous section that DPO is prone to overfitting, and this stems from a combination of the unboundedness of $\Psi$, together with not training an explicit reward function. Not training a reward function directly is a clear advantage of DPO, but we would like to avoid the problems of overfitting as well. This analysis of DPO motivates choices of $\Psi$ which are bounded, ensuring that the KL regularisation in Equation (6) remains effective even in the regime of $\{0, 1\}$-valued preferences, as it is often the case when working with empirical datasets. A particularly natural form of objective to consider is given by taking $\Psi$ to be the identity mapping in Equation (6), leading to direct regularised optimisation of total preferences:</p>
+            <div class="bi-eq">$$\max_{\pi}\;p^*_\rho(\pi \succ \mu) - \tau\,D_\mathrm{KL}(\pi\,\|\,\pi_\mathrm{ref}). \quad (8)$$</div>
+            <p>The standard approach to optimise the objective function of Equation (8) is through RLHF with the choice of reward $r(y) = p^*(y \succ \mu)$. However both using RL and estimating the reward model $r(y)$ can be costly. Inspired by DPO one would like to devise an empirical solution for the optimisation problem of Equation (8) which can directly learn from the preference dataset. Thus it would be able to avoid RL and reward modelling altogether.</p>
+          </div>
+          <div class="zh">
+            <p>前一节我们看到:DPO 易于过拟合,这源于两点的叠加——$\Psi$ <em>无界</em> + 不训练显式奖励函数。"不训练奖励函数"是 DPO 的明显优点,但我们也希望避免过拟合。对 DPO 的这一分析促使我们选择<em>有界的</em> $\Psi$,以确保即便偏好为 $\{0,1\}$(在经验数据中常见),公式 (6) 的 KL 正则仍能保持有效。一种特别自然的目标形式,是在公式 (6) 中把 $\Psi$ 取为<em>恒等映射</em>,从而得到"对总偏好做直接的正则化优化"——即公式 (8)。要优化公式 (8) 的标准做法,是用 RLHF 并取奖励 $r(y) = p^*(y\succ\mu)$;但既要 RL 又要估计奖励模型 $r(y)$,二者皆代价高昂。受 DPO 启发,我们希望设计一种<em>直接</em>从偏好数据集学习的经验解法,从而<em>同时</em>免去 RL 与奖励建模。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.1 Derivations and Computationally Efficient Algorithm.</strong> As with DPO, it will be beneficial to re-express Equation (8) as an offline learning objective. To derive such an expression, we begin by following the derivation of Rafailov et al. (2023), manipulating the analytic expression for the optimal policy into a system of root-finding problems. As in the previous section, we drop dependence on the context $x$ from our notation, as all arguments can be applied on a per-context basis.</p>
+            <p><strong>Root-finding problems.</strong> Let $g(y) = \mathbb{E}_{y'\sim\mu}[\Psi(p^*(y \succ y'))]$. Then we have</p>
+            <div class="bi-eq">$$\pi^*(y) \propto \pi_\mathrm{ref}(y)\,\exp(\tau^{-1} g(y)). \quad (9)$$</div>
+            <p>For any $y, y' \in \mathrm{Supp}(\pi_\mathrm{ref})$, we therefore have</p>
+            <div class="bi-eq">$$\frac{\pi^*(y)}{\pi^*(y')} = \frac{\pi_\mathrm{ref}(y)}{\pi_\mathrm{ref}(y')}\,\exp\bigl(\tau^{-1}(g(y) - g(y'))\bigr). \quad (10)$$</div>
+            <p>By letting $h^*(y, y') = \log\!\Bigl(\frac{\pi^*(y)\pi_\mathrm{ref}(y')}{\pi^*(y')\pi_\mathrm{ref}(y)}\Bigr)$ and rearranging Equation (10), we obtain</p>
+            <div class="bi-eq">$$h^*(y, y') = \tau^{-1}\bigl(g(y) - g(y')\bigr). \quad (11)$$</div>
+            <p>The core idea now is to consider a policy $\pi$, define $h_\pi(y, y') = \log\!\Bigl(\frac{\pi(y)\pi_\mathrm{ref}(y')}{\pi(y')\pi_\mathrm{ref}(y)}\Bigr)$, and aim to solve the equations $h_\pi(y, y') = \tau^{-1}(g(y) - g(y'))$, namely Equation (12).</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.1 推导与计算高效的算法。</strong>与 DPO 类似,把公式 (8) 改写为<em>离线</em>学习目标会很有帮助。为此,我们沿用 Rafailov 等(2023)的推导路径,把最优策略的解析表达式整理为一组根求解(root-finding)问题。如上节,我们省去对 context $x$ 的依赖——所有论证都可按 context 逐一应用。</p>
+            <p><strong>根求解问题。</strong>令 $g(y) = \mathbb{E}_{y'\sim\mu}[\Psi(p^*(y\succ y'))]$。于是有公式 (9)。对任意 $y, y' \in \mathrm{Supp}(\pi_\mathrm{ref})$,我们因此有公式 (10)。再令 $h^*(y, y') = \log\!\bigl(\frac{\pi^*(y)\pi_\mathrm{ref}(y')}{\pi^*(y')\pi_\mathrm{ref}(y)}\bigr)$ 并重排公式 (10),得公式 (11)。</p>
+            <p>核心思路是:对一个策略 $\pi$,定义 $h_\pi(y, y') = \log\!\bigl(\frac{\pi(y)\pi_\mathrm{ref}(y')}{\pi(y')\pi_\mathrm{ref}(y)}\bigr)$,并求解 $h_\pi(y, y') = \tau^{-1}(g(y) - g(y'))$,即公式 (12)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Loss for IPO.</strong> We now depart from the approach to the analysis employed by Rafailov et al. (2023), to obtain a novel offline formulation of Equation (6), in the specific case of $\Psi$ as the identity function. In this case, Equation (12) reduces to</p>
+            <div class="bi-eq">$$h_\pi(y, y') = \tau^{-1}\bigl(p^*(y \succ \mu) - p^*(y' \succ \mu)\bigr).$$</div>
+            <p>We begin by re-expressing these root-finding problems as a single optimisation problem $L(\pi)$:</p>
+            <div class="bi-eq">$$L(\pi) = \mathbb{E}_{y, y' \sim \mu}\!\left[\left(h_\pi(y, y') - \frac{p^*(y \succ \mu) - p^*(y' \succ \mu)}{\tau}\right)^{2}\right]. \quad (13)$$</div>
+            <p>One can easily show that for the choice of $\pi^*$ we have $L(\pi^*) = 0$. Thus $\pi^*$ is a global minimiser of $L(\pi)$. The following theorem establishes the uniqueness of this solution.</p>
+            <p><strong>Theorem 2 (Uniqueness of Global/Local Optima).</strong> Assume that $\mathrm{Supp}(\mu) = \mathrm{Supp}(\pi_\mathrm{ref})$ and define $\Pi$ to be the set of policies $\pi$ such that $\mathrm{Supp}(\pi) = \mathrm{Supp}(\mu)$. Then $\pi \mapsto L(\pi)$ has a unique local/global minimum in $\Pi$, which is $\pi^*$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>IPO 的损失。</strong>我们在这里偏离 Rafailov 等(2023)的分析路径,以得到公式 (6) 在 $\Psi$ 取恒等映射时的一种<em>全新的离线表述</em>。此时,公式 (12) 化简为 $h_\pi(y, y') = \tau^{-1}(p^*(y\succ\mu) - p^*(y'\succ\mu))$。</p>
+            <p>我们先把这些根求解问题改写成一个单一的优化问题 $L(\pi)$——即公式 (13)。容易证明:取 $\pi^*$ 时 $L(\pi^*) = 0$,因此 $\pi^*$ 是 $L(\pi)$ 的全局最小点。下面的定理建立了该解的<em>唯一性</em>。</p>
+            <p><strong>定理 2(全局/局部最优的唯一性)。</strong>设 $\mathrm{Supp}(\mu) = \mathrm{Supp}(\pi_\mathrm{ref})$,定义 $\Pi$ 为所有满足 $\mathrm{Supp}(\pi) = \mathrm{Supp}(\mu)$ 的策略 $\pi$ 之集合。则 $\pi\mapsto L(\pi)$ 在 $\Pi$ 中有唯一的局部/全局最小点,即 $\pi^*$。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Proof sketch.</strong> By assumption $\pi^* \in \Pi$, and by definition $\forall \pi \in \Pi$, $L(\pi) \geq 0$. From Equation (11), $L(\pi^*) = 0$, so $\pi^*$ is a global optimum. We parametrise $\Pi$ via vectors of logits $s \in \mathbb{R}^\mathcal{J}$ with $\mathcal{J} = \mathrm{Supp}(\mu)$, setting $\pi_s(y) = e^{s(y)} / \sum_{y' \in \mathcal{J}} e^{s(y')}$. Writing $L(s) = L(\pi_s)$,</p>
+            <div class="bi-eq">$$L(s) = \mathbb{E}_{y,y'\sim\mu}\!\left[\left(\tfrac{p^*(y\succ\mu)-p^*(y'\succ\mu)}{\tau} - (s(y)-s(y')) - \log\tfrac{\pi_\mathrm{ref}(y')}{\pi_\mathrm{ref}(y)}\right)^2\right]. \quad (14)$$</div>
+            <p>The objective is quadratic in $s$. Expanding it, the loss decomposes into a sum of squares</p>
+            <div class="bi-eq">$$\sum_{y,y'\in\mathcal{J}}\mu(y)\mu(y')(s(y) - s(y'))^2 \quad (15)$$</div>
+            <p>plus linear and constant terms, which is a positive-semidefinite quadratic, hence convex (Boyd & Vandenberghe, 2004, Chap. 4). The only direction in which (15) does not increase away from $0$ is the $(1,\ldots,1)$ direction, in which $\pi_s$ does not change. Hence $L$ is strictly convex on the quotient space and $\pi^*$ is the unique local/global minimum in $\Pi$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>证明概要。</strong>由假设 $\pi^*\in\Pi$,且由定义 $\forall \pi\in\Pi$ 有 $L(\pi)\geq 0$。由公式 (11),$L(\pi^*) = 0$,因此 $\pi^*$ 是全局最优。我们用 logits 向量 $s\in\mathbb{R}^\mathcal{J}$($\mathcal{J} = \mathrm{Supp}(\mu)$)参数化 $\Pi$,设 $\pi_s(y) = e^{s(y)}/\sum_{y'\in\mathcal{J}} e^{s(y')}$。记 $L(s) = L(\pi_s)$,得到公式 (14)。</p>
+            <p>该目标作为 $s$ 的函数是<em>二次型</em>。展开后,损失等于平方和(公式 (15))加上线性与常数项;它是半正定二次型,因此凸(Boyd & Vandenberghe, 2004, Chap. 4)。唯一不会让 (15) 离开 $0$ 还能增大的方向是 $(1,\ldots,1)$,但在该方向上 $\pi_s$ 不变。故 $L$ 在商空间上严格凸,$\pi^*$ 是 $\Pi$ 中唯一的局部/全局最小。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.2 Sampled Loss for IPO.</strong> In order to obtain the sampled loss for IPO we need to show that we can build an unbiased estimate of the right-hand side of Equation (13). To this end, we consider the Population IPO Loss:</p>
+            <div class="bi-eq">$$\mathbb{E}_{y, y' \sim \mu}\!\left[\bigl(h_\pi(y, y') - \tau^{-1}\,I(y, y')\bigr)^2\right], \quad (16)$$</div>
+            <p>where $I(y, y')$ is drawn from a Bernoulli distribution with mean $p^*(y \succ y')$, i.e., $I(y, y')$ is $1$ if $y$ is preferred to $y'$ (which happens with probability $p^*(y \succ y')$), and $0$ otherwise. This straightforwardly yields a sample-based loss that can be used, by sampling a pair $(y, y')$ from the preference dataset and consulting the recorded preference to obtain a sample from $I(y, y')$.</p>
+            <p><strong>Proposition 3.</strong> The expressions in Equation (13) and Equation (16) are equal, up to an additive constant independent of $\pi$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.2 IPO 的采样损失。</strong>要得到 IPO 的采样损失,需要证明公式 (13) 右端有<em>无偏估计</em>。为此,考虑总体 IPO 损失(公式 (16)),其中 $I(y, y')$ 从均值 $p^*(y\succ y')$ 的 Bernoulli 分布抽出——即以概率 $p^*(y\succ y')$ 取 $1$(若 $y$ 被偏好),否则取 $0$。这立刻给出一个可用的样本损失:从偏好数据集中抽一对 $(y, y')$ 并查询记录到的偏好以得到 $I(y, y')$ 的一个采样即可。</p>
+            <p><strong>命题 3。</strong>公式 (13) 与公式 (16) 的表达式相差一个不依赖于 $\pi$ 的可加常数。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We now discuss how to approximate the loss in Equation (16) with an empirical dataset. As in our earlier discussion, the empirical dataset $\mathcal{D}$ takes the form $(y_{w,i}, y_{l,i})_{i=1}^N$. Note that each datapoint $(y_{w,i}, y_{l,i})$ contributes two terms to an empirical approximation of Equation (16), with $(y, y', I(y, y')) = (y_{w,i}, y_{l,i}, 1)$, and also $(y, y', I(y, y')) = (y_{l,i}, y_{w,i}, 0)$. This symmetry is important to exploit, and leads to a reduction in the variance of the loss. The overall empirical loss is therefore given by</p>
+            <div class="bi-eq">$$\tfrac{1}{2}\,\mathbb{E}_{(y_w,y_l)\sim\mathcal{D}}\!\left[(h_\pi(y_w, y_l) - \tau^{-1})^2 + h_\pi(y_l, y_w)^2\right],$$</div>
+            <p>which up to a constant equals</p>
+            <div class="bi-eq">$$\mathbb{E}_{(y_w,y_l)\sim\mathcal{D}}\!\left[\left(h_\pi(y_w, y_l) - \frac{\tau^{-1}}{2}\right)^2\right]. \quad (17)$$</div>
+            <p>This simplified form of the loss provides some valuable insights on the way in which IPO optimises the policy $\pi$: IPO learns from the preference dataset simply by regressing the gap between log-likelihood ratios $\log(\pi(y_w)/\pi(y_l))$ and $\log(\pi_\mathrm{ref}(y_w)/\pi_\mathrm{ref}(y_l))$ to $\tau^{-1}/2$. So the weaker the regularisation becomes, the higher would be the log-likelihood ratio of $y_w$ to $y_l$. In other words IPO, unlike DPO, always regularises its solution towards $\pi_\mathrm{ref}$ by controlling the gap between the log-likelihood ratios, thus avoiding the over-fitting to the preference dataset.</p>
+          </div>
+          <div class="zh">
+            <p>下面讨论如何用一个经验数据集来近似公式 (16) 的损失。如前所述,经验数据集 $\mathcal{D}$ 形如 $(y_{w,i}, y_{l,i})_{i=1}^N$。注意每个数据点 $(y_{w,i}, y_{l,i})$ 对公式 (16) 的经验近似贡献<em>两项</em>:$(y, y', I) = (y_{w,i}, y_{l,i}, 1)$,以及 $(y, y', I) = (y_{l,i}, y_{w,i}, 0)$。利用这一对称性很重要——可以降低损失的方差。于是,总的经验损失为(上述均值式),它至一个常数等于公式 (17)。</p>
+            <p>这种化简后的形式给出 IPO 优化策略 $\pi$ 的若干<em>有价值的洞见</em>:IPO 从偏好数据集学习的方式,无非是把"$\log(\pi(y_w)/\pi(y_l))$ 与 $\log(\pi_\mathrm{ref}(y_w)/\pi_\mathrm{ref}(y_l))$ 之差"<em>回归</em>到 $\tau^{-1}/2$。因此正则越弱,$y_w$ 相对 $y_l$ 的对数似然比就越高。换言之,与 DPO 不同,IPO <em>始终</em>通过控制这两个对数似然比之差,把解正则化到 $\pi_\mathrm{ref}$ 附近,从而避免对偏好数据的过拟合。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We summarise the sampled IPO in <strong>Algorithm 1</strong>: given a dataset $\mathcal{D}$ of prompts and preferred/dispreferred generations $(x, y_w, y_l)$ and a reference policy $\pi_\mathrm{ref}$, define $h_\pi(y, y', x) = \log\!\bigl(\frac{\pi(y|x)\pi_\mathrm{ref}(y'|x)}{\pi(y'|x)\pi_\mathrm{ref}(y|x)}\bigr)$ and, starting from $\pi = \pi_\mathrm{ref}$, minimise</p>
+            <div class="bi-eq">$$\mathbb{E}_{(y_w, y_l, x)\sim\mathcal{D}}\!\left(h_\pi(y_w, y_l, x) - \frac{\tau^{-1}}{2}\right)^{2}.$$</div>
+          </div>
+          <div class="zh">
+            <p>我们把采样 IPO 算法总结为<strong>算法 1</strong>:给定一个含 prompt、偏好与非偏好生成 $(x, y_w, y_l)$ 的数据集 $\mathcal{D}$ 与参考策略 $\pi_\mathrm{ref}$,定义 $h_\pi(y, y', x) = \log\!\bigl(\frac{\pi(y|x)\pi_\mathrm{ref}(y'|x)}{\pi(y'|x)\pi_\mathrm{ref}(y|x)}\bigr)$;然后以 $\pi = \pi_\mathrm{ref}$ 为起点,最小化上式。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3e"></div>
+    </details>
+
+    <details class="sec" id="sec-3f">
+      <summary>
+        <span>§5.3–5.4 + §6 实验与结论<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.3 Illustrative Examples — Asymptotic Setting.</strong> To illustrate the qualitative difference between our algorithm and DPO we consider a few simple cases. For simplicity we assume there is no context $x$, i.e., we are in the bandit setting. We first consider the simple case where we have $2$ actions only, $y_1$ and $y_2$, and a deterministic preference between them: $p^*(y_1 \succ y_2) = 1$. Suppose we start with a uniform $\pi_\mathrm{ref}$ and $\mu$. We know from Section 4.2 that DPO will converge to the deterministic policy $\pi^*(y_1) = 1$, $\pi^*(y_2) = 0$ regardless of the value of $\tau$. Thus even when the regularisation coefficient $\tau$ is very large, this is very different from the uniform $\pi_\mathrm{ref}$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.3 说明性示例 —— 渐近设定。</strong>为说明 IPO 与 DPO 之间的定性差异,我们考虑若干简单情形。为简化,我们假设没有 context $x$,即处于 bandit 设定。先看一个简单情形:仅有两个动作 $y_1, y_2$,二者之间偏好确定:$p^*(y_1\succ y_2) = 1$。设初始 $\pi_\mathrm{ref}$ 与 $\mu$ 均为均匀。由 §4.2 我们知道:不论 $\tau$ 取何值,DPO 都将收敛到确定性策略 $\pi^*(y_1) = 1$、$\pi^*(y_2) = 0$。因此即便正则系数 $\tau$ 非常大,这与均匀的 $\pi_\mathrm{ref}$ <em>截然不同</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Now, let us derive the optimal policy for IPO. We have $p^*(y_1 \succ \mu) = 3/4$ and $p^*(y_2 \succ \mu) = 1/4$. Plugging this into Equation (9) with $\Psi = I$ gives</p>
+            <div class="bi-eq">$$\pi^*(y_1) = \frac{\exp(0.75\,\tau^{-1})}{\exp(0.75\,\tau^{-1}) + \exp(0.25\,\tau^{-1})} = \sigma(0.5\,\tau^{-1}),\quad \pi^*(y_2) = \sigma(-0.5\,\tau^{-1}).$$</div>
+            <p>Hence we see that if we have large regularisation as $\tau \to +\infty$, then $\pi^*$ converges to the uniform policy $\pi_\mathrm{ref}$, and on the flip side as $\tau \to 0$, then $\pi^*(y_1) \to 1$ and $\pi^*(y_2) \to 0$, which is the deterministic optimal policy. The regularisation parameter $\tau$ can now actually be used to control how close to $\pi_\mathrm{ref}$ we are.</p>
+          </div>
+          <div class="zh">
+            <p>现在我们推 IPO 的最优策略。我们有 $p^*(y_1\succ\mu) = 3/4$、$p^*(y_2\succ\mu) = 1/4$。把这些代入公式 (9) 并取 $\Psi = I$,得 $\pi^*(y_1) = \sigma(0.5\,\tau^{-1})$、$\pi^*(y_2) = \sigma(-0.5\,\tau^{-1})$。可见:当正则很大($\tau\to+\infty$)时,$\pi^*$ 收敛到均匀的 $\pi_\mathrm{ref}$;反之当 $\tau\to 0$ 时,$\pi^*(y_1)\to 1$、$\pi^*(y_2)\to 0$,即确定性的最优策略。因此正则参数 $\tau$ <em>真的可以</em>用来控制"我们离 $\pi_\mathrm{ref}$ 有多近"。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.4 Sampled Preferences.</strong> So far we relied on the closed-form optimal policy from Eq. (9) to study DPO and IPO's stability, but this equation is not applicable to more complex settings where we only have access to sampled preferences instead of $p^*$. We can still however find accurate approximations of the optimal policy by choosing a parametrisation $\pi_\theta$ and optimising $\theta$ with an empirical loss over a dataset and iterative gradient-based updates. We use this approach to show two non-asymptotic examples where DPO over-fits the dataset of preferences and ignores $\pi_\mathrm{ref}$: when one action $y$ wins against all others DPO pushes $\pi_\theta(y)$ to $1$ regardless of $\tau$, and conversely when one action $y$ never wins against the others DPO pushes $\pi_\theta(y)$ to $0$ again regardless of $\tau$. In the same scenarios, IPO does not converge to these degenerate solutions but instead remains close to $\pi_\mathrm{ref}$ based on the strength of the regularisation $\tau$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.4 采样偏好。</strong>至此我们都依赖公式 (9) 的闭式最优策略来研究 DPO 与 IPO 的稳定性,但这条公式无法直接套到"只能拿到采样偏好而非 $p^*$"的更复杂设定。然而我们仍可通过选择参数化 $\pi_\theta$、在数据集上用经验损失 + 迭代梯度更新来优化 $\theta$,从而精确逼近最优策略。我们用这一思路展示<em>两个非渐近</em>例子:DPO 过拟合偏好数据并无视 $\pi_\mathrm{ref}$——当一个动作 $y$ 胜过其它所有动作时,无论 $\tau$ 取何值,DPO 都会把 $\pi_\theta(y)$ 推到 $1$;反过来,当一个动作 $y$ <em>从未</em>胜出时,无论 $\tau$ 取何值,DPO 又都会把 $\pi_\theta(y)$ 推到 $0$。在同样的情形下,IPO <em>不会</em>收敛到这些退化解,而是根据正则强度 $\tau$ 留在 $\pi_\mathrm{ref}$ 附近。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>For both scenarios we consider a discrete space $\mathcal{Y} = \{y_a, y_b, y_c\}$ with $3$ actions, and select a dataset of pairs $\mathcal{D} = \{(y_{w,i}, y_{l,i})\}$. Given $\mathcal{D}$, we leverage the empirical losses from Eq. (4) and Eq. (13) to find DPO's and IPO's optimal policy. We encode policies as $\pi_\theta(y_i) = \mathrm{softmax}(\theta)_i$ using a vector $\theta \in \mathbb{R}^3$, and optimise them for $18000$ steps using Adam (Kingma and Ba, 2014) with learning rate $0.01$ and mini-batch size $9$. Mini-batches are constructed using uniform sampling with replacement from $\mathcal{D}$. Both policies and losses are implemented using the flax python framework (Bradbury et al., 2018; Heek et al., 2023), and the Adam implementation is from optax (Babuschkin et al., 2020). For each set of hyperparameters we repeat the experiment $10$ times with different seeds, and report mean and $95\%$ confidence intervals.</p>
+          </div>
+          <div class="zh">
+            <p>在两个情形下,我们都考虑含 $3$ 个动作的离散空间 $\mathcal{Y} = \{y_a, y_b, y_c\}$,并选定一组成对数据集 $\mathcal{D} = \{(y_{w,i}, y_{l,i})\}$。给定 $\mathcal{D}$,我们用公式 (4) 与公式 (13) 的经验损失分别求出 DPO 与 IPO 的最优策略。策略以 $\pi_\theta(y_i) = \mathrm{softmax}(\theta)_i$ 编码,$\theta\in\mathbb{R}^3$;用 Adam(Kingma & Ba, 2014)优化 $18000$ 步,学习率 $0.01$、mini-batch 大小 $9$。mini-batch 从 $\mathcal{D}$ 做<em>有放回均匀采样</em>构造。策略与损失用 flax(Bradbury 等,2018;Heek 等,2023)实现,Adam 来自 optax(Babuschkin 等,2020)。每组超参重复 $10$ 次不同种子,汇报均值与 $95\%$ 置信区间。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>IPO Avoids Greedy Policies.</strong> For the first example we sample each unique action pair once to collect a dataset $\mathcal{D}$ containing $3$ observed preferences. Due to symmetries of pairwise preferences, sampling only $3$ preferences can result in only two outcomes (up to permutations of the actions): $\mathcal{D}_1 = \{(y_a, y_b), (y_b, y_c), (y_a, y_c)\}$ and $\mathcal{D}_2 = \{(y_a, y_b), (y_b, y_c), (y_c, y_a)\}$, where we focus on $\mathcal{D}_1$, which represents a total ordering, rather than $\mathcal{D}_2$, which represents a cycle. The outcome of the experiment is reported in Fig. 1 in which we plot the learning curves for varying values of $\tau$. We observe that DPO always converges to the deterministic policy for all values of $\tau$. In other words DPO completely ignores the reference policy, no matter how strong is the regularisation term, and converges to the action which is preferred in the dataset. On the other hand, IPO prevents the policy from becoming greedy when the regularisation is strong.</p>
+          </div>
+          <div class="zh">
+            <p><strong>IPO 避免贪心策略。</strong>第一个例子中,我们对每对不同动作各采样一次,得到包含 $3$ 条偏好的数据集 $\mathcal{D}$。由于成对偏好的对称性,只采 $3$ 条偏好(忽略动作排列)只会产生两种结果:$\mathcal{D}_1 = \{(y_a, y_b), (y_b, y_c), (y_a, y_c)\}$ 与 $\mathcal{D}_2 = \{(y_a, y_b), (y_b, y_c), (y_c, y_a)\}$;我们聚焦 $\mathcal{D}_1$(<em>全序</em>)而非 $\mathcal{D}_2$(<em>循环</em>)。实验结果见图 1,我们在不同 $\tau$ 下绘制学习曲线。可见:对任意 $\tau$,DPO <em>总是</em>收敛到确定性策略——也就是说,无论正则项多强,DPO 都<em>完全无视</em>参考策略,收敛到数据集中被偏好的动作。而 IPO 在强正则下能避免策略变贪心。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>IPO Does not Exclude Actions.</strong> In the first example DPO converges to a deterministic policy because one action strictly dominates all others and the loss continues to push up its likelihood until it saturates. The opposite effect happens for the logical opposite condition, i.e., when one action does not have at least a victory in the dataset DPO will set its probability to $0$ regardless of $\tau$. While this is less disruptive than the first example (a single probability is perturbed whereas previously the whole policy was warped by an over-achieving action) it is also much more common in real-world data. In particular, whenever the action space is large but the dataset small, some actions will necessarily be sampled rarely or only once, making it likely to never observe a victory. Especially because we do not have data on their performance, $\pi$ should stick close to $\pi_\mathrm{ref}$ for safety, but DPO's objective does not promote this.</p>
+            <p>In the final example the dataset consists of two observed preferences $\mathcal{D}_3 = \{(y_a, y_b), (y_b, y_a)\}$ and leaves the pair $(y_a, y_c)$ completely unobserved. We compute solutions using Adam once again, and report the results in Fig. 2 for varying values of $\tau$. We observe again here that DPO ignores the prior $\pi_\mathrm{ref}$ completely, no matter how strong we regularise the objective, whereas IPO gradually decreases the probability of the unobserved action with $\tau$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>IPO 不会排除动作。</strong>在第一个例子中,DPO 收敛到确定性策略是因为某个动作严格支配其它所有动作,损失不断把它的似然推高直到饱和。<em>反向</em>条件也会出现类似效应:当一个动作在数据集中<em>没有任何一次胜出</em>,DPO 会把它的概率设到 $0$,与 $\tau$ 无关。虽然这比第一个例子破坏性小(只扰动单一概率,而非把整体策略被一个过分胜出的动作扭曲),但它在实际数据中其实<em>更常见</em>——尤其当动作空间大、数据集又小时,某些动作必然采样稀少或仅出现一次,以致很可能从未被观察到胜出。<em>正因为</em>我们没有这些动作的表现数据,出于安全考虑 $\pi$ 应当贴近 $\pi_\mathrm{ref}$,但 DPO 的目标不会促成这一点。</p>
+            <p>在最后一个例子中,数据集仅含两条观察到的偏好 $\mathcal{D}_3 = \{(y_a, y_b), (y_b, y_a)\}$,而对 $(y_a, y_c)$ 完全没有观察。我们再次用 Adam 求解,并在图 2 中报告不同 $\tau$ 下的结果。我们再次观察到:无论正则多强,DPO 都<em>完全</em>无视先验 $\pi_\mathrm{ref}$;而 IPO 随 $\tau$ 增大,会逐渐降低未观察动作的概率。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>6 Conclusion and Future Work.</strong> We presented a unified objective, called ΨPO, for learning from preferences. It unifies RLHF and DPO methods. In addition, we introduced a particular case of ΨPO, called IPO, that allows to learn directly from preferences without a reward modelling stage and without relying on the Bradley-Terry modelisation assumption that assumes that pairwise preferences can be substituted with pointwise rewards. This is important because it allows to avoid the overfitting problem. This theoretical contribution is only useful in practice if an empirical sampled loss function can be derived. This is what we have done in Sec. 5 where we show that IPO can be formulated as a root-finding problem from which an empirical sampled loss function can be derived. The IPO loss function is simple, easy to implement and theoretically justified. Finally, in Sec. 5.3 and Sec. 5.4, we provide illustrative examples where we highlight the instabilities of DPO when the preferences are fully-known as well as when they are sampled. Those minimal experiments are sufficient to prove that IPO is better suited to learn from sampled preferences than DPO. Future works should scale those experiments to more complex settings such as training language models on human preferences data.</p>
+          </div>
+          <div class="zh">
+            <p><strong>6 结论与未来工作。</strong>我们提出了一个统一的偏好学习目标——ΨPO,它统一了 RLHF 与 DPO。此外,我们引入了 ΨPO 的一个特例——IPO——它允许<em>直接</em>从偏好学习,既不需要奖励建模阶段,也不依赖 BT 建模假设(即"成对偏好可被替换为逐点奖励")。这一点重要,因为它得以规避过拟合问题。这一理论贡献只有在能导出经验上的<em>采样损失函数</em>时,才有实践意义——我们在第 5 节中做到了这一点:把 IPO 表述为一个根求解问题,并从中导出经验采样损失函数。IPO 损失简单、易实现、有理论保证。最后,在 §5.3 与 §5.4 中,我们以说明性例子凸显了"在偏好完全已知"以及"偏好为采样"两种情形下 DPO 的不稳定性。这些最小实验已足以证明 IPO 比 DPO 更适合从采样偏好中学习。未来工作应当把这些实验扩展到更复杂的设定,例如在人类偏好数据上训练语言模型。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3f"></div>
+    </details>
+    
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>References<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content"><p style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">(参考文献仅作索引,不译)</p><p>Igor Babuschkin et al. The DeepMind JAX ecosystem (2020). · Quentin Bertrand, Wojciech Czarnecki, Gauthier Gidel. On the limitations of the Elo: Real-world games are transitive, not additive. AISTATS 2023. · Stephen Boyd, Lieven Vandenberghe. Convex Optimization. Cambridge UP, 2004. · James Bradbury et al. JAX: composable transformations of Python+NumPy programs (2018). · Ralph A. Bradley, Milton E. Terry. Rank analysis of incomplete block designs: I. The method of paired comparisons. Biometrika 39(3/4):324–345, 1952. · Robert Busa-Fekete et al. Preference-based RL: evolutionary direct policy search using a preference-based racing algorithm. Machine Learning, 2014. · Robert Busa-Fekete et al. Preference-based evolutionary direct policy search. Autonomous Learning Workshop @ ICRA, 2013. · Xiaoyu Chen, Han Zhong, Zhuoran Yang, Zhaoran Wang, Liwei Wang. Human-in-the-loop: Provably efficient preference-based RL with general function approximation. ICML 2022. · Paul Christiano, Jan Leike, Tom Brown, Miljan Martic, Shane Legg, Dario Amodei. Deep reinforcement learning from human preferences. NeurIPS 2017. · Matthieu Geist, Bruno Scherrer, Olivier Pietquin. A theory of regularized Markov decision processes. ICML 2019. · Jonathan Heek et al. Flax: a neural network library and ecosystem for JAX (2023). · Diederik P. Kingma, Jimmy Ba. Adam: A method for stochastic optimization. ICLR 2014. · Angeliki Lazaridou, Anna Potapenko, Olivier Tieleman. Multi-agent communication meets natural language. ACL 2020. · Tyler Lu, Dávid Pál, Martin Pál. Contextual multi-armed bandits. AISTATS 2010. · Yuchen Lu, Soumye Singhal, Florian Strub, Aaron Courville, Olivier Pietquin. Countering language drift with seeded iterated learning. ICML 2020. · Ellen Novoseller, Yibing Wei, Yanan Sui, Yisong Yue, Joel Burdick. Dueling posterior sampling for preference-based RL. UAI 2020. · OpenAI. GPT-4 Technical Report, 2023. · Long Ouyang et al. Training language models to follow instructions with human feedback (InstructGPT). NeurIPS 2022. · Aldo Pacchiano, Aadirupa Saha, Jonathan Lee. Dueling RL: RL with trajectory preferences. arXiv 2023. · Alec Radford, Karthik Narasimhan, Tim Salimans, Ilya Sutskever. Improving language understanding by generative pre-training. 2018. · Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher Manning, Chelsea Finn. Direct preference optimization: Your language model is secretly a reward model. arXiv 2023. · Prajit Ramachandran, Peter J. Liu, Quoc V. Le. Unsupervised pretraining for sequence to sequence learning. EMNLP 2016. · John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov. Proximal policy optimization algorithms. arXiv 2017. · Nisan Stiennon et al. Learning to summarize with human feedback. NeurIPS 2020. · Yuanhao Wang, Qinghua Liu, Chi Jin. Is RLHF more difficult than standard RL? arXiv 2023. · Jason Wei et al. Finetuned language models are zero-shot learners (FLAN). ICLR 2022. · Yao Zhao, Rishabh Joshi, Tianqi Liu, Misha Khalman, Mohammad Saleh, Peter J. Liu. SLiC-HF: Sequence likelihood calibration with human feedback. arXiv 2023.</p><p style="font-family:var(--mono);font-size:11.5px;color:var(--text-faint);">附录 A(KL-正则化 argmax 存在性与唯一性、Supp(π)≠Supp(µ) 时的非唯一性反例)与附录 B(命题 4:DPO 与 RLHF 等价性的更一般证明)请参考原文 PDF。</p></div> Quentin Bertrand, Wojciech Marian Czarnecki, and Gauthier Gidel. On the limitations of the Elo: Realworld games are transitive, not additive. In Proceedings of the International Conference on Artificial Intelligence and Statistics, 2023. Stephen P. Boyd and Lieven Vandenberghe. Convex optimization. Cambridge University Press, 2004. James Bradbury, Roy Frostig, Peter Hawkins, Matthew James Johnson, Chris Leary, Dougal Maclaurin, George Necula, Adam Paszke, Jake VanderPlas, Skye Wanderman-Milne, and Qiao Zhang. JAX: composable transformations of Python+NumPy programs, 2018. URL http:// github.com/google/jax. Ralph Allan Bradley and Milton E Terry. Rank analysis of incomplete block designs: I. The method of paired comparisons. Biometrika, 39(3/4):324–345, 1952. R´obert Busa-Fekete, Bal´azs Sz¨or´enyi, Paul Weng, Weiwei Cheng, and Eyke H¨ullermeier. Preference-based reinforcement learning: Evolutionary direct policy search using a preference-based racing algorithm. Machine Learning, (3):327–351, 2014. R´obert Busa-Fekete, Bal´azs Sz¨orenyi, Paul Weng, Weiwei Cheng, and Eyke H¨ullermeier. Preference-based evolutionary direct policy search. In Autonomous Learning Workshop @ ICRA, 2013. Xiaoyu Chen, Han Zhong, Zhuoran Yang, Zhaoran Wang, and Liwei Wang. Human-in-the-loop: Provably efficient preference-based reinforcement learning with general function approximation. In Proceedings of the International Conference on Machine Learning, 2022. Paul F. Christiano, Jan Leike, Tom Brown, Miljan Martic, Shane Legg, and Dario Amodei. Deep reinforcement learning from human preferences. In Advances in Neural Information Processing Systems, 2017. Matthieu Geist, Bruno Scherrer, and Olivier Pietquin. A theory of regularized Markov decision processes. In Proceedings of the International Conference on Machine Learning, 2019. Jonathan Heek, Anselm Levskaya, Avital Oliver, Marvin Ritter, Bertrand Rondepierre, Andreas Steiner, and Marc van Zee. Flax: A neural network library and ecosystem for JAX, 2023. URL http: //github.com/google/flax. Diederik P Kingma and Jimmy Ba. Adam: A method for stochastic optimization. In Proceedings of the International Conference on Learning Representations, 2014. Angeliki Lazaridou, Anna Potapenko, and Olivier Tieleman. Multi-agent communication meets natural language: Synergies between functional and structural language learning. In Proceedings of the Annual Meeting of Association for Computational Linguistics, 2020. Tyler Lu, D´avid P´al, and Martin P´al. Contextual multi-armed bandits. In Proceedings of the International Conference on Artificial Intelligence and Statistics, 2010. Yuchen Lu, Soumye Singhal, Florian Strub, Aaron Courville, and Olivier Pietquin. Countering language drift with seeded iterated learning. In Proceedings of the International Conference on Machine Learning, 2020. Ellen Novoseller, Yibing Wei, Yanan Sui, Yisong Yue, and Joel Burdick. Dueling posterior sampling for preference-based reinforcement learning. In Proceedings of the Conference on Uncertainty in Artificial Intelligence, 2020. OpenAI. Gpt-4 technical report, 2023. Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller amd Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, and Ryan Lowe. Training language models to follow instructions with human feedback. In Advances in Neural Information Processing Systems, 2022. Aldo Pacchiano, Aadirupa Saha, and Jonathan Lee. Dueling RL: Reinforcement learning with trajectory preferences. arXiv, 2023. Alec Radford, Karthik Narasimhan, Tim Salimans, and Ilya Sutskever. Improving language understanding by generative pre-training. 2018. Rafael Rafailov, Archit Sharma, Eric Mitchell, Stefano Ermon, Christopher D. Manning, and Chelsea Finn. Direct preference optimization: Your language model is secretly a reward model. arXiv, 2023. Prajit Ramachandran, Peter J. Liu, and Quoc V. Le. Unsupervised pretraining for sequence to sequence learning. In Proceedings of the Conference on Empirical Methods in Natural Language Processings, 2016. Gheshlaghi Azar, Rowland, Piot, Guo, Calandriello, Valko, Munos John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization algorithms. arXiv, 2017. Nisan Stiennon, Long Ouyang, Jeffrey Wu, Daniel Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, and Paul F. Christiano. Learning to summarize with human feedback. Advances in Neural Information Processing Systems, 2020. Yuanhao Wang, Qinghua Liu, and Chi Jin. Is RLHF more difficult than standard RL? arXiv, 2023. Jason Wei, Maarten Bosma, Vincent Y. Zhao, Kelvin Guu, Adams Wei Yu, Brian Lester, Nan Du, Andrew M. Dai, and Quoc V. Le. Finetuned language models are zero-shot learners. In Proceedings of the International Conference on Learning Representations, 2022. Yao Zhao, Rishabh Joshi, Tianqi Liu, Misha Khalman, Mohammad Saleh, and Peter J Liu. SLiC-HF: Sequence likelihood calibration with human feedback. arXiv, 2023. Understand Learning from Human Preferences APPENDICES A Proofs A.1 Existence and uniqueness of the regularized argmaximum For completeness, we briefly recall the proof of existence and uniqueness of the argmaximum of the following regularized criterion that can also be found in the work of Rafailov et al. (2023): Lτ(δ) = Es∈δ[f(s)] −τKL(δ || η), = X s∈S δ(s)f(s) −τKL(δ || η), where S is a finite set, f ∈RS a function mapping elements of S to real numbers, τ ∈R∗ + a strictly positive real number, δ ∈∆S and η ∈∆S are discrete probability distributions over S. In particular, we recall that a discrete probability distribution δ ∈∆S can be identified as a positive real function δ ∈RS + verifying: X s∈S δ(s) = 1. Now, if we define the softmax probability δ∗∈∆S as: ∀s ∈S, δ∗(s) = η(s) exp(τ −1f(s)) P s′∈S η(s′) exp(τ −1f(s′)), then, under the previous definitions, we have the following result: δ∗= arg max δ∈∆S Lτ(δ) Proof. Lτ(δ) τ = X s∈S δ(s)f(s) τ −KL(δ || η), = X s∈S δ(s)f(s) τ − X s∈S δ(s) log  δ(s) η(s)  , = X s∈S δ(s)  f(s) τ −log  δ(s) η(s)  , = X s∈S δ(s)  log  exp(τ −1f(s))  −log  δ(s) η(s)  , = X s∈S δ(s)  log  η(s) exp(τ −1f(s)) δ(s)  , = X s∈S δ(s)  log  η(s) exp(τ −1f(s)) P s′∈S η(s′) exp(τ −1f(s′)) P s′∈S η(s′) exp(τ −1f(s′)) δ(s)  , = X s∈S δ(s)  log  η(s) exp(τ −1f(s)) P s′∈S η(s′) exp(τ −1f(s′)) δ(s)  + X s∈S δ(s) log   X s′∈S η(s′) exp(τ −1f(s′))  , = X s∈S δ(s)  log  δ∗(s) δ(s)  + log   X s′∈S η(s′) exp(τ −1f(s′))  , = −KL(δ || δ∗) + log   X s′∈S η(s′) exp(τ −1f(s′))  . Gheshlaghi Azar, Rowland, Piot, Guo, Calandriello, Valko, Munos By definition of the KL, we now that δ∗= arg maxδ∈∆S  −KL(δ || δ∗)  and as: −KL(δ || δ∗) = Lτ(δ) τ −log   X s′∈S η(s′) exp(τ −1f(s′))  where log   P s′∈S η(s′) exp(τ −1f(s′))  is a constant (does not depend on δ) and τ a positive multiplicative term, then −KL(δ || δ∗) and Lτ(δ) share the same argmaximum. This concludes the proof. A.2 Non-uniqueness when Supp(π(·)) ̸= Supp(µ): Notice that if we search for a solution where the support of π is strictly larger than that of µ then there could be multiple solutions. Let us illustrate this case with a simple example. Consider a single state x and 3 actions y1, y2, y3. The reference policy πref is uniform over {y1, y2, y3} and the policy µ assigns a probability 1/2 to both y1 and y2 and 0 probability to y3. Thus the loss is L(π) = 2  τ −1 p∗(y1 ≻µ) −p∗(y2 ≻µ)  −log π(y1) π(y2) 2 . We deduce that any policy π = (p, q, 1 −p −q) such that p q = eτ −1(p∗(y1≻µ)−p∗(y2≻µ)) is a global minimum of L(π). In particular there are an infinity of solutions different from the optimal solution π∗. The problem comes from the fact that when the support of µ does not cover the whole action space there are not enough constraints to uniquely characterize π∗. Assuming that the supports of πref and µ coincide enables us to recover uniqueness of the solution, as proven in Theorem 2. B Additional results In this section, we show the equivalence of DPO and RLHF, regardless of whether the preference model p∗corresponds to a Bradley-Terry model. Note that the assumption of the existence of a minimizer is to exclude cases where the loss is minimized by taking the rewards of certain actions to +/ −∞. Proposition 4. Consider a preference model p∗such that there exists a minimizer to the Bradley-Terry loss arg min r − E x∼ρ y∼µ(·|x) y′∼µ(·|x) [p∗(y ≻y′|x) log σ(r(x, y) −r(x, y′))] . Then, the optimal policy for the DPO objective in Equation (4) and for the RLHF objective in Equation (3) with reward model given as the minimizer to the Bradley-Terry loss above are identical, regardless of whether or not p∗corresponds to a Bradley-Terry preference model. Proof. Recall that the optimal policy π∗ r for a given reward function r for the objective in Equation (3) is given by π∗ r(y|x) ∝πref(y|x) exp(τ −1r(x, y)). It therefore follows that − E x∼ρ y,y′∼µ(·|x) [p(y ≻y′|x) log σ(r(x, y) −r(x, y′))] = − E x∼ρ y,y′∼µ(·|x) h p(y ≻y′|x) log σ  τ log  π∗ r(y|x) π∗r(y′|x)  −τ log  πref(y|x) πref(y′|x) i . In words, the value of the Bradley-Terry reward objective for r is the value of the DPO objective for π∗ r. We recall also that the map r 7→π∗ r is surjective. Now, suppose r is optimal for the Bradley-Terry reward objective, meaning that π∗ r is optimal for the RLHF objective. If π∗ r is not optimal for the DPO objective, then there exists another policy π′ that obtains a strictly lower value for the DPO loss. But then there exists a reward function r′ such that π′ = π∗ r′, such as r′(x, y) = τ log(π′(y|x)/πref(y|x)), and this r′ therefore obtains a lower Bradley-Terry loss than r, a contradiction. Similarly, if π∗ is optimal for the DPO objective, the corresponding reward function r(x, y) = τ log(π∗(y|x)/πref(y|x)) must be optimal for the Bradley-Terry reward loss. The corresponding optimizer for the RLHF objective is then given by π(y|x) ∝πref(y|x) exp(τ −1τ log(π∗(y|x)/πref(y|x))) = π∗(y|x), as required.</p></div>
+      <div class="sec-claude-note" data-sec-idx="4"></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

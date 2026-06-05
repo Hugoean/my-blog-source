@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Llama 3 Herd of Models · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2407.21783 · 92 页 · 8 张图</div>
+    <h1>The Llama 3 Herd of Models</h1>
+    <div class="meta-bar">
+      <span class="track-B">轨道 B</span>
+      <span class="prio-skim">优先级 skim</span>
+      <span>W6</span>
+      <span>Tech Report</span><span>Meta</span>
+      <span><a href="https://arxiv.org/abs/2407.21783" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2407.21783.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>Llama 3 是 Meta 在 2024 年 7 月发布的开源基础模型群——以 <strong>405B 参数 dense Transformer</strong>(GQA + RoPE θ=500K + 128K 词表)为旗舰,在精心清洗的 <strong>15.6T 多语言 token</strong> 上预训练,通过"标准 8K + 六阶段长上下文"扩到 <strong>128K context</strong>,再用"<strong>SFT → 拒绝采样 → DPO</strong>"为骨干的 <strong>6 轮迭代 post-training</strong> 对齐;论文还以"组合式适配器"(image / video / speech)给出多模态实验结果。一句话:<strong>数据质量 + 规模 + 工程简化(dense 而非 MoE、DPO 而非 PPO)</strong>三条路线同时推到底。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li><strong>预训练数据清洗管线(必背)</strong>:Web 数据走 <em>PII/安全过滤 → 自研 HTML parser(保留 alt 与数学/代码结构) → URL/document(MinHash)/line 三级 dedup → 启发式(重复 n-gram、脏词、token KL) → fasttext + DistilRoBERTa 质量分类器</em>;对 code/math 走 prompt 调优的领域分类器;多语言用 fasttext 识别到 176 种语言。15.6T token 比 Llama 2 的 1.8T 多 ~8.7×。</li>
+        <li><strong>15.6T 预训练 mixture</strong>:最终配比 <em>50% general knowledge / 25% math+reasoning / 17% code / 8% multilingual</em>;靠"小模型在不同 mixture 上的 scaling law 实验"挑配比,再用 annealing(40M token 线性退火到 0,40B token 上 30% 新数据)反向评估小数据集价值。</li>
+        <li><strong>架构与 Llama 2 的 diff</strong>:仍是 <strong>dense Transformer</strong>(不上 MoE 以最大化训练稳定性);<em>GQA 8 KV heads</em>;<em>RoPE base = 500,000</em>(支持更长 context);<em>tiktoken 100K + 28K 非英语 = 128K 词表</em>(压缩率 3.17→3.94 chars/token);文档间 attention mask 防止跨 doc 注意。405B 用 126 layers / d=16,384 / 128 heads,scaling-law 给出 16.55T compute-optimal,实际训 15.6T。</li>
+        <li><strong>长上下文 6 阶段到 128K</strong>:预训练前期固定 8K;末尾按 <em>8K → 16K → 32K → 64K → 96K → 128K</em> 六档逐档增长,每档训练直到 (1) 短 ctx 评测完全恢复且 (2) NIH "needle-in-haystack" 完全通过;长 ctx 阶段共烧 ~800B token,最后 40M token 线性退火并做 Polyak 平均。</li>
+        <li><strong>Post-training 4 步 × 6 轮</strong>:每轮 = <em>① RM 训练(去掉 Llama 2 margin 项,引入 edited > chosen > rejected 三档排序) → ② SFT 数据 = 拒绝采样 + 合成数据,LR 1e-5 × 8.5–9K step → ③ DPO 在最新策略采的偏好对上训,β=0.1,LR 1e-5;两个改动: (a) 把 header/termination 等格式 token 从 loss 里 mask 掉, (b) 加 NLL 0.2 系数正则 → ④ 多组 (RM/SFT/DPO) checkpoint 做模型平均</em>。共 6 轮迭代,每轮重采偏好数据。<strong>选 DPO 而非 PPO 的理由</strong>:同等规模下 DPO 计算更省、IFEval 等指令跟随更好。</li>
+        <li><strong>DPO 公式 + 改动</strong>:基本目标 $\mathcal{L}_{\mathrm{DPO}} = -\mathbb{E}\bigl[\log\sigma(\beta\log\tfrac{\pi_\theta(y_w|x)}{\pi_{\mathrm{ref}}(y_w|x)} - \beta\log\tfrac{\pi_\theta(y_l|x)}{\pi_{\mathrm{ref}}(y_l|x)})\bigr]$;Llama 3 把 chat 模板 special token mask 出 loss,再叠加 $0.2 \cdot \mathcal{L}_{\mathrm{NLL}}(y_w)$。</li>
+        <li><strong>vs Llama 2</strong>:(a) 数据 1.8T → 15.6T 多语言;(b) 词表 32K → 128K;(c) context 4K → 128K;(d) GQA 默认开;(e) post-training 从 PPO+SFT 改成 SFT+DPO+RS 多轮;(f) RM loss 去 margin,加 edited 第三档。</li>
+        <li><strong>多模态组合式适配器</strong>:不做联合预训练,而是冻结 LM、训 <em>image encoder + cross-attn vision adapter</em>(图文对),再叠 <em>temporal aggregator + video cross-attn</em>(视频文本),最后训 <em>speech adapter</em>(自监督 mask + 离散 token + TTS);好处:文本能力不受损、避免跨模态 token 化与困惑度冲突。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      92 页全方位报告:重点啃 §3 预训练数据/架构/scaling/long-ctx 与 §4 post-training(SFT+DPO+RS),其余跳读
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble / 作者团队</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">§1 Introduction / 总览</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3a">§3.1 Pre-Training Data / 预训练数据清洗管线</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-3b">§3.2 Architecture &amp; Scaling Laws / 架构与 scaling law</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-3c">§3.4 Training Recipe &amp; Long-Context / 训练配方与 128K 长上下文</a><span class="toc-page">p.13</span></li>
+
+      <li><a href="#sec-4a">§4.1 Post-Training Modeling / RM + SFT + DPO + 模型平均</a><span class="toc-page">p.15</span></li>
+
+      <li><a href="#sec-4b">§4.2 Post-Training Data / 偏好数据 + SFT 配比 + 质量控制</a><span class="toc-page">p.17</span></li>
+
+      <li><a href="#sec-4c">§4.3 Capability-specific Data / 推理 / 代码 / 工具 / 事实性 / 可控性</a><span class="toc-page">p.20</span></li>
+
+      <li><a href="#sec-3">§5 Results / 评测结果(text 模型)</a><span class="toc-page">p.28</span></li>
+
+      <li><a href="#sec-4">§5.4–6 Safety &amp; Inference / 安全与推理(FP8/PP)</a><span class="toc-page">p.51</span></li>
+
+      <li><a href="#sec-7a">§7 Vision Experiments / 多模态视觉组合式适配器</a><span class="toc-page">p.54</span></li>
+
+      <li><a href="#sec-7b">§8 Speech Experiments / 语音编码器 + 适配器 + TTS</a><span class="toc-page">p.63</span></li>
+
+      <li><a href="#sec-5">§9 Related Work</a><span class="toc-page">p.69</span></li>
+
+      <li><a href="#sec-6">§10 Conclusion</a><span class="toc-page">p.70</span></li>
+
+      <li><a href="#sec-7">References(略)</a><span class="toc-page">p.75</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (8 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2407.21783_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.1 · 23666×6483</div>
+          <div class="fig-caption">Figure 1. The development of our Llama 3 language</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>论文的"骨架图"。从左到右展示 Llama 3 训练全流程:<em>原始文本 → tokenization → 405B dense Transformer 在 15.6T token 上预训练 → 长上下文继续预训练扩到 128K → post-training(SFT + RS + DPO,六轮) → 对齐后的 Llama 3</em>;下方分支接入 image encoder / video adapter / speech adapter,组合成多模态模型。</p>
+          <p><strong>② 关键数据:</strong>预训练 15.6T tokens、context 8K → 128K、3.8 × 10²⁵ FLOPs(≈ 50× Llama 2);post-training 走 SFT → RS → DPO 三件套 ×6 轮;多模态走<em>组合式</em>(cross-attn 适配器),冻结 LM,不联合预训练。</p>
+          <p><strong>③ 启示:</strong>Llama 3 把"复杂度"从架构(MoE / 多模态联合预训练)和算法(PPO)里挪到了<strong>数据 + 训练规模 + 工程稳定性</strong>;图中没有 RL,只有 DPO——这是 405B 体量上"DPO 跑赢 PPO"的一次公开背书。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2407.21783_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.21 · 1556×700</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>Scaling-law IsoFLOPs 曲线。横轴是训练 token 数(10¹⁰–10¹²),纵轴是 hold-out 验证集上的 NLL;每条曲线对应一个 FLOPs 预算(6 × 10¹⁸ 到 10²²),作者在每个预算下扫多个模型规模,二次多项式拟合得到该预算的<em>最优(N, D)</em>。</p>
+          <p><strong>② 关键数据:</strong>预算从 6e18 到 1e22 共 10 档;每档取抛物线极小值即"compute-optimal"模型。把这些极小点的 N 与 C 做幂律拟合,得到 $N^*(C) = A\,C^\alpha$,$\alpha \approx 0.53$、$A \approx 0.29$,外推到 3.8 × 10²⁵ FLOPs 给出 ≈ 402B 参数 / 16.55T tokens。</p>
+          <p><strong>③ 启示:</strong>关键观察是<em>预算越大、IsoFLOPs 抛物线越平</em>——意味着模型大小的最优解附近性能很鲁棒。Llama 团队因此把 token 数从 compute-optimal 的 16.55T 调到 15.6T、把 N 从 402B 取整到 405B,几乎不影响最终质量,却换来推理友好性。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_3">
+        <img src="../figures/2407.21783_fig_3.png" alt="fig_3" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_3</span> · p.21 · 1882×812</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_3">
+          <p><strong>① 图说明:</strong>"compute-optimal token 数 vs 训练预算"幂律拟合图。横轴是预算 C(FLOPs,10¹⁹–10²²),纵轴是该预算下最优 token 数 N*(C);蓝点来自图 2 抛物线极小值,直线是幂律 $N^*(C) = A\,C^\alpha$ 的拟合。</p>
+          <p><strong>② 关键数据:</strong>拟合得 $(\alpha, A) = (0.53, 0.29)$;斜率 0.53 接近 Chinchilla 的 0.5,但略偏"token-heavy"。把直线外推到 Llama 3 旗舰预算 3.8 × 10²⁵ FLOPs,落点是 ≈ 16.55T tokens × ≈ 402B 参数。</p>
+          <p><strong>③ 启示:</strong>这给 405B 大小提供了<em>可外推 4 个数量级</em>的依据——直接训那么大模型成本太高,只能用小预算扫 scaling law 反推。该流程后来也用来挑数据 mixture(在小模型上扫 mixture → 拟合 → 选最优配比)。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_4">
+        <img src="../figures/2407.21783_fig_4.png" alt="fig_4" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_4</span> · p.27 · 9240×6968</div>
+          <div class="fig-caption">Figure 16. On text-only</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_4">
+          <p><strong>① 图说明:</strong>把 scaling-law 预测"延伸到下游 benchmark"的两步法,以 ARC Challenge 为例。<em>左</em>:横轴训练 FLOPs,纵轴 ARC 正确答案的归一化 NLL —— 用 scaling-law 小模型拟合一条线;<em>右</em>:横轴归一化 NLL,纵轴 ARC 准确率 —— 用小模型 + Llama 2 一起拟合 sigmoid,把"loss → acc"映射出来。</p>
+          <p><strong>② 关键数据:</strong>预测覆盖 10²⁰–10²⁵ FLOPs(≈ 5 个数量级);最终 Llama 3 405B 在 ARC 上的实际表现略<em>高于</em>外推预测,说明大模型有"突变收益"未被 scaling-law 捕获,反过来证明数据 mixture 选择正确。</p>
+          <p><strong>③ 启示:</strong>用"FLOPs → NLL → benchmark acc"两步拼接,是开源界目前最稳的"在跑大模型之前先估 benchmark"方法,直接对标 GPT-4 那种"emergent capability"宣称。对 Meta 自己来说:它给了去训 405B 一个量化承诺,而不是赌大小。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_5">
+        <img src="../figures/2407.21783_fig_5.png" alt="fig_5" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_5</span> · p.40 · 1606×726</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_5">
+          <p><strong>① 图说明:</strong>Post-training 全流程示意。每一轮按 <em>偏好数据 → 训 RM → 用 RM 做拒绝采样(RS)给提示挑最优响应 → SFT 把 RS 数据 + 合成数据混进去训 → DPO 在最近一批策略采样的偏好对上对齐</em> 串联;末尾对多组 (RM/SFT/DPO) checkpoint 做模型平均,得到本轮模型,然后再用它去给下一轮挖偏好。</p>
+          <p><strong>② 关键数据:</strong>共 <em>6 轮迭代</em>;每轮 RM 训练沿用 Llama 2 BT loss 但去掉 margin 项,新增"edited > chosen > rejected"三档排序;SFT 用 LR 1e-5、8.5–9K step;DPO 用 β = 0.1、LR 1e-5,并对格式 token mask 出 loss、外加 0.2 × NLL 正则。</p>
+          <p><strong>③ 启示:</strong>这张图是"开源界第一次把 Anthropic / OpenAI 的 RLHF 串联在 405B 上用 DPO 替代 PPO 跑通"的可视化定稿。<strong>多轮 + 拒绝采样 + 模型平均</strong>是 Llama 3 做 instruct 的三件法宝——比单跑 DPO 更稳、比 PPO 更便宜。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_6">
+        <img src="../figures/2407.21783_fig_6.png" alt="fig_6" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_6</span> · p.54 · 1200×800</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_6">
+          <p><strong>① 图说明:</strong>多模态"<em>组合式</em>(compositional)"训练流程图。从下到上 5 个阶段:<em>① 语言模型预训练</em>(主线 Llama 3 405B)→ <em>② 多模态编码器预训练</em>(图像编码器 + 自监督语音编码器分头训)→ <em>③ Vision adapter 训练</em>(在 LM 与 image encoder 之间插 cross-attn 层,只训 adapter + image encoder,LM 冻结)→ <em>④ 模型微调</em> → <em>⑤ Speech adapter 训练</em>(语音 encoder 输出经 adapter 转 token 喂给 LM,LM 冻结)。</p>
+          <p><strong>② 关键数据:</strong>Image encoder 用大量 image-text pair 训(CLIP 风格质量过滤 + SSCD 去重 + OCR);Video 在 image encoder 之上叠 temporal aggregator + video cross-attn;Speech 用 mask-and-reconstruct 自监督,再加 TTS。<em>关键约束</em>:vision adapter 训练期间 <strong>不更新 LM 参数</strong>。</p>
+          <p><strong>③ 启示:</strong>组合式优于联合预训练的核心理由:① 文本能力<em>零损失</em>;② 避开多模态 token 化与困惑度冲突;③ cross-attn 推理时不必把图像走 FFN,省算力。代价是 image token 不能像 Flamingo / GPT-4V 那样深度交错——这也是后来 Llama 3.2/3.3 调整路线的伏笔。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_7">
+        <img src="../figures/2407.21783_fig_7.png" alt="fig_7" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_7</span> · p.54 · 1200×800</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_7">
+          <p><strong>① 图说明:</strong>推理阶段的 micro-batching 性能曲线。<em>左</em>:prefill 阶段(time-to-first-token vs prefill throughput)的 latency–throughput 前沿;<em>右</em>:decode 阶段(每 token latency vs decode throughput);两条曲线对比 <em>TP8/PP2 BF16</em> 与 <em>TP8/PP2 BF16 + micro-batching</em>。</p>
+          <p><strong>② 关键数据:</strong>405B 在 BF16 下无法塞进单机 8 × H100,只能跨 2 机 16 GPUs 用 tensor parallel (机内 NVLink) + pipeline parallel (机间);加 micro-batching 后,prefill 与 decode 阶段在<em>相同本地 batch</em>下吞吐都提升(curve 整体右移)、latency 略增,但 latency-throughput 前沿被推到外侧。</p>
+          <p><strong>③ 启示:</strong>Llama 3 推理工程的两板斧:<strong>PP + micro-batching</strong> 解决"装不进单机"的吞吐问题,<strong>FP8 quant</strong> 解决 FFN 计算瓶颈(self-attn 不 quant 防数值漂移)。这也是社区跑 405B 时实际复制的 recipe。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_8">
+        <img src="../figures/2407.21783_fig_8.png" alt="fig_8" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_8</span> · p.63 · 12150×2958</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_8">
+          <p><strong>① 图说明:</strong>语音端到端处理流程。语音输入 → <em>self-supervised speech encoder</em>(对部分语音帧 mask 后,通过离散 token 表示重建被 mask 的部分)→ <em>speech adapter</em>(把语音表示转成 LM token 表示)→ 冻结的 Llama 3 LM → 文本回复;反向链路接 TTS 系统输出语音。</p>
+          <p><strong>② 关键数据:</strong>speech encoder + adapter <em>联合</em>训练,但 LM 仍冻结;encoder 学到的是"语音信号结构"而非"语音 → 文本"对齐(后者交给 adapter 完成)。这种解耦让 ASR 数据不必直接进 LM。</p>
+          <p><strong>③ 启示:</strong>与 vision 是同一思路:让 LM 主权重不动,所有跨模态适配压到一个轻量 adapter 上,既保护文本能力,又方便分阶段迭代。代价是<em>无法做语音原生 reasoning</em>(语音 token 没进 self-attention 的 KV cache 主流),后续 Llama 3.2 Voice 路线会调整。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble / 作者团队<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The Llama 3 Herd of Models. Llama Team, AI @ Meta. A detailed contributor list can be found in the appendix of this paper. Modern artificial intelligence (AI) systems are powered by foundation models.</p>
+          </div>
+          <div class="zh">
+            <p>《Llama 3 模型群》。Meta AI 的 Llama 团队;详细贡献者名单见论文附录。现代 AI 系统由"基础模型"驱动。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>§1 Introduction / 总览<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Foundation models are general models of language, vision, speech, and/or other modalities that are designed to support a large variety of AI tasks. The development of modern foundation models consists of two main stages: (1) a pre-training stage in which the model is trained at massive scale using straightforward tasks such as next-word prediction or captioning, and (2) a post-training stage in which the model is tuned to follow instructions, align with human preferences, and improve specific capabilities.</p>
+            <p>In this paper, we present a new set of foundation models for language, called Llama 3. The Llama 3 Herd of models natively supports multilinguality, coding, reasoning, and tool usage. Our largest model is a dense Transformer with 405B parameters, processing information in a context window of up to 128K tokens.</p>
+          </div>
+          <div class="zh">
+            <p>基础模型(foundation model)是面向语言、视觉、语音及其他模态的通用模型,设计用来支撑多种多样的 AI 任务。现代基础模型的发展分两大阶段:① <em>预训练</em>——用"下一个词预测"或图像描述等朴素任务在大规模数据上训;② <em>post-training</em>——把模型调成会跟随指令、与人类偏好对齐、并在特定能力(如编码、推理)上更强。</p>
+            <p>本文提出一组新的语言基础模型 <strong>Llama 3</strong>。这一"模型群"原生支持多语言、代码、推理与工具使用;最大的旗舰是一个 <strong>405B 参数的 dense Transformer</strong>,context window 最长 <strong>128K tokens</strong>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We believe there are three key levers in the development of high-quality foundation models: data, scale, and managing complexity. <strong>Data.</strong> We improved both the quantity and quality of the data we use for pre-training and post-training. We pre-train Llama 3 on a corpus of about 15T multilingual tokens, compared to 1.8T tokens for Llama 2. <strong>Scale.</strong> Our flagship language model was pre-trained using $3.8 \times 10^{25}$ FLOPs, almost 50× more than the largest version of Llama 2; we pre-trained a flagship model with 405B trainable parameters on 15.6T text tokens. <strong>Managing complexity.</strong> We opt for a standard dense Transformer model architecture rather than a mixture-of-experts model to maximize training stability, and we adopt a relatively simple post-training procedure based on supervised finetuning (SFT), rejection sampling (RS), and direct preference optimization (DPO).</p>
+          </div>
+          <div class="zh">
+            <p>我们认为做高质量基础模型有三个关键杠杆:<strong>数据、规模、控制复杂度</strong>。<strong>数据</strong>:比 Llama 2 显著提升预/后训练数据的"量"与"质"——Llama 3 的预训练语料约 <strong>15T 多语言 token</strong>,而 Llama 2 只有 <strong>1.8T</strong>(约 8.7×)。<strong>规模</strong>:旗舰模型用 $3.8 \times 10^{25}$ FLOPs 预训练,几乎是 Llama 2 最大版本的 50×;具体为 <strong>405B 参数</strong> × <strong>15.6T 文本 token</strong>。<strong>控制复杂度</strong>:架构上选标准 <strong>dense Transformer</strong> 而<em>不</em>上 MoE 以最大化训练稳定性;post-training 采用相对简单的 <strong>SFT + 拒绝采样(RS)+ DPO</strong>,而非更复杂、更难规模化的 RL 算法。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The development of our Llama 3 language models comprises two main stages. <strong>Language model pre-training</strong>: we pre-train a model with 405B parameters on 15.6T tokens using a context window of 8K tokens; this is followed by a continued pre-training stage that increases the supported context window to 128K tokens. <strong>Language model post-training</strong>: the pre-trained language model has a rich understanding of language but it does not yet follow instructions or behave in the way we would expect an assistant to. We align the model with human feedback in several rounds, each of which involves supervised finetuning (SFT) on instruction tuning data and Direct Preference Optimization (DPO).</p>
+            <p>We also perform experiments in which we add image, video, and speech capabilities to Llama 3 using a compositional approach. The approach we study comprises three additional stages: multi-modal encoder pre-training, vision adapter training, and speech adapter training.</p>
+          </div>
+          <div class="zh">
+            <p>Llama 3 语言模型分两大训练阶段。<strong>预训练</strong>:在 <strong>8K context window</strong> 下用 15.6T tokens 预训 405B 模型;<em>continued pre-training</em> 把支持的 context window 扩到 <strong>128K</strong>。<strong>Post-training</strong>:预训练模型对语言理解很丰富,但还不会按指令行事、也不像一个 assistant;我们用"人类反馈"对模型做<em>多轮对齐</em>,每轮包括 SFT(指令微调数据)+ DPO。</p>
+            <p>我们还做了多模态扩展实验,采用"<strong>组合式</strong>(compositional)"方法,把图像、视频、语音能力加到 Llama 3 上,共 3 个附加阶段:多模态编码器预训练、vision adapter 训练、speech adapter 训练。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3a">
+      <summary>
+        <span>§3.1 Pre-Training Data / 预训练数据清洗管线<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We create our dataset for language model pre-training from a variety of data sources containing knowledge until the end of 2023. We apply several de-duplication methods and data cleaning mechanisms on each data source to obtain high-quality tokens. We remove domains that contain large amounts of personally identifiable information (PII), and domains with known adult content.</p>
+            <p><strong>Web Data Curation.</strong> We implement filters designed to remove data from websites that are likely to contain unsafe content or high volumes of PII. We process the raw HTML content with a custom parser that optimizes for precision in boilerplate removal and content recall; we carefully preserve mathematics and code structure and maintain image alt attribute text. We find that markdown is harmful to performance and remove all markdown markers.</p>
+          </div>
+          <div class="zh">
+            <p>预训练数据集涵盖到 2023 年底的多源数据;对每个数据源都做了若干去重(de-duplication)与清洗,以拿到高质量 token。我们移除两类站点:含大量 PII(个人可识别信息)的站点,以及已知含成人内容的站点。</p>
+            <p><strong>Web 数据清洗。</strong>首先用过滤器剔除可能含不安全内容或大量 PII 的网站。HTML 处理走自研 parser,目标是"精确去 boilerplate、召回正文"——对数学与代码结构特别小心保留,图像 alt 属性也保留(因为数学常以图像 + alt 给出)。实验发现:对主要在 web 上训的模型,<strong>markdown 标记反而是<em>负面</em>的</strong>,因此一律去掉。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>De-duplication.</strong> We apply several rounds of de-duplication at the URL, document, and line level. URL-level: we keep the most recent version for each URL. Document-level: global MinHash de-duplication across the entire dataset to remove near duplicates. Line-level: we remove lines that appeared more than 6 times in each bucket of 30M documents (similar to ccNet).</p>
+            <p><strong>Heuristic filtering.</strong> We use duplicated n-gram coverage ratio to remove repeated content; "dirty word" counting to filter adult sites not covered by block lists; and token-distribution KL divergence to filter documents with excessive outlier tokens.</p>
+            <p><strong>Model-based quality filtering.</strong> We use fasttext-based classifiers trained to recognize text that would be referenced by Wikipedia, as well as Roberta-based classifiers trained on Llama 2 predictions; for efficiency we use DistilRoberta to score each document. We also build domain-specific pipelines for code and reasoning, trained on web data annotated by Llama 2.</p>
+          </div>
+          <div class="zh">
+            <p><strong>三级去重。</strong>(1) URL 级:同 URL 保留最新版本;(2) document 级:对全量做 <em>MinHash</em> 全局去重以剔近重文档;(3) line 级:类似 ccNet,在每 30M 文档桶内移除"出现 6 次以上"的行——人工检查发现这虽然会误删一些 boilerplate 中混着的高质量句,但实证效果仍是显著提升。</p>
+            <p><strong>启发式过滤。</strong>① 用"重复 n-gram 覆盖比"剔除"日志/报错"类的重复内容;② 用"脏词计数"过滤 blocklist 没覆盖到的成人站点;③ 用"<em>token 分布 KL 散度</em>"过滤含过多 outlier token 的文档。</p>
+            <p><strong>模型质量分类器。</strong>用 <em>fasttext</em>(预测"是否会被 Wikipedia 引用")与基于 Llama 2 标注训的 <em>RoBERTa</em> 分类器筛高质量;实际打分用 DistilRoBERTa 提速。代码与数学走单独管线:领域分类器同样是 DistilRoBERTa,但训练时<em>prompt 调优</em>定向到含"数学推导/STEM 推理/代码 + 自然语言"的页。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Multilingual data.</strong> Our multilingual text processing pipeline has several unique features: we use a fasttext-based language identification model to categorize documents into 176 languages; we perform document-level and line-level de-duplication within data for each language; we apply language-specific heuristics and model-based filters to remove low-quality documents; we perform quality ranking of multilingual documents using a multilingual Llama 2-based classifier.</p>
+            <p><strong>Data Mix.</strong> Our main tools in determining this data mix are knowledge classification and scaling law experiments. Our final data mix contains roughly 50% of tokens corresponding to general knowledge, 25% of mathematical and reasoning tokens, 17% code tokens, and 8% multilingual tokens.</p>
+            <p><strong>Annealing Data.</strong> We find that annealing on small amounts of high-quality code and mathematical data can boost the performance of pre-trained models on key benchmarks; annealing improved the performance of a pre-trained Llama 3 8B model on the GSM8k and MATH validation sets by 24.0% and 6.4%, respectively. However, the improvements on the 405B model are negligible.</p>
+          </div>
+          <div class="zh">
+            <p><strong>多语言数据。</strong>用 fasttext 语言识别把文档分到 <strong>176 种语言</strong>;对每种语言<em>各自</em>做文档级与行级去重;按语言定制启发式 + 模型过滤;再用多语言 Llama 2 分类器做质量排序。多语言占比靠"小模型在不同英文/多语比例下的下游表现"实验来选,以平衡英文 benchmark 与多语 benchmark。</p>
+            <p><strong>预训练混合配比。</strong>选 mixture 的两大工具:<em>知识分类器</em>(把 web 内容按主题分类,以便下采样过度代表的类目如"娱乐")+ <em>scaling-law 实验</em>(在不同 mixture 上训小模型、拟合并外推大模型表现)。最终配比:<strong>50% 通用知识 / 25% 数学+推理 / 17% 代码 / 8% 多语言</strong>。</p>
+            <p><strong>Annealing 数据。</strong>实证发现:在预训练末段用少量"高质量代码+数学"数据做退火,可显著抬升 benchmark——8B 在 GSM8k / MATH 验证集上分别 +24.0% / +6.4%;但 <strong>405B 上提升微乎其微</strong>,说明旗舰模型的 in-context 学习与推理已足够强,不再依赖领域内训练样本。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3b">
+      <summary>
+        <span>§3.2 Architecture &amp; Scaling Laws / 架构与 scaling law<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Llama 3 uses a standard, dense Transformer architecture. It does not deviate significantly from Llama and Llama 2 in terms of model architecture; our performance gains are primarily driven by improvements in data quality and diversity as well as by increased training scale. We make a few small modifications compared to Llama 2: we use grouped query attention (GQA) with 8 key-value heads to improve inference speed and to reduce the size of key-value caches during decoding; we use an attention mask that prevents self-attention between different documents within the same sequence; we use a vocabulary with 128K tokens (100K from tiktoken plus 28K additional non-English tokens), improving compression rates from 3.17 to 3.94 characters per token; we increase the RoPE base frequency hyperparameter to 500,000 to better support longer contexts.</p>
+            <p>Llama 3 405B uses an architecture with 126 layers, a token representation dimension of 16,384, and 128 attention heads.</p>
+          </div>
+          <div class="zh">
+            <p>Llama 3 使用标准 <strong>dense Transformer</strong>,架构相对 Llama / Llama 2 没大变;主要的性能提升来自<em>数据质量、数据多样性、训练规模</em>。与 Llama 2 相比的小改动:① <strong>GQA</strong>(grouped query attention)用 8 个 KV head,加快推理、缩小 KV cache;② 引入 <em>document-level attention mask</em>,防止同一序列内跨文档的 self-attention(标准预训练影响有限,但<em>长序列继续预训练</em>下很关键);③ 词表 <strong>128K</strong> = tiktoken 的 100K + 额外 28K 非英语 token,英文压缩率从 3.17 → 3.94 chars/token;④ <strong>RoPE base 频率从默认调到 500,000</strong> 以支持更长 context。</p>
+            <p>Llama 3 <strong>405B</strong> 的具体超参:<em>126 层 / d=16,384 / 128 attention heads</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Scaling Laws.</strong> We develop scaling laws to determine the optimal model size for our flagship model given our pre-training compute budget. We implement a two-stage methodology to develop scaling laws that accurately predict downstream benchmark performance: (1) we first establish a correlation between the compute-optimal model's negative log-likelihood on downstream tasks and the training FLOPs; (2) next, we correlate the negative log-likelihood on downstream tasks with task accuracy, utilizing both the scaling law models and older models trained with higher compute FLOPs.</p>
+            <p>We construct our scaling laws by pre-training models using compute budgets between $6 \times 10^{18}$ FLOPs and $10^{22}$ FLOPs. We assume a power-law relation between compute budget $C$ and the optimal number of training tokens $N^\star(C)$:</p>
+            <div class="bi-eq">$$N^\star(C) = A\,C^{\alpha}, \qquad (\alpha, A) = (0.53, 0.29).$$</div>
+            <p>Extrapolation of the resulting scaling law to $3.8 \times 10^{25}$ FLOPs suggests training a 402B parameter model on 16.55T tokens. An important observation is that IsoFLOPs curves become flatter around the minimum as the compute budget increases — this implies that performance of the flagship model is relatively robust to small changes in the trade-off between model size and training tokens. Based on this observation, we ultimately decided to train a flagship model with 405B parameters.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Scaling Laws。</strong>在确定旗舰模型尺寸时,作者搞了一套<em>两步法</em>预测下游 benchmark 表现:① 先把"compute-optimal 模型在下游任务上的 NLL"与"训练 FLOPs"做线性关联;② 再把"NLL"与"任务准确率"用 sigmoid 关联(同时用 scaling-law 小模型 + 高算力的 Llama 2 拟合)。</p>
+            <p>scaling-law 实验在 $6 \times 10^{18}$ 到 $10^{22}$ FLOPs 间扫;假设最优 token 数与算力是幂律关系:</p>
+            <div class="bi-eq">$$N^\star(C) = A\,C^{\alpha}, \qquad (\alpha, A) = (0.53,\ 0.29).$$</div>
+            <p>把这条幂律外推到 $3.8 \times 10^{25}$ FLOPs,建议训 <strong>402B × 16.55T tokens</strong>。一个关键观察:算力越大,<em>IsoFLOPs 抛物线越平</em>,意味着旗舰模型的最优解附近"模型大小 vs token 数"的取舍很<strong>鲁棒</strong>——所以最终取整到 <strong>405B × 15.6T</strong>,几乎不损失质量却便于推理。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3c">
+      <summary>
+        <span>§3.4 Training Recipe &amp; Long-Context / 训练配方与 128K 长上下文<span class="sec-page">p.13</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Initial Pre-Training.</strong> We pre-train Llama 3 405B using AdamW with a peak learning rate of $8 \times 10^{-5}$, a linear warm up of 8,000 steps, and a cosine learning rate schedule decaying to $8 \times 10^{-7}$ over 1,200,000 steps. We use a lower batch size early in training to improve training stability, and increase it subsequently to improve efficiency. Specifically, we use an initial batch size of 4M tokens and sequences of length 4,096, and double these values to a batch size of 8M sequences of 8,192 tokens after pre-training 252M tokens. We double the batch size again to 16M after pre-training on 2.87T tokens.</p>
+          </div>
+          <div class="zh">
+            <p><strong>初始预训练。</strong>405B 用 AdamW,peak LR $8 \times 10^{-5}$,线性 warmup 8,000 步,cosine 衰减到 $8 \times 10^{-7}$,共 120 万步。<em>batch size 渐进放大</em>以稳住早期训练:开局 4M token、序列长 4,096;训 <strong>252M token</strong> 后 batch 翻倍到 8M、序列长翻到 8,192;训到 <strong>2.87T token</strong> 再翻一次到 <strong>16M</strong> token / batch。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Long Context Pre-Training.</strong> In the final stages of pre-training, we train on long sequences to support context windows of up to 128K tokens. We do not train on long sequences earlier because the compute in self-attention layers grows quadratically in the sequence length. We increase the supported context length in increments, pre-training until the model has successfully adapted to the increased context length. We assess successful adaptation by measuring whether (1) model performance on short-context evaluations has recovered completely and (2) the model perfectly solves "needle in a haystack" tasks up to that length. In Llama 3 405B pre-training, we increased context length gradually in six stages, starting from the original 8K context window and ending in the final 128K context window. This long-context pre-training stage was performed using approximately 800B training tokens.</p>
+          </div>
+          <div class="zh">
+            <p><strong>长上下文预训练。</strong>预训练末段才上长序列,因为 self-attention 算力随序列长度<strong>平方</strong>增长。作者把支持的 context length 分档<em>渐进</em>扩张,每档训到模型"适应"了再进下一档——判定标准是:(1) <em>短 context 评测完全恢复</em>到原水平;(2) <em>"针在草堆中(NIH)"任务在该长度下完全通过</em>。在 Llama 3 405B 里,context 从原始 <strong>8K → 16K → 32K → 64K → 96K → 128K</strong>,共 <strong>6 个阶段</strong>;整个长 context 预训练共烧 ≈ <strong>800B token</strong>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Annealing.</strong> During pre-training on the final 40M tokens, we linearly annealed the learning rate to 0, maintaining a context length of 128K tokens. During this annealing phase, we also adjusted the data mix to upsample data sources of very high quality. Finally, we compute the average of model checkpoints (Polyak averaging) during annealing to produce the final pre-trained model.</p>
+          </div>
+          <div class="zh">
+            <p><strong>退火(Annealing)。</strong>预训练的最后 <strong>40M token</strong>,LR 线性退火到 0,context 维持 128K;退火期间把"超高质量数据"上采样进 mixture。最后对退火阶段的多个 checkpoint 做 <strong>Polyak 平均</strong>,得到最终的预训练模型。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4a">
+      <summary>
+        <span>§4.1 Post-Training Modeling / RM + SFT + DPO + 模型平均<span class="sec-page">p.15</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We produce the aligned Llama 3 models by applying several rounds of post-training, or aligning the model with human feedback on top of a pre-trained checkpoint. Each round of post-training involves supervised finetuning (SFT) followed by Direct Preference Optimization (DPO) on examples collected either via human annotations or generated synthetically. The backbone of our post-training strategy is a reward model and a language model. We first train a reward model on top of the pre-trained checkpoint using human-annotated preference data. We then finetune pre-trained checkpoints with supervised finetuning (SFT), and further align the checkpoints with Direct Preference Optimization (DPO).</p>
+          </div>
+          <div class="zh">
+            <p>"对齐版"Llama 3 是在预训练 checkpoint 上做<em>若干轮</em> post-training 得到的。<strong>每一轮 = SFT → DPO</strong>,数据来自人工标注或合成。post-training 的骨干是两个模型:一个<em>奖励模型(RM)</em> + 一个<em>语言模型</em>。流程上:先在预训练 checkpoint 上用人工标注的偏好数据训 RM;再做 SFT 微调;最后用 DPO 把 SFT checkpoint 进一步对齐到人类偏好。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Reward Modeling.</strong> The training objective is the same as Llama 2 except that we remove the margin term in the loss, as we observe diminishing improvements after data scaling. Annotations also create a third "edited response" for some prompts, where the chosen response from the pair is further edited for improvement. Hence, each preference ranking sample has two or three responses with clear ranking (edited &gt; chosen &gt; rejected). The standard reward model objective is the Bradley–Terry pairwise loss:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\mathrm{RM}} = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\Bigl[\log \sigma\bigl(r_\phi(x, y_w) - r_\phi(x, y_l)\bigr)\Bigr],$$</div>
+            <p>where $(y_w, y_l)$ is a preferred / rejected pair and $\sigma$ is the logistic function. We concatenate the prompt and multiple responses into a single row during training with responses randomly shuffled — this approximates the standard scenario but improves training efficiency without a loss in accuracy.</p>
+          </div>
+          <div class="zh">
+            <p><strong>奖励建模(RM)。</strong>训练目标沿用 Llama 2,但<em>去掉了 margin 项</em>——作者观察到数据扩张后 margin 的收益递减。标注里对部分 prompt 引入第三档"<em>edited response</em>"(由标注员把 chosen 进一步改得更好),使得每条偏好样本可有<em>2 或 3 档</em>排序:<strong>edited &gt; chosen &gt; rejected</strong>。标准 RM 目标是 Bradley–Terry pairwise loss:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\mathrm{RM}} = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\Bigl[\log \sigma\bigl(r_\phi(x, y_w) - r_\phi(x, y_l)\bigr)\Bigr],$$</div>
+            <p>其中 $(y_w, y_l)$ 是被偏好/被拒绝的回答对,$\sigma$ 为 sigmoid。训练时<em>把 prompt 与多个响应拼成一行</em>(响应顺序随机打乱),近似"分别打分"的写法但提升训练吞吐、且不损精度。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Supervised Finetuning (SFT).</strong> The reward model is then used to perform rejection sampling on our human annotation prompts. Together with this rejection-sampled data and other data sources (including synthetic data), we finetune the pre-trained language model using a standard cross entropy loss on the target tokens (while masking loss on prompt tokens). We refer to this stage as supervised finetuning even though many of the training targets are model-generated. Our largest models are finetuned with a learning rate of $10^{-5}$ over the course of 8.5K to 9K steps.</p>
+          </div>
+          <div class="zh">
+            <p><strong>监督微调(SFT)。</strong>RM 训好后用来做"<em>拒绝采样(rejection sampling)</em>"——对每个 prompt 采 N 个候选,只留 RM 打分最高的那条作为 SFT target。这些拒绝采样数据 + 其他数据源(含合成)汇总后,用标准交叉熵在 target token 上微调(prompt token 上的 loss 被 mask 掉)。这一阶段仍叫"SFT",虽然很多 target 其实是模型自己生成的。<strong>旗舰用 LR $10^{-5}$ × 8.5K–9K 步</strong>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Direct Preference Optimization (DPO).</strong> We further train our SFT models with DPO for human preference alignment. For training, we primarily use the most recent batches of preference data collected using the best performing models from the previous alignment rounds. We also explored on-policy algorithms such as PPO, but found that DPO required less compute for large-scale models and performed better, especially on instruction following benchmarks like IFEval. For Llama 3, we use a learning rate of $10^{-5}$ and set the $\beta$ hyper-parameter to be $0.1$. The DPO objective is:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\mathrm{DPO}}(\pi_\theta;\,\pi_\mathrm{ref}) = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\!\left[\log \sigma\!\left(\beta\log\tfrac{\pi_\theta(y_w\mid x)}{\pi_\mathrm{ref}(y_w\mid x)} - \beta\log\tfrac{\pi_\theta(y_l\mid x)}{\pi_\mathrm{ref}(y_l\mid x)}\right)\right].$$</div>
+            <p>We apply two algorithmic modifications to DPO. <strong>Masking out formatting tokens in DPO loss</strong>: we mask out special formatting tokens (header and termination tokens) from both chosen and rejected responses in the loss; we observe that having these tokens contribute to the loss may lead to undesired model behaviors such as tail repetition or abruptly generating termination tokens. <strong>Regularization with NLL loss</strong>: we add an additional negative log-likelihood loss term with a scaling coefficient of $0.2$ on the chosen sequences, which helps stabilize DPO training by maintaining desired formatting and preventing the decrease of log probability of chosen responses.</p>
+          </div>
+          <div class="zh">
+            <p><strong>直接偏好优化(DPO)。</strong>SFT 模型之后再用 DPO 做人类偏好对齐。训练数据主要来自<em>上一轮最佳模型采集的最新偏好批次</em>——这样训练数据更贴近当前策略分布。作者也试过 on-policy 算法(如 PPO),但发现 <strong>DPO 在大模型上计算更省、表现更好</strong>,尤其在 IFEval 等指令跟随评测上。超参 $\beta = 0.1$,LR $10^{-5}$。DPO 目标:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\mathrm{DPO}}(\pi_\theta;\,\pi_\mathrm{ref}) = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\!\left[\log \sigma\!\left(\beta\log\tfrac{\pi_\theta(y_w\mid x)}{\pi_\mathrm{ref}(y_w\mid x)} - \beta\log\tfrac{\pi_\theta(y_l\mid x)}{\pi_\mathrm{ref}(y_l\mid x)}\right)\right].$$</div>
+            <p>Llama 3 对 DPO 加了两个改动:① <strong>把格式 token 从 loss 里 mask 掉</strong>——chosen 与 rejected 里共有的 header / termination 等 special token 不计入 loss,否则模型会被推向"既要增大又要减小同一 token 的似然",出现尾部重复或突然终止;② <strong>NLL 正则</strong>:对 chosen 序列额外加 $0.2 \cdot \mathcal{L}_{\mathrm{NLL}}(y_w)$,稳定训练,避免 chosen 的 logprob 反向下降。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Model Averaging.</strong> Finally, we average models obtained from experiments using various versions of data or hyperparameters at each RM, SFT, or DPO stage. <strong>Iterative Rounds.</strong> Following Llama 2, we apply the above methods in six rounds. In each cycle, we collect new preference annotations and SFT data, sampling synthetic data from the latest models.</p>
+          </div>
+          <div class="zh">
+            <p><strong>模型平均。</strong>每个阶段(RM / SFT / DPO)都跑多组实验(不同数据版本 / 超参),最后把这些 checkpoint 做<em>权重平均</em>。<strong>多轮迭代。</strong>沿用 Llama 2 的迭代式 alignment,前述流程跑 <strong>6 轮</strong>;每一轮都收集新偏好标注与 SFT 数据,合成数据从<em>最新模型</em>采。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4b">
+      <summary>
+        <span>§4.2 Post-Training Data / 偏好数据 + SFT 配比 + 质量控制<span class="sec-page">p.17</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Preference Data.</strong> Our preference data annotation process is similar to Llama 2. We deploy multiple models for annotation after each round and sample two responses from two different models for each user prompt. We ask annotators to rate the strength of their preference by categorizing it into one of four levels (significantly better, better, slightly better, marginally better). We also incorporate an editing step after preference ranking to encourage annotators to further improve the preferred response. Consequently, a portion of our preference data has three responses ranked (edited &gt; chosen &gt; rejected).</p>
+            <p>In each round of post-training, we use all the preference data that is available at the time for reward modeling, while only using the latest batches from various capabilities for DPO training. For both reward modeling and DPO, we use samples that are labeled as the chosen response being significantly better or better than the rejected counterpart for training and discard samples with similar responses.</p>
+          </div>
+          <div class="zh">
+            <p><strong>偏好数据。</strong>采集流程接近 Llama 2:每轮后部署多个模型,对每个 user prompt 从两个<em>不同</em>模型各采一条响应。让标注员用<em>四档强度</em>表达偏好(显著更好 / 更好 / 略好 / 边际好),再加一个"<em>编辑</em>"步骤——让标注员对 chosen 进一步精修,从而产生第三档"edited"。</p>
+            <p>每轮 post-training:<em>RM 用当时所有可用偏好数据</em>训(累计);<em>DPO 只用最新一批</em>且各能力均有覆盖。对 RM 与 DPO,只保留"显著更好"或"更好"的样本——相似的对子被丢掉,避免噪声。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>SFT Data.</strong> Our finetuning data is largely comprised of the following sources: (1) Prompts from our human annotation collection with rejection-sampled responses; (2) Synthetic data targeting specific capabilities; (3) Small amounts of human-curated data. We refer to this stage as supervised finetuning even though many of the training targets are model-generated. Our finetuning data is meticulously curated to ensure quality.</p>
+            <p><strong>Data Processing and Quality Control.</strong> Given that most of our training data is model-generated, it requires careful cleaning and quality control. We perform topic classification, quality scoring (using both reward-model scores and Llama-based rubric scores), difficulty scoring, and semantic de-duplication (using RoBERTa-based embeddings + clustering) to keep only high-quality, diverse examples.</p>
+          </div>
+          <div class="zh">
+            <p><strong>SFT 数据来源。</strong>主要三类:① 人工标注的 prompt + RM 拒绝采样得到的 response;② 针对具体能力(代码、推理、工具、长 context 等)的合成数据;③ 少量人工 curate 数据。"SFT"这名字其实<em>名不副实</em>——绝大多数 target 都是模型自己生成的。</p>
+            <p><strong>数据处理与质量控制。</strong>因为绝大多数 SFT 数据是模型生成的,清洗与质控很关键:做<em>主题分类</em>、<em>质量打分</em>(同时用 RM 分与 Llama 自评 rubric 分)、<em>难度打分</em>、<em>语义去重</em>(RoBERTa embedding + 聚类,每簇只保留最高分若干条),最终只留"高质 × 多样"的样本。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4c">
+      <summary>
+        <span>§4.3 Capability-specific Data / 推理 / 代码 / 工具 / 事实性 / 可控性<span class="sec-page">p.20</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Code.</strong> We train an expert via continued pre-training on a code-heavy data mix, then run multiple rounds of SFT on it. We use the expert to generate high-quality SFT data for code and to back-translate code documentation and tests. We also use execution feedback to filter out generations that fail to compile, run, or pass unit tests.</p>
+            <p><strong>Reasoning.</strong> For mathematical reasoning, we (1) generate step-by-step solutions and verify them with answer-checking, (2) use Llama 3 itself as a reward signal to filter reasoning chains, and (3) sample long chains-of-thought during rejection sampling.</p>
+          </div>
+          <div class="zh">
+            <p><strong>代码。</strong>用"代码 heavy" mixture 做 <em>continued pre-training</em> 训出一个 code 专家模型,再对其多轮 SFT;然后用这个专家生成高质代码 SFT 数据、把代码反向翻译成文档与测试。再用<em>执行反馈</em>过滤掉编译/运行/单元测试失败的生成,保证 SFT 数据可执行。</p>
+            <p><strong>推理。</strong>数学推理上:① 让模型生成 step-by-step 解,再用 answer-check 验证;② 用 Llama 3 自身作为 reward signal,过滤错误推理链;③ 在拒绝采样时<em>偏向长 CoT</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Tool Use.</strong> We train Llama 3 to use search engines, a Python interpreter, and Wolfram Alpha. We generate synthetic data for tool use, including single-turn and multi-turn function calling. We use multiple agents to generate domains, APIs, user queries, API calls, and responses, while also ensuring that the generated data covers a set of diverse domains and realistic APIs.</p>
+            <p><strong>Factuality.</strong> We follow the principle that post-training should align the model to "know what it knows" rather than add knowledge. Our primary approach involves generating data that aligns model generations with subsets of factual data present in the pre-training data: extract pre-training snippets → generate factual questions about them → sample answers → score correctness (Llama-as-judge against the original context) → score informativeness → generate refusals for "confidently wrong" outputs.</p>
+            <p><strong>Steerability.</strong> For Llama 3, we focus on enhancing its steerability through system prompt with natural language instructions, especially around response length, format, tone and character/persona. We collect steerability preference samples by asking annotators to design different system prompts and evaluate conversations against them.</p>
+          </div>
+          <div class="zh">
+            <p><strong>工具使用。</strong>训 Llama 3 用搜索引擎、Python 解释器、Wolfram Alpha;合成工具使用数据(含单轮 + 多轮 function calling)——用多个 agent 分别扮演"领域 / API / 用户 query / API 调用 / 响应"角色,逐步对话,确保覆盖多样领域与真实 API。</p>
+            <p><strong>事实性(Factuality)。</strong>原则是 post-training 应让模型"<em>知道自己知道什么</em>",而<em>不是</em>往里塞新知识。具体做法:从预训练数据抽一段 snippet → 让 Llama 3 基于它出事实问题 → 采样回答 → 用原 snippet 作为 reference 由 Llama 3 评对错 → 评"信息量" → 对"自信但错"的答案生成<em>拒答(refusal)</em>样本,以鼓励模型对不确定问题说"我不知道"。</p>
+            <p><strong>可控性(Steerability)。</strong>主要靠 system prompt 中的自然语言指令(响应长度、格式、语气、人设)。让标注员针对 Llama 3 设计不同 system prompt,然后多轮对话评估模型对这些 prompt 的<em>一致跟随能力</em>,采到的偏好数据进入 RM / RS / SFT / DPO 各阶段。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§5 Results / 评测结果(text 模型)<span class="sec-page">p.28</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We performed an extensive series of evaluations of Llama 3, investigating the performance of: (1) the pre-trained language model, (2) the post-trained language model, and (3) the safety characteristics of Llama 3. The evaluations cover eight top-level categories: commonsense reasoning; knowledge; reading comprehension; math, reasoning, and problem solving; long context; code; adversarial evaluations; and aggregate evaluations.</p>
+            <p>Llama 3 8B outperforms competing models in virtually every category. Llama 3 70B outperforms its predecessor Llama 2 70B by a large margin on most benchmarks, with the exception of commonsense benchmarks that are likely saturated. Our flagship Llama 3 405B model performs on par with leading language models such as GPT-4 across a variety of tasks, and is close to matching the state-of-the-art on some benchmarks.</p>
+          </div>
+          <div class="zh">
+            <p>对 Llama 3 做了三大类全面评测:① 预训练模型;② 对齐后(instruct)模型;③ 安全特性。覆盖 8 大类:常识推理、知识、阅读理解、数学&amp;推理、长上下文、代码、对抗、聚合指标。</p>
+            <p><strong>结论</strong>:8B 在<em>几乎所有</em>类目上都跑赢同档竞品;70B 在大多数 benchmark 上显著超过 Llama 2 70B(只有"已饱和"的常识类例外);旗舰 <strong>405B 与 GPT-4 等头部模型在多任务上持平</strong>,部分接近 SOTA。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Selected benchmarks for Llama 3 405B Instruct vs GPT-4 (0125) / GPT-4o / Claude 3.5 Sonnet</strong>: MMLU (5-shot) 87.3 / 85.1 / 89.1 / 89.9; MMLU-Pro (5-shot, CoT) 73.3 / 64.8 / 74.0 / 77.0; IFEval 88.6 / 84.3 / 85.6 / 88.0; HumanEval 89.0 / 86.6 / 90.2 / 92.0; GSM8K 96.8 / 94.2 / 96.1 / 96.4; MATH 73.8 / 64.5 / 76.6 / 71.1; ARC-C 96.9 / 96.4 / 96.7 / 96.7; GPQA 51.1 / 41.4 / 53.6 / 59.4; MGSM 91.6 / 85.9 / 90.5 / 91.6.</p>
+            <p>For long context: Llama 3 405B reaches 95.2 on ZeroSCROLLS/QuALITY, 83.4 on InfiniteBench/En.MC, and 98.1 on NIH/Multi-needle. We also conduct human evaluations comparing Llama 3 against competing models.</p>
+          </div>
+          <div class="zh">
+            <p><strong>核心 benchmark(405B Instruct vs GPT-4 / GPT-4o / Claude 3.5 Sonnet)</strong>:MMLU 87.3 / 85.1 / 89.1 / 89.9;MMLU-Pro 73.3 / 64.8 / 74.0 / 77.0;IFEval 88.6 / 84.3 / 85.6 / 88.0;HumanEval 89.0 / 86.6 / 90.2 / 92.0;GSM8K 96.8 / 94.2 / 96.1 / 96.4;MATH 73.8 / 64.5 / 76.6 / 71.1;ARC-C 96.9 / 96.4 / 96.7 / 96.7;GPQA 51.1 / 41.4 / 53.6 / 59.4;MGSM 91.6 / 85.9 / 90.5 / 91.6。</p>
+            <p>长上下文:Llama 3 405B 在 ZeroSCROLLS / QuALITY 上 <strong>95.2</strong>、InfiniteBench / En.MC <strong>83.4</strong>、NIH multi-needle <strong>98.1</strong>。除自动评测外,作者还做了与竞品的<em>人工评测</em>。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§5.4–6 Safety &amp; Inference / 安全与推理(FP8/PP)<span class="sec-page">p.51</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Safety.</strong> We conducted extensive measurement and mitigation on a wide variety of risks to safe usage of Llama 3. However, no testing can be guaranteed to be exhaustive in identifying every possible risk. Llama 3 may still generate harmful content due to training on various datasets, particularly for languages beyond English and when prompt engineered by skilled adversarial red teamers. We released Llama Guard for input and output safety, and a Prompt Guard classifier for jailbreak / prompt-injection detection (jailbreaks TPR 99.9%, indirect injections TPR 71.4%).</p>
+          </div>
+          <div class="zh">
+            <p><strong>安全。</strong>对 Llama 3 做了大量风险测量与缓解,但<em>没有任何</em>测试能穷尽所有风险:模型仍可能产出有害内容,在<em>非英文语言</em>和有经验的红队 prompt 工程下尤甚。Meta 同步开源了 <strong>Llama Guard</strong>(输入/输出安全分类器)与 <strong>Prompt Guard</strong>(越狱与 prompt-injection 检测):jailbreak TPR 99.9%、间接注入 TPR 71.4%。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Inference.</strong> We investigate two main techniques to make inference with the Llama 3 405B model efficient: pipeline parallelism and FP8 quantization. When using a BF16 number representation for the model parameters, Llama 3 405B does not fit in the GPU memory of a single machine with 8 Nvidia H100 GPUs. To address this issue, we parallelize model inference using BF16 precision across 16 GPUs on two machines. Within each machine, the high NVLink bandwidth enables the use of tensor parallelism. Across nodes, however, connectivity has lower bandwidth and higher latency, so we use pipeline parallelism instead.</p>
+            <p>For FP8 quantization, we apply FP8 quantization to most matrix multiplications inside the model. In particular, we quantize most parameters and activations in the feedforward network layers in the model, which account for roughly 50% of the inference compute time. We do not quantize parameters in the self-attention layers of the model. We have publicly released our implementation of FP8 quantization.</p>
+          </div>
+          <div class="zh">
+            <p><strong>推理。</strong>让 405B 跑起来的两件套:<strong>pipeline parallelism + FP8 量化</strong>。BF16 下 405B 装不进单机 8×H100,所以跨 2 机 16 GPU——机内靠 <em>NVLink 高带宽</em>走 tensor parallel,机间靠较慢链路走 pipeline parallel。训练时 pipeline 的"气泡"是效率杀手;但<em>推理没有反传</em>,作者引入 <em>micro-batching</em> 把多个微批次塞进 prefill / decode 阶段并发执行,牺牲少量 latency 换更高吞吐。</p>
+            <p><strong>FP8 量化</strong>:把模型中大多数矩阵乘改成 FP8——主要量化 <em>FFN 的参数与激活</em>(约占推理算力 50%);<em>self-attention 层不量化</em>,避免数值不稳。该 FP8 实现已开源。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7a">
+      <summary>
+        <span>§7 Vision Experiments / 多模态视觉组合式适配器<span class="sec-page">p.54</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We perform a series of experiments in which we incorporate visual-recognition capabilities into Llama 3 via a compositional approach that consists of two main stages. First, we compose a pre-trained image encoder and the pre-trained language model by introducing and training a set of cross-attention layers between the two models on a large number of image-text pairs. Second, we introduce temporal aggregator layers and additional video cross-attention layers that operate on a large collection of video-text pairs to learn the model to recognize and process temporal information from videos.</p>
+            <p>A compositional approach has several advantages: (1) it enables us to parallelize the development of the vision and language modeling capabilities; (2) it circumvents complexities of joint pre-training on visual and language data; (3) it guarantees that model performance on text-only tasks is not affected by the introduction of visual-recognition capabilities; (4) the cross-attention architecture ensures that we do not have to expend compute passing full-resolution images through the increasingly large LLM backbones, making it more efficient during inference.</p>
+          </div>
+          <div class="zh">
+            <p>视觉能力走"<strong>组合式(compositional)</strong>"两阶段:① 预训练的 <em>image encoder</em> + 预训练的 LM,中间插一组 <strong>cross-attention</strong> 层,在大量 image–text pair 上训这套 cross-attn(LM 主权重不动);② 再叠 <em>temporal aggregator</em> 与额外的 video cross-attention,在大量 video–text pair 上训,让模型能聚合视频跨帧的时序信息。</p>
+            <p><strong>组合式 vs 联合预训练的好处</strong>:① 视觉与语言可<em>并行</em>研发;② 避开"图文混合预训练"的复杂性(token 化差异、跨模态困惑度冲突);③ 引入视觉<em>不会影响</em>文本任务的表现;④ cross-attention 推理时<em>不必把全分辨率图像送进 LLM 的 FFN</em>,推理更省。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Image Data Pipeline.</strong> Our image encoder and adapter are trained on image-text pairs. We construct this dataset via a complex data processing pipeline that consists of four main stages: (1) quality filtering (using CLIP-score based heuristics), (2) perceptual de-duplication (using an internal SSCD copy-detection model), (3) resampling (n-gram based to favor richer descriptions), and (4) optical character recognition. We also apply a series of safety mitigations, including PhotoDNA scanning for CSAM, NSFW filtering, and face blurring.</p>
+            <p><strong>Annealing data.</strong> We create an annealing dataset by resampling the image-caption pairs to ∼350M examples using n-grams, augmented with ∼150M examples from five additional sources: visual grounding (linking noun phrases to bounding boxes / masks), screenshot parsing (HTML rendering ↔ code), question-answer pairs, synthetic captions, and synthetically-generated structured images (charts, tables, math equations).</p>
+          </div>
+          <div class="zh">
+            <p><strong>图像数据管线。</strong>图像编码器与 adapter 在 image–text pair 上训。整个管线 4 步:① <em>质量过滤</em>(用 CLIP 分数等启发式,丢非英文 caption 与低对齐对);② <em>感知去重</em>(用内部 SSCD copy-detection 模型);③ <em>重采样</em>(n-gram 选偏好"更丰富描述"的子集);④ <em>OCR</em>。安全侧:用 PhotoDNA 与内部分类器扫 CSAM;NSFW 过滤;<strong>对所有训练图片做<em>人脸打码</em></strong>。</p>
+            <p><strong>退火数据</strong>:用 n-gram 重采约 350M image-caption pair,再补 150M 来自 5 类:① <em>visual grounding</em>(把名词短语对应到 bbox/mask,要么用 marks-on-image,要么用文本内的归一化坐标);② <em>screenshot parsing</em>(渲 HTML 截图,让模型预测某元素对应的 HTML);③ QA 对;④ <em>合成 caption</em>(用早期模型生成,常比原 caption 更全面);⑤ <em>合成结构化图像</em>(图表/表格/流程图/数学公式/纯文字),并配套 markdown 或 LaTeX 标注。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7b">
+      <summary>
+        <span>§8 Speech Experiments / 语音编码器 + 适配器 + TTS<span class="sec-page">p.63</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Speech encoder.</strong> Our speech encoder is trained using a self-supervised approach that masks out parts of the speech inputs and tries to reconstruct the masked out parts via a discrete-token representation. As a result, the model learns the structure of speech signals.</p>
+            <p><strong>Speech adapter.</strong> We integrate the speech encoder into the model via an adapter that converts speech encodings into token representations that can be fed directly into the finetuned language model. The parameters of the adapter and encoder are jointly updated in a supervised finetuning stage to enable high-quality speech understanding. We do not change the language model during speech adapter training. We also integrate a text-to-speech system.</p>
+          </div>
+          <div class="zh">
+            <p><strong>语音编码器。</strong>用<em>自监督</em>方法训:对部分语音输入做 mask,再用离散 token 表示重建被 mask 的部分——结果是编码器学到"语音信号的结构",而不直接做语音→文本对齐(后者留给 adapter)。</p>
+            <p><strong>语音适配器。</strong>用一个 adapter 把语音编码转成"可直接喂 LM 的 token 表示";<em>encoder 与 adapter 联合微调</em>来获得高质量语音理解,但 <strong>LM 主权重不变</strong>。系统还集成了 <em>TTS</em> 作为反向(text → speech)出口。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§9 Related Work<span class="sec-page">p.69</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The development of Llama 3 builds on a large body of prior work studying foundation models for language, images, videos, and speech. A comprehensive overview of that work is outside the scope of this paper. Llama 3 inherits ideas from PaLM, Chinchilla scaling laws, the GQA family for efficient inference, RoPE positional embeddings, RLHF / DPO for alignment, Flamingo-style cross-attention for vision-language models, and self-supervised audio representations for speech.</p>
+          </div>
+          <div class="zh">
+            <p>Llama 3 站在大量已有基础模型工作的肩上(语言 / 图像 / 视频 / 语音),全面综述不在论文范围内。它直接继承了若干路线:PaLM 风格 Transformer、Chinchilla scaling laws、GQA(高效推理)、RoPE 位置编码、RLHF / DPO 对齐范式、Flamingo 式 cross-attention 视觉–语言模型,以及自监督音频表征。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§10 Conclusion<span class="sec-page">p.70</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In many ways, the development of high-quality foundation models is still in its infancy. Our experience in developing Llama 3 suggests that substantial further improvements of these models are on the horizon. Throughout the development of the Llama 3 model family, we found that a strong focus on high-quality data, scale, and simplicity consistently yielded the best results. The open release of Llama 3 reaffirms the importance of making such models broadly available to the research community to accelerate progress on AI in a responsible way.</p>
+          </div>
+          <div class="zh">
+            <p>从多方面看,高质量基础模型的发展还处在<em>早期</em>。开发 Llama 3 的经验告诉我们:大幅进一步的提升<em>已经在地平线上</em>。整个 Llama 3 家族的研发过程中,我们一直发现——<strong>专注于"高质量数据 × 规模 × 简洁性"</strong>这三件事,持续地产出最佳结果。Llama 3 的开放发布,再次强调了"<em>把这类模型广泛开放给研究社区</em>"对加速 AI 负责任发展的重要性。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>References(略)<span class="sec-page">p.75</span></span>
+      </summary>
+      <div class="sec-content"><p>参考文献从略 —— 见原论文 p.75 起,合计 ~30 页、800+ 条引用。</p></div>
+    </details>
+
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>
