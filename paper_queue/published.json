@@ -1,1 +1,75 @@
-[]
+[
+  {
+    "slug": "dolma",
+    "href": "papers/dolma.html",
+    "title": "Dolma: an Open Corpus of Three Trillion Tokens",
+    "arxiv": "2402.00159",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "开源完整 pipeline + 工具链 + 决策记录，工业数据工程的教科书。",
+    "published_at": "2026-06-05",
+    "path": "source/papers-reader/papers/dolma.html",
+    "audit": {
+      "slug": "dolma",
+      "title": "Dolma: an Open Corpus of Three Trillion Tokens",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2402.00159_fig_1.png",
+          "exists": true,
+          "bytes": 270456,
+          "dimensions": [
+            3215,
+            2732
+          ]
+        },
+        {
+          "src": "../figures/2402.00159_fig_2.png",
+          "exists": true,
+          "bytes": 293132,
+          "dimensions": [
+            3321,
+            2732
+          ]
+        },
+        {
+          "src": "../figures/2402.00159_fig_3.png",
+          "exists": true,
+          "bytes": 1109077,
+          "dimensions": [
+            3188,
+            2221
+          ]
+        },
+        {
+          "src": "../figures/2402.00159_fig_4.png",
+          "exists": true,
+          "bytes": 148432,
+          "dimensions": [
+            915,
+            781
+          ]
+        },
+        {
+          "src": "../figures/2402.00159_fig_5.png",
+          "exists": true,
+          "bytes": 236563,
+          "dimensions": [
+            2633,
+            2531
+          ]
+        }
+      ],
+      "sentence_count": 270
+    }
+  }
+]

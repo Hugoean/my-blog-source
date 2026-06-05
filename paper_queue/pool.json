@@ -1,21 +1,5 @@
 [
   {
-    "slug": "dolma",
-    "href": "papers/dolma.html",
-    "title": "Dolma: an Open Corpus of Three Trillion Tokens",
-    "arxiv": "2402.00159",
-    "tags": [
-      "数据工程"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "开源完整 pipeline + 工具链 + 决策记录，工业数据工程的教科书。"
-  },
-  {
     "slug": "fineweb",
     "href": "papers/fineweb.html",
     "title": "The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale",

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大模型论文阅读地图 · 开源版</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+
+    /* Tag 配色 */
+    --tag-data: #1d4ed8;      /* 数据工程 */
+    --tag-cpt: #6d28d9;       /* CPT */
+    --tag-post: #15803d;      /* 后训练 */
+    --tag-report: #c2410c;    /* 技术报告 */
+    --tag-other: #6b7280;     /* 其他 */
+
+    /* Audience 配色 */
+    --aud-eng: #b91c1c;       /* 算法工程师 */
+    --aud-stu: #0369a1;       /* 学生 */
+    --aud-teach: #7c2d12;     /* 老师 */
+
+    --done: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 14px;
+    line-height: 1.6; padding: 32px 24px 64px;
+    background-image:
+      radial-gradient(circle at 10% 0%, rgba(29, 78, 216, 0.04) 0%, transparent 35%),
+      radial-gradient(circle at 90% 100%, rgba(194, 65, 12, 0.04) 0%, transparent 35%);
+    min-height: 100vh;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px; margin-bottom: 28px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 32px; font-weight: 800;
+    letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 8px;
+  }
+  h1 .accent { color: var(--accent); }
+  .subtitle {
+    font-family: var(--serif); font-style: italic;
+    color: var(--text-dim); font-size: 15px;
+  }
+  .header-nav {
+    margin-top: 14px; font-family: var(--mono); font-size: 12px;
+  }
+  .header-nav a {
+    color: var(--accent); text-decoration: none;
+    border-bottom: 1px dotted;
+  }
+
+  /* ============ Audience selector ============ */
+  .aud-section { margin-bottom: 24px; }
+  .aud-section-label {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .audiences {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .aud-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative; overflow: hidden;
+  }
+  .aud-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; height: 3px; width: 100%;
+    background: var(--text-faint);
+  }
+  .aud-card[data-aud="A"]::before { background: var(--aud-eng); }
+  .aud-card[data-aud="B"]::before { background: var(--aud-stu); }
+  .aud-card[data-aud="C"]::before { background: var(--aud-teach); }
+  .aud-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--text-faint);
+  }
+  .aud-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(176,119,0,0.12);
+  }
+  .aud-title {
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .aud-meta {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); margin-bottom: 8px;
+  }
+  .aud-desc {
+    font-family: var(--serif); font-style: italic;
+    font-size: 12px; color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .aud-card[data-aud="A"] .aud-meta strong { color: var(--aud-eng); }
+  .aud-card[data-aud="B"] .aud-meta strong { color: var(--aud-stu); }
+  .aud-card[data-aud="C"] .aud-meta strong { color: var(--aud-teach); }
+
+  /* ============ Filter ============ */
+  .filters {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    display: flex; flex-wrap: wrap;
+    gap: 8px; align-items: center;
+  }
+  .filter-label {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); margin-right: 6px;
+  }
+  .filter-btn {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .filter-btn:hover {
+    color: var(--text); border-color: var(--text-faint);
+  }
+  .filter-btn.active {
+    background: var(--accent); color: #ffffff;
+    border-color: var(--accent);
+  }
+  .filter-btn[data-filter-tag="数据工程"].active { background: var(--tag-data); border-color: var(--tag-data); }
+  .filter-btn[data-filter-tag="CPT"].active { background: var(--tag-cpt); border-color: var(--tag-cpt); }
+  .filter-btn[data-filter-tag="后训练"].active { background: var(--tag-post); border-color: var(--tag-post); }
+  .filter-btn[data-filter-tag="技术报告"].active { background: var(--tag-report); border-color: var(--tag-report); }
+  .filter-btn[data-filter-tag="其他"].active { background: var(--tag-other); border-color: var(--tag-other); }
+  .filter-btn[data-filter-aud="A"].active { background: var(--aud-eng); border-color: var(--aud-eng); }
+  .filter-btn[data-filter-aud="B"].active { background: var(--aud-stu); border-color: var(--aud-stu); }
+  .filter-btn[data-filter-aud="C"].active { background: var(--aud-teach); border-color: var(--aud-teach); }
+
+  /* ============ Tag Section ============ */
+  .tag-section {
+    margin-bottom: 32px;
+  }
+  .tag-header {
+    font-family: var(--mono); font-size: 13px;
+    font-weight: 700; letter-spacing: 0.06em;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.025);
+    border-left: 3px solid var(--text-faint);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .tag-header .tag-name { text-transform: uppercase; }
+  .tag-header .tag-count {
+    color: var(--text-faint); font-weight: 400;
+    font-size: 11px;
+  }
+  .tag-header .tag-pitch {
+    margin-left: auto; font-weight: 400;
+    font-family: var(--serif); font-style: italic;
+    font-size: 12px; color: var(--text-dim);
+    text-transform: none; letter-spacing: 0;
+  }
+  .tag-section[data-tag="数据工程"] .tag-header { border-left-color: var(--tag-data); color: var(--tag-data); }
+  .tag-section[data-tag="CPT"] .tag-header { border-left-color: var(--tag-cpt); color: var(--tag-cpt); }
+  .tag-section[data-tag="后训练"] .tag-header { border-left-color: var(--tag-post); color: var(--tag-post); }
+  .tag-section[data-tag="技术报告"] .tag-header { border-left-color: var(--tag-report); color: var(--tag-report); }
+  .tag-section[data-tag="其他"] .tag-header { border-left-color: var(--tag-other); color: var(--tag-other); }
+
+  /* ============ Paper Card ============ */
+  .papers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 12px;
+  }
+  .paper {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    transition: transform 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .paper:hover {
+    transform: translateY(-2px);
+    border-color: var(--text-faint);
+  }
+  .paper-header {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .paper-title {
+    font-size: 14px; font-weight: 700;
+    line-height: 1.35;
+    color: var(--text);
+  }
+  .paper a.paper-link {
+    color: inherit; text-decoration: none; border: none;
+  }
+  .paper a.paper-link:hover { color: var(--accent); }
+  .paper-arxiv {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .paper-meta {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 10px;
+    margin-bottom: 8px;
+  }
+  .paper-meta span {
+    padding: 2px 6px; border-radius: 2px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border-soft);
+    color: var(--text-dim);
+  }
+  .paper-meta .tag-数据工程 { color: var(--tag-data); border-color: rgba(29,78,216,0.3); }
+  .paper-meta .tag-CPT { color: var(--tag-cpt); border-color: rgba(109,40,217,0.3); }
+  .paper-meta .tag-后训练 { color: var(--tag-post); border-color: rgba(21,128,61,0.3); }
+  .paper-meta .tag-技术报告 { color: var(--tag-report); border-color: rgba(194,65,12,0.3); }
+  .paper-meta .tag-其他 { color: var(--tag-other); border-color: rgba(107,114,128,0.3); }
+  .paper-meta .prio-deep { color: #b91c1c; font-weight: 600; }
+  .paper-meta .prio-read { color: #c2410c; }
+  .paper-meta .prio-skim { color: var(--text-faint); }
+
+  .aud-badges {
+    display: flex; gap: 4px; margin-bottom: 6px;
+  }
+  .aud-badge {
+    font-family: var(--mono); font-size: 9px;
+    padding: 1px 5px; border-radius: 2px;
+    font-weight: 700; letter-spacing: 0.04em;
+  }
+  .aud-badge.A { background: rgba(185,28,28,0.1); color: var(--aud-eng); border: 1px solid rgba(185,28,28,0.25); }
+  .aud-badge.B { background: rgba(3,105,161,0.1); color: var(--aud-stu); border: 1px solid rgba(3,105,161,0.25); }
+  .aud-badge.C { background: rgba(124,45,18,0.1); color: var(--aud-teach); border: 1px solid rgba(124,45,18,0.25); }
+
+  .paper-note {
+    font-family: var(--serif); font-style: italic;
+    font-size: 12px; color: var(--text-dim);
+    line-height: 1.5; margin-top: 6px;
+  }
+  .paper-actions {
+    display: flex; gap: 8px; align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .paper-actions a {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); text-decoration: none;
+    border-bottom: 1px dotted;
+  }
+  .paper-actions a:hover { border-bottom-style: solid; }
+
+  /* ============ Stats ============ */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; height: 2px; width: 100%;
+  }
+  .stat-card[data-stat="数据工程"]::before { background: var(--tag-data); }
+  .stat-card[data-stat="CPT"]::before { background: var(--tag-cpt); }
+  .stat-card[data-stat="后训练"]::before { background: var(--tag-post); }
+  .stat-card[data-stat="技术报告"]::before { background: var(--tag-report); }
+  .stat-card[data-stat="其他"]::before { background: var(--tag-other); }
+  .stat-label {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 20px; font-weight: 800;
+    font-family: var(--mono);
+  }
+  .stat-card[data-stat="数据工程"] .stat-value { color: var(--tag-data); }
+  .stat-card[data-stat="CPT"] .stat-value { color: var(--tag-cpt); }
+  .stat-card[data-stat="后训练"] .stat-value { color: var(--tag-post); }
+  .stat-card[data-stat="技术报告"] .stat-value { color: var(--tag-report); }
+  .stat-card[data-stat="其他"] .stat-value { color: var(--tag-other); }
+
+  /* ============ Footer ============ */
+  footer {
+    margin-top: 56px;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-faint);
+    font-family: var(--mono); font-size: 11px;
+  }
+  footer .quote {
+    font-family: var(--serif); font-style: italic;
+    color: var(--text-dim); font-size: 13px;
+    margin-bottom: 12px;
+  }
+  footer a {
+    color: var(--accent); text-decoration: none;
+    border-bottom: 1px dotted;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="eyebrow">PAPERS READER · 大模型论文阅读地图 · 开源版 v0.1</div>
+    <h1>大模型论文 <span class="accent">阅读地图</span></h1>
+    <div class="subtitle">1 篇已发布 · 每天 1 篇更新 · 5 标签分类 · 3 类读者推荐路径 · 中英双语全文翻译 · 公式 KaTeX · 图含中文图注</div>
+  </header>
+
+  <!-- ===== 标签统计 ===== -->
+  <div class="stats">
+    <div class="stat-card" data-stat="数据工程">
+      <div class="stat-label">🔧 数据工程</div>
+      <div class="stat-value">1</div>
+    </div>
+    <div class="stat-card" data-stat="CPT">
+      <div class="stat-label">🏗️ CPT</div>
+      <div class="stat-value">0</div>
+    </div>
+    <div class="stat-card" data-stat="后训练">
+      <div class="stat-label">🎯 后训练</div>
+      <div class="stat-value">0</div>
+    </div>
+    <div class="stat-card" data-stat="技术报告">
+      <div class="stat-label">📊 技术报告</div>
+      <div class="stat-value">0</div>
+    </div>
+    <div class="stat-card" data-stat="其他">
+      <div class="stat-label">🌐 其他</div>
+      <div class="stat-value">0</div>
+    </div>
+  </div>
+
+  <!-- ===== 读者路径选择 ===== -->
+  <div class="aud-section">
+    <div class="aud-section-label">👥 选择你的读者身份 · 点击查看专属路径</div>
+    <div class="audiences">
+      <div class="aud-card" data-aud="A">
+        <div class="aud-title">🛠️ 算法工程师</div>
+        <div class="aud-meta"><strong>在职 · 4-6 周</strong> · 目标：跟 SOTA + 工程落地</div>
+        <div class="aud-desc">你已经懂 Transformer 和 RLHF 基础，想搞清楚最新一代怎么做、为什么这么做、能不能复用到自己的业务。重点路径：完整 pipeline → 数据工程 → 后训练前沿。</div>
+      </div>
+      <div class="aud-card" data-aud="B">
+        <div class="aud-title">🎓 冲击算法岗学生</div>
+        <div class="aud-meta"><strong>求职 · 3 周</strong> · 目标：面试讲清训练全栈</div>
+        <div class="aud-desc">你需要在面试时把 RLHF→DPO→GRPO 的演进、数据 pipeline、Scaling Law 一气呵成讲完。重点路径：经典论文背公式 + 一份完整工业报告。</div>
+      </div>
+      <div class="aud-card" data-aud="C">
+        <div class="aud-title">👨‍🏫 大模型方向老师</div>
+        <div class="aud-meta"><strong>授课 · 学期 5 模块</strong> · 目标：横向对比 + 演进脉络</div>
+        <div class="aud-desc">你要给研究生开课，需要每个主题有 2-4 篇代表作，能讲清楚"前作 → 改进 → 现状"。重点路径：每个 tag 都按时间线选 3-4 篇，横向对比技术报告。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 过滤器 ===== -->
+  <div class="filters">
+    <span class="filter-label">标签:</span>
+    <button class="filter-btn active" data-filter-tag="all">全部</button>
+    <button class="filter-btn" data-filter-tag="数据工程">🔧 数据工程</button>
+    <button class="filter-btn" data-filter-tag="CPT">🏗️ CPT</button>
+    <button class="filter-btn" data-filter-tag="后训练">🎯 后训练</button>
+    <button class="filter-btn" data-filter-tag="技术报告">📊 技术报告</button>
+    <button class="filter-btn" data-filter-tag="其他">🌐 其他</button>
+
+    <span class="filter-label" style="margin-left:18px">读者:</span>
+    <button class="filter-btn active" data-filter-aud="all">全部</button>
+    <button class="filter-btn" data-filter-aud="A">🛠️ 工程师</button>
+    <button class="filter-btn" data-filter-aud="B">🎓 学生</button>
+    <button class="filter-btn" data-filter-aud="C">👨‍🏫 老师</button>
+
+    <span class="filter-label" style="margin-left:18px">优先级:</span>
+    <button class="filter-btn active" data-filter-prio="all">全部</button>
+    <button class="filter-btn" data-filter-prio="deep">精读</button>
+    <button class="filter-btn" data-filter-prio="read">细读</button>
+    <button class="filter-btn" data-filter-prio="skim">扫读</button>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ============ Tag: 数据工程 ============ -->
+  <!-- =================================================== -->
+  <div class="tag-section" data-tag="数据工程">
+    <div class="tag-header">
+      <span class="tag-name">🔧 数据工程</span>
+      <span class="tag-count">1 篇</span>
+      <span class="tag-pitch">收集 / 清洗 / 去重 / 配比 / 合成数据 — 工业训练的真正瓶颈</span>
+    </div>
+    <div class="papers-grid">
+
+      <div class="paper" data-tags="数据工程" data-aud="A,B,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/dolma.html">Dolma: an Open Corpus of Three Trillion Tokens</a></div>
+          <div class="paper-arxiv">2402.00159</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-数据工程">数据工程</span>
+          <span class="prio-deep">deep</span>
+          <span>AI2 · 3T tokens</span>
+        </div>
+        <div class="paper-note">开源完整 pipeline + 工具链 + 决策记录，工业数据工程的教科书。</div>
+        <div class="paper-actions">
+          <a href="papers/dolma.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2402.00159" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
+
+      
+
+      
+
+      
+
+      
+
+      
+
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ============ Tag: CPT ============ -->
+  <!-- =================================================== -->
+  <div class="tag-section" data-tag="CPT">
+    <div class="tag-header">
+      <span class="tag-name">🏗️ CPT · 继续预训练</span>
+      <span class="tag-count">0 篇</span>
+      <span class="tag-pitch">领域适配 / 能力增强 / Scaling 理论 — base 模型上长出新能力</span>
+    </div>
+    <div class="papers-grid">
+
+      
+
+      
+
+      
+
+      
+
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ============ Tag: 后训练 ============ -->
+  <!-- =================================================== -->
+  <div class="tag-section" data-tag="后训练">
+    <div class="tag-header">
+      <span class="tag-name">🎯 后训练</span>
+      <span class="tag-count">0 篇</span>
+      <span class="tag-pitch">SFT / RLHF / DPO / GRPO / RLVR / 蒸馏 — base 模型变 chat / reasoning 的关键</span>
+    </div>
+    <div class="papers-grid">
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ============ Tag: 技术报告 ============ -->
+  <!-- =================================================== -->
+  <div class="tag-section" data-tag="技术报告">
+    <div class="tag-header">
+      <span class="tag-name">📊 技术报告</span>
+      <span class="tag-count">0 篇</span>
+      <span class="tag-pitch">头部厂商完整 pipeline — 看行业在解决什么问题、用什么手段</span>
+    </div>
+    <div class="papers-grid">
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ============ Tag: 其他 ============ -->
+  <!-- =================================================== -->
+  <div class="tag-section" data-tag="其他">
+    <div class="tag-header">
+      <span class="tag-name">🌐 其他</span>
+      <span class="tag-count">0 篇</span>
+      <span class="tag-pitch">Scaling Law 理论 + 长序列架构 — 跨主题的支柱</span>
+    </div>
+    <div class="papers-grid">
+
+      
+
+      
+
+    </div>
+  </div>
+
+  <footer>
+    <div class="quote">"报告告诉你做什么，论文 + 代码告诉你为什么 + 怎么做。"</div>
+    <div>v0.1 · 1 篇已发布 · 每天 1 篇更新 · 中英双语全文 + KaTeX 公式 + 图含中文图注</div>
+    <div style="margin-top:8px">致谢：DPO/GRPO/SimPO/FineWeb/Qwen/DeepSeek/Kimi/Llama/MiniMax/Yi/GLM/MiMo 等开源团队</div>
+  </footer>
+</div>
+
+<script>
+let filters = { tag: 'all', aud: 'all', prio: 'all' };
+
+function applyFilters() {
+  document.querySelectorAll('.paper').forEach(p => {
+    const tags = (p.dataset.tags || '').split(',');
+    const auds = (p.dataset.aud || '').split(',');
+    const prio = p.dataset.priority;
+    let show = true;
+    if (filters.tag !== 'all' && !tags.includes(filters.tag)) show = false;
+    if (filters.aud !== 'all' && !auds.includes(filters.aud)) show = false;
+    if (filters.prio !== 'all' && prio !== filters.prio) show = false;
+    p.style.display = show ? '' : 'none';
+  });
+  // 隐藏空 tag-section
+  document.querySelectorAll('.tag-section').forEach(s => {
+    const visible = Array.from(s.querySelectorAll('.paper'))
+      .some(p => p.style.display !== 'none');
+    s.style.display = visible ? '' : 'none';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  ['tag', 'aud', 'prio'].forEach(key => {
+    const attr = `data-filter-${key}`;
+    document.querySelectorAll(`[${attr}]`).forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll(`[${attr}]`).forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        filters[key] = b.getAttribute(attr);
+        applyFilters();
+      });
+    });
+  });
+
+  // 读者卡片点击 → 设置 aud filter
+  document.querySelectorAll('.aud-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const aud = card.dataset.aud;
+      document.querySelectorAll('.aud-card').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('[data-filter-aud]').forEach(b => b.classList.remove('active'));
+      card.classList.add('active');
+      const btn = document.querySelector(`[data-filter-aud="${aud}"]`);
+      if (btn) btn.classList.add('active');
+      filters.aud = aud;
+      applyFilters();
+      // 滚动到第一个 tag section
+      const firstSection = document.querySelector('.tag-section');
+      if (firstSection) firstSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+});
+</script>
+
+</body>
+</html>
