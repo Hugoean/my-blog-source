@@ -1,20 +1,5 @@
 [
   {
-    "slug": "datacomp-lm",
-    "href": "papers/datacomp-lm.html",
-    "title": "DataComp-LM: In Search of the Next Generation of Training Sets",
-    "arxiv": "2406.11794",
-    "tags": [
-      "数据工程"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "把\"数据选择\"做成 benchmark，统一对比不同过滤策略的实验框架。"
-  },
-  {
     "slug": "multilang-filter",
     "href": "papers/multilang-filter.html",
     "title": "Multilingual Data Filtering for Pretraining",

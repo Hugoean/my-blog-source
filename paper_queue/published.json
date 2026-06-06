@@ -252,5 +252,50 @@
       ],
       "sentence_count": 325
     }
+  },
+  {
+    "slug": "datacomp-lm",
+    "href": "papers/datacomp-lm.html",
+    "title": "DataComp-LM: In Search of the Next Generation of Training Sets",
+    "arxiv": "2406.11794",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "把\"数据选择\"做成 benchmark，统一对比不同过滤策略的实验框架。",
+    "published_at": "2026-06-06",
+    "path": "source/papers-reader/papers/datacomp-lm.html",
+    "audit": {
+      "slug": "datacomp-lm",
+      "title": "DataComp-LM: In Search of the Next Generation of Training Sets",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2406.11794_fig_1.png",
+          "exists": true,
+          "bytes": 113543,
+          "dimensions": [
+            2044,
+            511
+          ]
+        },
+        {
+          "src": "../figures/2406.11794_fig_2.png",
+          "exists": true,
+          "bytes": 124133,
+          "dimensions": [
+            1011,
+            934
+          ]
+        }
+      ],
+      "sentence_count": 248
+    }
   }
 ]
