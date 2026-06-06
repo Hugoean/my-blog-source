@@ -24,6 +24,7 @@ IMAGE_OUT_DIR = ROOT / "source" / "images" / "papers"
 READER_OUT_DIR = ROOT / "source" / "papers-reader"
 READER_PAPERS_DIR = READER_OUT_DIR / "papers"
 READER_FIGURES_DIR = READER_OUT_DIR / "figures"
+HEXO_LAYOUT_FALSE = "---\nlayout: false\n---\n"
 
 PLACEHOLDERS = (
     "让 Claude",
@@ -127,6 +128,12 @@ def image_refs(paper_html: str) -> list[str]:
     return re.findall(r'<img[^>]+src="(\.\./figures/[^"]+)"', paper_html)
 
 
+def as_standalone_page(page_html: str) -> str:
+    if page_html.startswith(HEXO_LAYOUT_FALSE):
+        return page_html
+    return HEXO_LAYOUT_FALSE + page_html
+
+
 def sentence_audit(text: str) -> list[str]:
     issues: list[str] = []
     chunks = re.split(r"(?<=[。！？.!?])\s+", text)
@@ -198,7 +205,11 @@ def audit(item: dict) -> dict:
 def copy_static_paper(item: dict) -> None:
     src_paper = SOURCE_DIR / item["href"]
     READER_PAPERS_DIR.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src_paper, READER_PAPERS_DIR / f"{item['slug']}.html")
+    page_html = src_paper.read_text(encoding="utf-8")
+    (READER_PAPERS_DIR / f"{item['slug']}.html").write_text(
+        as_standalone_page(page_html),
+        encoding="utf-8",
+    )
 
 
 def copy_static_images(item: dict) -> None:
@@ -298,7 +309,10 @@ def render_static_index(published: list[dict]) -> None:
     index_html = filter_paper_cards(index_html, published_slugs)
     index_html = update_index_counts(index_html, len(published_slugs))
     READER_OUT_DIR.mkdir(parents=True, exist_ok=True)
-    (READER_OUT_DIR / "index.html").write_text(index_html, encoding="utf-8")
+    (READER_OUT_DIR / "index.html").write_text(
+        as_standalone_page(index_html),
+        encoding="utf-8",
+    )
 
 
 def publish_next(publish_date: str | None = None) -> dict:
