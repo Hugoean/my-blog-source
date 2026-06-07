@@ -1,36 +1,5 @@
 [
   {
-    "slug": "multilang-filter",
-    "href": "papers/multilang-filter.html",
-    "title": "Multilingual Data Filtering for Pretraining",
-    "arxiv": "2505.22232",
-    "tags": [
-      "数据工程"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "英语外其他语言数据该怎么筛？低资源语种的工业实战，东南亚/印地语适用。"
-  },
-  {
-    "slug": "doremi",
-    "href": "papers/doremi.html",
-    "title": "DoReMi: Optimizing Data Mixtures Speeds Up LM Pretraining",
-    "arxiv": "2305.10429",
-    "tags": [
-      "数据工程"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "read",
-    "note": "把\"调配比\"自动化的奠基论文。Group-DRO 思路用代理模型搜最优 domain weights。"
-  },
-  {
     "slug": "redpajama-v2",
     "href": "papers/redpajama-v2.html",
     "title": "RedPajama-v2: an Open Dataset for Training LLMs",

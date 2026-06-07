@@ -1,0 +1,31 @@
+{
+  "slug": "multilang-filter",
+  "title": "Multilingual Data Filtering for Pretraining",
+  "status": "error",
+  "errors": [
+    "sentence 355 is too long for review: 1819 chars",
+    "sentence 461 is too long for review: 1306 chars",
+    "sentence 462 is too long for review: 2180 chars",
+    "sentence 464 is too long for review: 1477 chars",
+    "sentence 466 is too long for review: 3010 chars",
+    "sentence 467 is too long for review: 3031 chars",
+    "sentence 525 is too long for review: 1210 chars",
+    "sentence 546 is too long for review: 21949 chars",
+    "sentence 665 is too long for review: 1526 chars",
+    "sentence 666 is too long for review: 1532 chars",
+    "sentence 697 is too long for review: 1559 chars"
+  ],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2505.22232_fig_1.png",
+      "exists": true,
+      "bytes": 4030199,
+      "dimensions": [
+        16147,
+        10357
+      ]
+    }
+  ],
+  "sentence_count": 699
+}

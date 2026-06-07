@@ -297,5 +297,168 @@
       ],
       "sentence_count": 248
     }
+  },
+  {
+    "slug": "doremi",
+    "href": "papers/doremi.html",
+    "title": "DoReMi: Optimizing Data Mixtures Speeds Up LM Pretraining",
+    "arxiv": "2305.10429",
+    "tags": [
+      "数据工程"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "把\"调配比\"自动化的奠基论文。Group-DRO 思路用代理模型搜最优 domain weights。",
+    "published_at": "2026-06-07",
+    "path": "source/papers-reader/papers/doremi.html",
+    "audit": {
+      "slug": "doremi",
+      "title": "DoReMi: Optimizing Data Mixtures Speeds Up LM Pretraining",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2305.10429_fig_1.png",
+          "exists": true,
+          "bytes": 205677,
+          "dimensions": [
+            3308,
+            904
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_2.png",
+          "exists": true,
+          "bytes": 492314,
+          "dimensions": [
+            3809,
+            2053
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_3.png",
+          "exists": true,
+          "bytes": 368156,
+          "dimensions": [
+            2783,
+            1845
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_4.png",
+          "exists": true,
+          "bytes": 478762,
+          "dimensions": [
+            2756,
+            1816
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_5.png",
+          "exists": true,
+          "bytes": 411050,
+          "dimensions": [
+            3874,
+            1428
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_6.png",
+          "exists": true,
+          "bytes": 470055,
+          "dimensions": [
+            2777,
+            1914
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_7.png",
+          "exists": true,
+          "bytes": 448003,
+          "dimensions": [
+            2784,
+            1887
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_8.png",
+          "exists": true,
+          "bytes": 364244,
+          "dimensions": [
+            2782,
+            1856
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_9.png",
+          "exists": true,
+          "bytes": 374190,
+          "dimensions": [
+            2785,
+            1876
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_10.png",
+          "exists": true,
+          "bytes": 520635,
+          "dimensions": [
+            2782,
+            1850
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_11.png",
+          "exists": true,
+          "bytes": 509445,
+          "dimensions": [
+            2782,
+            1890
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_12.png",
+          "exists": true,
+          "bytes": 723216,
+          "dimensions": [
+            3042,
+            2069
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_13.png",
+          "exists": true,
+          "bytes": 476500,
+          "dimensions": [
+            2795,
+            1849
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_14.png",
+          "exists": true,
+          "bytes": 492652,
+          "dimensions": [
+            2795,
+            1864
+          ]
+        },
+        {
+          "src": "../figures/2305.10429_fig_15.png",
+          "exists": true,
+          "bytes": 420105,
+          "dimensions": [
+            2783,
+            1777
+          ]
+        }
+      ],
+      "sentence_count": 338
+    }
   }
 ]
