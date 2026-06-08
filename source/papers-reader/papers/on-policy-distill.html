@@ -1,0 +1,1166 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Published as a conference paper at ICLR 2024 · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2306.13649 · 18 页 · GKD / On-Policy Distillation</div>
+    <h1>On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W9</span>
+      <span>Distillation</span><span>RL</span><span>GKD</span>
+      <span><a href="https://arxiv.org/abs/2306.13649" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2306.13649.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>GKD(Generalized Knowledge Distillation)把"蒸馏 auto-regressive 语言模型"重新表述为<em>带交互式专家的模仿学习</em>——用 student 自己采样的 on-policy 轨迹做训练数据,再让 teacher 在这些轨迹上输出 token 级 logits 作为监督信号,从根本上消除 off-policy 蒸馏的 train-inference 分布偏移,并能与 RLHF/RLAIF 无缝拼接。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>核心痛点:train-inference distribution mismatch</strong>。SeqKD / Supervised KD 都在一个<em>固定</em>数据集(ground-truth 或 teacher-sampled)上算 forward KL;但 student 推理时自回归生成,看到的前缀分布与训练时完全不同——早期 token 一错就级联,这就是 imitation learning 里的 <em>exposure bias</em>(Ross & Bagnell 2010)。on-policy 蒸馏直接让训练数据 = student 自己的采样,把"训练态"和"推理态"对齐。
+        </li>
+        <li>
+          <strong>GKD 总目标(必默写)</strong>:用 student 数据比例 $\lambda\in[0,1]$ 和散度 $D$ 把 supervised / on-policy 统一:
+          $$\mathcal{L}_{\text{GKD}}(\theta) = (1-\lambda)\,\mathbb{E}_{(x,y)\sim(X,Y)}\!\left[D(p_T\|p_S^\theta)(y|x)\right] + \lambda\,\mathbb{E}_{x\sim X}\,\mathbb{E}_{y\sim p_S(\cdot|x)}\!\left[D(p_T\|p_S^\theta)(y|x)\right].$$
+          其中 token 级散度 $D(p_T\|p_S^\theta)(y|x) = \tfrac{1}{L_y}\sum_n D\!\left(p_T(\cdot|y_{<n},x)\,\|\,p_S^\theta(\cdot|y_{<n},x)\right)$。Supervised KD = $(\lambda=0,\text{forward KL})$,On-policy KD = $(\lambda=1,\text{forward KL})$;<strong>不</strong>回传 student 采样过程的梯度——这是 GKD 比 MiniLLM 更稳定的关键。
+        </li>
+        <li>
+          <strong>散度选哪个:forward KL / reverse KL / JSD$(\beta)$</strong>。forward KL($\sum P\log P/Q$)是 <em>mode-covering / mean-seeking</em>,会强迫 student 覆盖 teacher 整个支撑集,容量不够时把概率撒到 teacher 几乎不会生成的 token → hallucination;reverse KL 是 <em>mode-seeking</em>,聚焦 teacher 高概率 token,质量好但多样性差。JSD$(\beta)$ 是有界的插值:$\beta\!\to\!0$ 退化为 forward KL、$\beta\!\to\!1$ 退化为 reverse KL。论文经验:WMT 用 JSD(0.1) 最好;XSum 在 temperature 采样下 reverse KL / JSD(0.9) 占优;Instruction tuning(MMLU/BBH)reverse KL 显著好于 forward KL,因为它强制对齐指令的 main intent。
+        </li>
+        <li>
+          <strong>vs 同期 MiniLLM(2306.08543)</strong>:MiniLLM 也把蒸馏当 RL,在 sequence-level 上优化 reverse KL,用 policy gradient(要回传采样),为此堆了很多稳定化 trick(方差控制、reward hacking、长度偏置)。GKD 在 <em>token-level</em> 上算散度、<em>不</em>回传采样,本质上还是监督学习的稳定性;并且 GKD 散度可换、可与 RL 共训,更通用。
+        </li>
+        <li>
+          <strong>与 RL fine-tuning(RLHF / RLAIF)合一</strong>:把 distillation loss 当作向 teacher 而非向 SFT 模型的正则项,$$\mathbb{E}_{x\sim X}\!\left[(1-\alpha)\,\mathbb{E}_{y\sim p_S^\theta}[r(y)] - \alpha\,\mathbb{E}_{y\sim p_S}\!\left[D(p_T\|p_S^\theta)(y|x)\right]\right].$$ 既最大化 reward(摘要事实一致性),又让 student 不丢 teacher 教过的能力——可缓解 alignment tax。论文里 $\alpha\in\{0.05,0.1,0.25,0.5\}$ 扫,$\alpha\!\uparrow$ → ROUGE-2$\uparrow$ / 事实性$\downarrow$。
+        </li>
+        <li>
+          <strong>$\lambda$ 与 student data 比例</strong>:GSM8K 实验显示只要 on-policy 数据 $\geq 25\%$ 就显著优于纯 supervised;纯 on-policy($\lambda=1$)在多数任务上最优。前提是 student 已经 SFT 过,能产出"基本能看"的序列让 teacher 打分——和 RLHF 先 SFT 再 RL 的两阶段同构。
+        </li>
+        <li>
+          <strong>实验数字(可背)</strong>:T5 student 上相对增益 summarization 2.1×、translation 1.7×、reasoning 1.9×;7000× 小的 T5 蒸馏后可超过 PaLM-540B few-shot;instruction tuning 上 MMLU +2%、BBH +1%(absolute)。
+        </li>
+        <li>
+          <strong>计算代价</strong>:on-policy 需要训练时从 student 采样,GSM8K 上 1.8–2.2× overhead;但 GKD+RLHF 时由于 teacher 只跑 inference 取 logits,额外开销很小。论文 argues:能上线服务的模型,训练时让它采样不算贵。
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      蒸馏 + RL 思路源头;必懂 on-policy 数据 + token-level KL 的组合拳
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-4a">§2 Preliminaries / 预备</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-4b">§3 Distillation for Auto-Regressive Models / 蒸馏框架</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-4c">§3.1 Generalized Knowledge Distillation (GKD)</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-4d">§3.2 RL Fine-Tuning + On-Policy GKD</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-5a">§4 Experiments / 实验</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-5b">§4.1 Abstractive Summarization (XSum)</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-5c">§4.2 Machine Translation (WMT)</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-5d">§4.3 Arithmetic Reasoning (GSM8K)</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-5e">§4.4 Task-Agnostic Distillation / 指令微调</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-6">§5 Related Work / 相关工作</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-7">§6 Conclusion / 结论</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-8">References / 参考文献</a><span class="toc-page">p.11</span></li>
+
+    </ul>
+  </div>
+
+
+  <!-- 图表画廊 -->
+
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>Published as a conference paper at ICLR 2024. ON-POLICY DISTILLATION OF LANGUAGE MODELS: LEARNING FROM SELF-GENERATED MISTAKES. Rishabh Agarwal*†, Nino Vieillard*, Yongchao Zhou, Piotr Stanczyk†, Sabela Ramos†, Matthieu Geist, Olivier Bachem — Google DeepMind / Mila / University of Toronto.</p></div>
+    </details>
+
+    <details class="sec" id="sec-2" open>
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Knowledge distillation (KD) is widely used for compressing a teacher model to reduce its inference cost and memory footprint, by training a smaller student model. However, current KD methods for auto-regressive sequence models suffer from distribution mismatch between output sequences seen during training and those generated by the student during inference. To address this issue, we introduce Generalized Knowledge Distillation (GKD). Instead of solely relying on a fixed set of output sequences, GKD trains the student on its self-generated output sequences by leveraging feedback from the teacher on such sequences. Unlike supervised KD approaches, GKD also offers the flexibility to employ alternative loss functions between the student and teacher, which may be useful when the student lacks the expressivity to mimic the teacher's distribution. Furthermore, GKD facilitates the seamless integration of distillation with RL fine-tuning of language models. We demonstrate the efficacy of GKD for distilling auto-regressive T5 language models for task-specific distillation on summarization, translation, and reasoning tasks, and task-agnostic distillation for instruction tuning.</p>
+          </div>
+          <div class="zh">
+            <p>知识蒸馏(KD)被广泛用于压缩 teacher 模型,通过训练一个更小的 student 模型来降低推理成本与显存占用。然而,当前用于自回归序列模型的 KD 方法都受困于一个分布偏移问题:训练时所见的输出序列与 student 在推理时自己生成的输出序列并不一致。为了解决这一问题,我们提出 Generalized Knowledge Distillation(GKD)。GKD 不再仅依赖一个固定的输出序列集合,而是用 student 自己生成的输出序列来训练它,并借助 teacher 对这些序列的反馈作为监督。与有监督 KD 方法不同,GKD 还提供了在 student 与 teacher 之间使用其他损失函数的灵活性——这一点在 student 表达能力不足以模仿 teacher 分布时尤其有用。此外,GKD 还能让蒸馏与语言模型的 RL 微调无缝整合。我们在自回归 T5 语言模型上验证了 GKD 的有效性:既包括摘要、翻译、推理等任务上的任务专属蒸馏,也包括指令微调这种任务无关的蒸馏。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3" open>
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Auto-regressive sequence models, such as language models (LMs), have shown impressive capabilities in numerous tasks, where the key to this success is often scaling the amount of training data as well as the number of model parameters (Kaplan et al., 2020). However, scaling parameter count comes at a cost, and the deployment of such models is limited by either their inference cost or memory footprint. Thus, a crucial goal for practical use of large capable models is to compress them by reducing their parameter count, while retaining as much as possible of their performance.</p>
+            <p>One of the prevalent techniques for compressing models is knowledge distillation (Hinton et al., 2015). Distillation is the process of training a model – the student – to replicate the knowledge of another model – the teacher – on a specific set of tasks. Typically, the student has fewer parameters than the teacher and as such, distillation can improve task-specific performance while maintaining lower inference cost and memory footprint than the teacher.</p>
+          </div>
+          <div class="zh">
+            <p>自回归序列模型——例如语言模型(LM)——已经在许多任务上展现出令人印象深刻的能力,其成功的关键往往在于训练数据规模与模型参数量的扩张(Kaplan et al., 2020)。然而,参数量的扩张是有代价的:这类模型的部署受限于推理成本或显存占用。因此,在实际使用大模型时一个关键的目标就是压缩它们——在减少参数量的同时尽可能保留其性能。</p>
+            <p>知识蒸馏(Hinton et al., 2015)是压缩模型最常见的技术之一。蒸馏的过程是训练一个模型(student),让它在特定任务集上复现另一个模型(teacher)的知识。通常 student 的参数量比 teacher 少,因此蒸馏能在保持比 teacher 更低的推理成本与显存占用的前提下,提升任务特定的性能。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Current distillation methods for auto-regressive sequence models either require generating a fixed set of output sequences from the teacher model (Kim & Rush, 2016), which can be expensive, or a fixed dataset of sequences that the teacher can label by assigning token-level probabilities (Sanh et al., 2019). However, using a fixed dataset can lead to distribution mismatch between output sequences seen during training and the sequences generated by the student auto-regressively during inference, a well-known problem in imitation learning (Pomerleau, 1991; Ross & Bagnell, 2010). Furthermore, the common objective for distillation is to minimize the forward KL between the teacher and the student distributions. However, the student may not be expressive enough to fit the teacher's distribution, which can result in student-generated samples that are unlikely to be generated by the teacher (e.g., Figure A.16).</p>
+          </div>
+          <div class="zh">
+            <p>目前用于自回归序列模型的蒸馏方法,要么需要从 teacher 模型生成一个固定的输出序列集合(Kim & Rush, 2016)——这可能很昂贵——要么使用一个固定的序列数据集,由 teacher 在其上给出 token 级概率作为标签(Sanh et al., 2019)。然而,使用一个固定的数据集会导致"训练时所见输出序列"与"推理时 student 自回归生成的序列"之间出现分布偏移,这是模仿学习里一个尽人皆知的问题(Pomerleau, 1991; Ross & Bagnell, 2010)。此外,蒸馏的通用目标是最小化 teacher 与 student 分布之间的 forward KL。但 student 的表达能力可能不足以拟合 teacher 的分布,从而导致 student 生成的样本是 teacher 几乎不会生成的(如图 A.16 所示)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this paper, we propose Generalized KD (GKD) to mitigate the above issues. First, we recognize that KD for auto-regressive sequence models can be viewed as an imitation learning problem with an interactive expert (Ross et al., 2011). Using this insight, GKD trains the student on its self-generated sequences that are on-policy, instead of a fixed set of outputs sequences, using teacher probabilities as expert labels on these sequences. Our idea is further supported by the recent success of fine-tuning large language models on their own output sequences (Ouyang et al., 2022; Singh et al., 2023). Furthermore, GKD provides the flexibility to optimize alternative divergence measures, such as reverse KL and generalized JSD (Section 2), that can use student's limited capacity to focus on generating samples that are likely under the teacher.</p>
+          </div>
+          <div class="zh">
+            <p>在本文中,我们提出 Generalized KD(GKD)以缓解上述问题。首先,我们意识到自回归序列模型的 KD 可以被看作一个带<em>交互式专家</em>的模仿学习问题(Ross et al., 2011)。借助这个洞察,GKD 不再使用固定的输出序列集合,而是用 student 自己生成的 on-policy 序列来训练它,并把 teacher 的概率当作这些序列上的"专家标签"。这一想法也得到近期工作的支持:大语言模型在自己生成的输出上做微调取得了成功(Ouyang et al., 2022; Singh et al., 2023)。此外,GKD 还提供了使用其他散度的灵活性,例如 reverse KL 与 generalized JSD(见第 2 节),这些散度能让 student 用其有限的容量去聚焦在 teacher 高概率的样本上。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>GKD unifies some existing KD methods for autoregressive LMs while instantiating new on-policy methods that substantially outperform prevalent approaches. In terms of performance gains over the initial student from on-policy GKD, averaged across T5 student models of different sizes, we see relative gains of 2.1× on summarization, 1.7× on machine translation, and 1.9× on arithmetic reasoning tasks, compared to the performance improvements achieved with baseline KD methods (Figure 1). Additionally, we exhibit GKD's efficacy in task-agnostic distillation, resulting in 2% and 1% absolute accuracy improvement on the held-out BBH and MMLU benchmark suites (Figure 10).</p>
+          </div>
+          <div class="zh">
+            <p>GKD 统一了若干已有的自回归 LM 蒸馏方法,同时实例化出了新的 on-policy 方法,这些方法的效果显著优于主流做法。以"on-policy GKD 相对原始 student 的提升"为指标,平均到不同尺寸的 T5 student 上,与基线 KD 方法相比,我们在摘要任务上得到 2.1× 的相对增益、机器翻译上 1.7×、算术推理上 1.9×(图 1)。此外,我们在任务无关的蒸馏上也展示了 GKD 的有效性:在 held-out 的 BBH 与 MMLU 基准上分别得到 2% 与 1% 的绝对准确率提升(图 10)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our key contributions are: <strong>(1)</strong> To tackle discrepancy during training and inference for auto-regressive LMs, we present GKD that leverages on-policy student-generated outputs for distillation, guided by the token-level teacher probabilities over these outputs. GKD substantially outperforms commonly-used methods in task-specific (Figure 1) and task-agnostic KD (Figure 10). <strong>(2)</strong> We demonstrate that on-policy GKD can be seamlessly combined with RL fine-tuning (e.g., RLAIF) of language models, a combination that has not been previously explored (Figure 5). <strong>(3)</strong> Through a systematic evaluation of design choices in GKD, we offer practical insights about the importance of using student-generated on-policy output sequences during distillation and the task-dependent nature of optimal divergence between the student and the teacher.</p>
+          </div>
+          <div class="zh">
+            <p>本文的关键贡献为:<strong>(1)</strong>为应对自回归 LM 训练-推理之间的分布偏移,我们提出 GKD——用 student 自己生成的 on-policy 输出做蒸馏数据,并以 teacher 在这些输出上的 token 级概率作为监督。GKD 在任务专属蒸馏(图 1)与任务无关蒸馏(图 10)上都显著优于常用方法。<strong>(2)</strong>我们展示了 on-policy GKD 可与语言模型的 RL 微调(例如 RLAIF)无缝结合——这种组合在以往的工作中尚未被探索(图 5)。<strong>(3)</strong>我们系统评估了 GKD 中的设计选择,在实践层面给出了两个洞察:一是在蒸馏中使用 student 自生成的 on-policy 输出序列的重要性,二是 student 与 teacher 之间最优散度的<em>任务相关性</em>。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4a">
+      <summary>
+        <span>§2 Preliminaries / 预备<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">2.1 Auto-regressive Generative Sequence Models / 自回归生成式序列模型</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We denote the input and output sequence as $x, y$ respectively. Let $\mathcal{V}$ denote the vocabulary comprising of $M$ tokens, $y_{<n+1} = (y_1, y_2, \dots, y_n)$ denote the generated output sequence up to the $n$th token, and $L_y$ denote the length of sequence $y$. A token-level auto-regressive policy $p(\cdot|y_{<n}, x) \in (0, 1)^M$ outputs a next-token probability distribution over all tokens in $\mathcal{V}$, conditioned on the input $x$ and output sequence $y_{<n}$. Furthermore, $y \sim p(\cdot|x)$ corresponds to a sampled output sequence $y$ given the input $x$. For ease of notation, we define $p(y_n|x) := p(y_n|y_{<n}, x)$.</p>
+            <p>Auto-regressive generation involves predicting tokens one at a time, based on the previously generated tokens. The probability of predicting the $n$th token $y_n$, $p(y_n|x)$, is determined using a softmax with temperature $\gamma$: $p(y_n|x) = \exp(z_n/\gamma) / \sum_{i=1}^{M} \exp(z_i/\gamma)$, where $z_n$ is the logit score for the token $y_n$. Higher values of $\gamma$ introduces more randomness, while a lower value makes the output more deterministic by favoring the most probable words. During training, the student's temperature is kept at 1. For evaluation, we use greedy sampling ($\gamma \to 0$) or temperature sampling ($\gamma > 0$).</p>
+          </div>
+          <div class="zh">
+            <p>我们用 $x, y$ 分别表示输入与输出序列。令 $\mathcal{V}$ 表示由 $M$ 个 token 组成的词表,$y_{<n+1} = (y_1, y_2, \dots, y_n)$ 表示生成到第 $n$ 个 token 为止的输出序列,$L_y$ 表示序列 $y$ 的长度。一个 token 级别的自回归策略 $p(\cdot|y_{<n}, x) \in (0, 1)^M$ 在给定输入 $x$ 与已生成前缀 $y_{<n}$ 的条件下,输出 $\mathcal{V}$ 上所有 token 的下一步概率分布。此外,$y \sim p(\cdot|x)$ 表示在给定输入 $x$ 时采样得到的一条输出序列 $y$。为方便记号,我们定义 $p(y_n|x) := p(y_n|y_{<n}, x)$。</p>
+            <p>自回归生成的过程是基于已生成的 token 一次预测一个 token。预测第 $n$ 个 token $y_n$ 的概率 $p(y_n|x)$ 由带温度 $\gamma$ 的 softmax 决定:$p(y_n|x) = \exp(z_n/\gamma) / \sum_{i=1}^{M} \exp(z_i/\gamma)$,其中 $z_n$ 是 token $y_n$ 的 logit。$\gamma$ 越高,采样越随机;$\gamma$ 越低,则越偏向高概率 token、输出越确定性。训练时 student 的温度固定为 1。评估时我们使用贪心采样($\gamma \to 0$)或温度采样($\gamma > 0$)。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">2.2 KL-Based Divergences / 基于 KL 的散度</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The divergence between two probability distributions is a measure of the similarity of the distributions, with KL divergence a prevalent measure. The KL divergence between two discrete distributions $P(\mathcal{C})$ and $Q(\mathcal{C})$ is given by:</p>
+            <div class="bi-eq">$$D_{\mathrm{KL}}(P\|Q) = \sum_{c\in\mathcal{C}} P(c)\,\log\frac{P(c)}{Q(c)}.$$</div>
+            <p>The KL divergence is not symmetric: $D_{\mathrm{KL}}(P\|Q) \neq D_{\mathrm{KL}}(Q\|P)$. As such, we refer to $D_{\mathrm{KL}}(P\|Q)$ as the <em>forward KL</em> while $D_{\mathrm{KL}}(Q\|P)$ as the <em>reverse KL</em> between $P$ and $Q$. Forward KL under an empirical data distribution corresponds to maximum likelihood, which we optimize in supervised learning. Given model capacity mismatch, when approximating $P(\mathcal{C})$ using a distribution $Q_\theta(\mathcal{C})$, minimizing the reverse and forward KL results in mean and mode-seeking behavior (Figure A.16).</p>
+          </div>
+          <div class="zh">
+            <p>两个概率分布之间的散度衡量它们的相似程度,KLD 是其中最常用的一种。两个离散分布 $P(\mathcal{C})$ 与 $Q(\mathcal{C})$ 之间的 KLD 由下式给出:</p>
+            <div class="bi-eq">$$D_{\mathrm{KL}}(P\|Q) = \sum_{c\in\mathcal{C}} P(c)\,\log\frac{P(c)}{Q(c)}.$$</div>
+            <p>KLD 是不对称的:$D_{\mathrm{KL}}(P\|Q) \neq D_{\mathrm{KL}}(Q\|P)$。因此我们把 $D_{\mathrm{KL}}(P\|Q)$ 称为 $P$、$Q$ 之间的 <em>forward KL</em>,把 $D_{\mathrm{KL}}(Q\|P)$ 称为 <em>reverse KL</em>。在经验数据分布下,forward KL 对应极大似然,也就是有监督学习里所优化的目标。当模型容量不匹配,用一个分布 $Q_\theta(\mathcal{C})$ 去逼近 $P(\mathcal{C})$ 时,最小化 reverse KL 与 forward KL 分别会产生<em>追众数(mode-seeking)</em>与<em>覆盖均值(mean-seeking)</em>的行为(图 A.16)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While KL divergence can be unbounded, a well-known divergence that is bounded even for probability distributions with disjoint supports is the generalized JSD (Jensen-Shannon divergence). $\mathrm{JSD}(\beta)$ interpolates between the forward and reverse KL using the bounded coefficient $0 < \beta < 1$:</p>
+            <div class="bi-eq">$$D_{\mathrm{JSD}(\beta)}(P\|Q) = \beta\,D_{\mathrm{KL}}\!\left(P\,\Big\|\,\beta P + (1-\beta)Q\right) + (1-\beta)\,D_{\mathrm{KL}}\!\left(Q\,\Big\|\,\beta P + (1-\beta)Q\right). \quad (1)$$</div>
+            <p>Huszár (2015) show that $\lim_{\beta\to 0} D_{\mathrm{JSD}(\beta)}(P\|Q)/\beta = D_{\mathrm{KL}}(P\|Q)$. As such, gradients of $\mathrm{JSD}(\beta)$ behave similarly to forward KL and reverse KL when $\beta$ is close to 0 and 1 respectively.</p>
+          </div>
+          <div class="zh">
+            <p>KLD 可以无界,但有一种即使在两个分布支撑集互不相交时仍然有界的散度,就是 generalized JSD(Jensen-Shannon divergence)。$\mathrm{JSD}(\beta)$ 通过一个有界的系数 $0 < \beta < 1$ 在 forward KL 与 reverse KL 之间插值:</p>
+            <div class="bi-eq">$$D_{\mathrm{JSD}(\beta)}(P\|Q) = \beta\,D_{\mathrm{KL}}\!\left(P\,\Big\|\,\beta P + (1-\beta)Q\right) + (1-\beta)\,D_{\mathrm{KL}}\!\left(Q\,\Big\|\,\beta P + (1-\beta)Q\right). \quad (1)$$</div>
+            <p>Huszár(2015)证明了 $\lim_{\beta\to 0} D_{\mathrm{JSD}(\beta)}(P\|Q)/\beta = D_{\mathrm{KL}}(P\|Q)$。也就是说,当 $\beta$ 接近 0 与 1 时,$\mathrm{JSD}(\beta)$ 的梯度分别表现得像 forward KL 与 reverse KL。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4b">
+      <summary>
+        <span>§3 Distillation for Auto-Regressive Sequence Models / 自回归序列模型的蒸馏框架<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">Problem Setup / 问题设定</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We are given two auto-regressive sequence models of different capacity, where $p_S$ and $p_T$ refers to the student and teacher respectively. We assume that the student has learnable parameters $\theta$ and $p_S^\theta$ is differentiable w.r.t $\theta$. We are also given a dataset of inputs $X$. Optionally, we can also assume access to a dataset of input-output sequence pairs $(X, Y)$. If not given, such a dataset can be generated by sampling sequences from the teacher. For a divergence $D$, we define the discrepancy between token-level distributions of $p_T$ and $p_S$ as:</p>
+            <div class="bi-eq">$$D\!\left(p_T\,\Big\|\,p_S^\theta\right)(y|x) := \frac{1}{L_y}\sum_{n=1}^{L_y} D\!\left(p_T(\cdot|y_{<n}, x)\,\Big\|\,p_S^\theta(\cdot|y_{<n}, x)\right), \quad (2)$$</div>
+            <p>for an input $x$ and output sequence $y$. For example, using $\mathrm{JSD}(\beta)$ as $D$ in equation 2 results in $D_{\mathrm{JSD}(\beta)}(p_T\|p_S^\theta)(y|x) = \tfrac{1}{L_y}\sum_n D_{\mathrm{JSD}(\beta)}(p_T(\cdot|y_{<n}, x)\,\|\,p_S^\theta(\cdot|y_{<n}, x))$.</p>
+          </div>
+          <div class="zh">
+            <p>我们给定两个容量不同的自回归序列模型,其中 $p_S$ 与 $p_T$ 分别指 student 与 teacher。我们假设 student 具有可学习参数 $\theta$,并且 $p_S^\theta$ 关于 $\theta$ 可微。我们还给定一个输入数据集 $X$;可选地,我们也可以假设能访问一个(输入,输出)序列对的数据集 $(X, Y)$,若没有,则可以通过从 teacher 采样序列来生成。对于一个散度 $D$,我们将 $p_T$ 与 $p_S$ 在 token 级分布上的差异定义为:</p>
+            <div class="bi-eq">$$D\!\left(p_T\,\Big\|\,p_S^\theta\right)(y|x) := \frac{1}{L_y}\sum_{n=1}^{L_y} D\!\left(p_T(\cdot|y_{<n}, x)\,\Big\|\,p_S^\theta(\cdot|y_{<n}, x)\right), \quad (2)$$</div>
+            <p>其中 $x$ 为输入、$y$ 为输出序列。比如把式 (2) 中的 $D$ 取为 $\mathrm{JSD}(\beta)$,即得 $D_{\mathrm{JSD}(\beta)}(p_T\|p_S^\theta)(y|x) = \tfrac{1}{L_y}\sum_n D_{\mathrm{JSD}(\beta)}(p_T(\cdot|y_{<n}, x)\,\|\,p_S^\theta(\cdot|y_{<n}, x))$。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">Supervised FT / 有监督微调</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>If we are only given a fixed dataset of ground-truth output sequences but not query access to the teacher policy, then a simple approach is to minimize the negative log-likelihood of such sequences under the student policy:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{SFT}}(\theta) = \mathbb{E}_{(x,y)\sim(X,Y)}\!\left[-\log p_S^\theta(y|x)\right].$$</div>
+          </div>
+          <div class="zh">
+            <p>如果我们只拥有一个固定的 ground-truth 输出序列数据集、而无法访问 teacher 策略,那么最简单的做法就是在 student 策略下最小化这些序列的负对数似然:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{SFT}}(\theta) = \mathbb{E}_{(x,y)\sim(X,Y)}\!\left[-\log p_S^\theta(y|x)\right].$$</div>
+          </div>
+        </div>
+
+        <div class="bi-sub">Sequence-Level KD & Supervised KD / 序列级 KD 与有监督 KD</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>SeqKD (Kim & Rush, 2016) maximizes the likelihood of high probability sequences generated by the teacher, and can be viewed as supervised FT on teacher-generated outputs. Supervised KD (Hinton et al., 2015; Sanh et al., 2019) is a widely used technique where the student is trained to imitate the token-level probability distributions of the teacher. The student $p_S$ is trained with the supervised objective $\mathcal{L}_{\text{SD}}$ over the target token-level probabilities of the teacher $p_T$:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{SD}}(\theta) := \mathbb{E}_{(x,y)\sim(X,Y)}\!\left[D_{\mathrm{KL}}\!\left(p_T\,\Big\|\,p_S^\theta\right)(y|x)\right], \quad (3)$$</div>
+            <p>where the expectation is over the samples from the dataset. This supervised objective results in a rich training signal by leveraging the full token-level distribution of the teacher.</p>
+          </div>
+          <div class="zh">
+            <p>SeqKD(Kim & Rush, 2016)最大化由 teacher 生成的高概率序列的似然,可以视作在 teacher 生成的输出上做有监督微调。Supervised KD(Hinton et al., 2015; Sanh et al., 2019)则是一种被广泛使用的技术:训练 student 去模仿 teacher 的 token 级概率分布。student $p_S$ 用如下有监督目标 $\mathcal{L}_{\text{SD}}$ 训练,目标是 teacher $p_T$ 的 token 级概率:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{SD}}(\theta) := \mathbb{E}_{(x,y)\sim(X,Y)}\!\left[D_{\mathrm{KL}}\!\left(p_T\,\Big\|\,p_S^\theta\right)(y|x)\right], \quad (3)$$</div>
+            <p>其中期望是对数据集中的样本取的。这个有监督目标由于利用了 teacher 完整的 token 级分布,从而提供了一个信息量丰富的训练信号。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4c">
+      <summary>
+        <span>§3.1 Generalized Knowledge Distillation (GKD) / 广义知识蒸馏<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>As discussed above, commonly-used KD approaches use a fixed dataset of output sequences, either using ground-truth targets or teacher-generated sequences. However, distilling auto-regressive student models using such approaches results in train-inference distribution mismatch. This is because the partial sequences encountered by the student during the auto-regressive generation phase at inference can be quite different from the ones seen during the training phase. Since predictions at any step are contingent upon previous steps in auto-regressive models, this mismatch can have a cascading effect where error in prediction at early step can affect the future predictions, resulting in poor quality text generation.</p>
+            <p>To address this mismatch, we draw heavily from imitation learning (IL). In particular, on-policy imitation approaches (e.g. Ross et al., 2011) iteratively collect sequences using the student policy, obtain expert labels for those sequences, and then retrain the student on this dataset. Despite their popularity in robotics and deep RL (Parisotto et al., 2015; Kelly et al., 2019; Agarwal et al., 2022), on-policy approaches are typically not used for distilling auto-regressive models.</p>
+          </div>
+          <div class="zh">
+            <p>如上所述,常用的 KD 方法使用一个固定的输出序列数据集——要么是 ground-truth、要么是 teacher 生成的。然而,用这类方法蒸馏自回归 student 会导致训练-推理分布偏移:因为在推理阶段,student 在自回归生成时所看到的<em>部分序列前缀</em>,可能与训练阶段所见的非常不同。由于自回归模型里每一步的预测都依赖于之前各步,这种偏移会被级联放大——早期一步的预测误差会影响后续所有预测,最终导致文本生成质量很差。</p>
+            <p>为了解决这一偏移,我们大量借鉴模仿学习(IL)的思想。具体而言,on-policy 模仿方法(如 Ross et al., 2011)会迭代地用 student 策略采集序列、为这些序列拿到专家标签、然后在这份数据上重训 student。尽管这一思路在机器人与深度 RL 领域很流行(Parisotto et al., 2015; Kelly et al., 2019; Agarwal et al., 2022),但它通常并未被用来蒸馏自回归模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">On-policy KD / On-policy 蒸馏</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Extending on-policy imitation to distillation, we present on-policy KD. When using on-policy data during distillation, the student receives token-specific feedback from the teacher's logits on the erroneous tokens in its self-generated output sequences. This enables a form of feedback loop akin to what we observe in RL, which helps minimize the train-inference distribution mismatch. Moreover, as the student evolves during training, the data it generates also improves in quality. Given an input $x$, the student generates the output sequence $y$ and imitates the teacher token-level distributions, $p_T(y_n|x)$, on intermediate states $y_{<n}$. Specifically, the on-policy loss $\mathcal{L}_{\text{OD}}$ is given by</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{OD}}(\theta) := \mathbb{E}_{x\sim X}\!\left[\mathbb{E}_{y\sim p_S(\cdot|x)}\!\left[D_{\mathrm{KL}}\!\left(p_T\,\Big\|\,p_S^\theta\right)(y|x)\right]\right], \quad (4)$$</div>
+            <p>where we do not backpropagate through the student's sampling distribution $p_S(\cdot|x)$, similar to on-policy imitation. Not backpropagating through the sampling makes the training stable and computationally efficient. In on-policy KD, the training is done on output sequences that the student is likely to generate. During training, we use a temperature of $\gamma = 1$ to encourage diversity in student generated sequences. Moreover, given unlabeled input prompts, generating sequences using the student is computationally cheaper than the teacher, due to differences in their model sizes.</p>
+          </div>
+          <div class="zh">
+            <p>把 on-policy 模仿扩展到蒸馏,我们提出 on-policy KD。在蒸馏中使用 on-policy 数据时,student 会从 teacher 的 logits 中,针对自己生成的输出序列里那些"错的 token"获得 token 级的反馈。这就形成了一种类似于 RL 中观察到的反馈回路,能有效减小训练-推理之间的分布偏移。而且,随着 student 在训练中演化,它所生成数据的质量也在提升。给定输入 $x$,student 生成输出序列 $y$,并在中间状态 $y_{<n}$ 上模仿 teacher 的 token 级分布 $p_T(y_n|x)$。具体地,on-policy 损失 $\mathcal{L}_{\text{OD}}$ 定义为</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{OD}}(\theta) := \mathbb{E}_{x\sim X}\!\left[\mathbb{E}_{y\sim p_S(\cdot|x)}\!\left[D_{\mathrm{KL}}\!\left(p_T\,\Big\|\,p_S^\theta\right)(y|x)\right]\right], \quad (4)$$</div>
+            <p>这里我们<em>不</em>对 student 的采样分布 $p_S(\cdot|x)$ 做反向传播,与 on-policy 模仿一致。不对采样反传一来让训练稳定,二来计算高效。在 on-policy KD 中,训练是在"student 容易生成的输出序列"上进行的。训练时我们使用温度 $\gamma = 1$ 以鼓励 student 生成的序列具有多样性。此外,给定无标注的输入 prompt 时,由于 student 比 teacher 小,用 student 采样比用 teacher 采样更便宜。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">GKD: 统一目标</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Building further upon on-policy KD, we unify supervised and on-policy approaches and propose a more general approach, which we call Generalized KD (GKD). In GKD, we can choose both the divergence to optimize as well as the output sequences to train on. Specifically, we can optimize any divergence between the teacher and student token-level probability distributions. For output sequences, GKD uses a mixture of fixed dataset, either teacher-generated or ground-truth, and on-policy student-generated sequences. Abstractly, GKD minimizes an objective of the form:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{GKD}}(\theta) := (1-\lambda)\,\mathbb{E}_{(x,y)\sim(X,Y)}\!\left[D(p_T\|p_S^\theta)(y|x)\right] + \lambda\,\mathbb{E}_{x\sim X}\!\left[\mathbb{E}_{y\sim p_S(\cdot|x)}\!\left[D(p_T\|p_S^\theta)(y|x)\right]\right],$$</div>
+            <p>where $D(p_T, p_S)(y|x)$ is a divergence between teacher and student distributions (equation 2), and $\lambda \in [0, 1]$ is a hyper-parameter that controls the student data fraction, that is, the fraction of on-policy student-generated outputs. Akin to on-policy KD, we do not backpropagate gradients through the student's sampling process. On-policy and supervised KD are instantiations of GKD with divergence $D$ set to forward KL and student data fractions $\lambda$ to 1 and 0 respectively. That said, GKD allows for other choices for the fraction $\lambda$ and the divergence, which we explore in this work.</p>
+          </div>
+          <div class="zh">
+            <p>在 on-policy KD 之上,我们进一步把有监督 KD 与 on-policy KD 统一起来,提出一个更一般的方法,称为 Generalized KD(GKD)。在 GKD 中,我们既能选择要优化的散度,也能选择要在哪些输出序列上训练。具体地,我们可以优化 teacher 与 student 之间任意的 token 级散度;在输出序列方面,GKD 使用一个混合数据源——一部分是固定数据集(teacher 生成或 ground-truth),一部分是 student 自己 on-policy 生成的序列。抽象地说,GKD 最小化如下形式的目标:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{GKD}}(\theta) := (1-\lambda)\,\mathbb{E}_{(x,y)\sim(X,Y)}\!\left[D(p_T\|p_S^\theta)(y|x)\right] + \lambda\,\mathbb{E}_{x\sim X}\!\left[\mathbb{E}_{y\sim p_S(\cdot|x)}\!\left[D(p_T\|p_S^\theta)(y|x)\right]\right],$$</div>
+            <p>其中 $D(p_T, p_S)(y|x)$ 是 teacher 与 student 分布间的散度(式 2),$\lambda \in [0, 1]$ 是一个超参数,控制 student 数据的占比——即 on-policy student 生成输出所占的比例。与 on-policy KD 一样,我们<em>不</em>通过 student 的采样过程回传梯度。On-policy KD 与 supervised KD 都是 GKD 在散度 $D$ 取 forward KL、$\lambda$ 取 1 与 0 时的特例。也就是说,GKD 还允许 $\lambda$ 与散度的其他取值,这正是本文要探索的。</p>
+          </div>
+        </div>
+
+        <details class="cn-note">
+          <summary>中文导读:Algorithm 1 GKD 一步训练循环</summary>
+          <div class="cn-content">
+            <p><strong>每一步 $k$:</strong></p>
+            <ol>
+              <li>从均匀分布抽 $u \sim \mathrm{Uniform}(0,1)$。</li>
+              <li>若 $u \le \lambda$ → 从 $X$ 抽 prompt,让 student 自己采样输出 $y \sim p_S^\theta(\cdot|x)$,组成 batch $B$;</li>
+              <li>否则 → 直接从固定数据 $(X,Y)$ 抽一个 batch $B$。</li>
+              <li>梯度更新:$\theta \leftarrow \theta - \eta\,\tfrac{1}{B}\sum_{(x,y)\in B}\nabla_\theta D(p_T\|p_S^\theta)(y|x)$。</li>
+            </ol>
+            <p>本质上就是一个 Bernoulli($\lambda$)切换 data source 的 mini-batch SGD,所有"on-policy"逻辑都封装在第 2 行的"采样后不反传"里。</p>
+          </div>
+        </details>
+
+        <div class="bi-sub">Remark: 起点必须是 SFT 后的 student</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>As opposed to a randomly initialized student, we assume access to a student that can generate sequences of adequate quality, which the teacher can provide feedback upon. In our experiments, we start from student models that have undergone supervised FT. This is analogous to two-stage RLHF training, which is widely used for LMs, where we first run SFT followed by the online RL fine-tuning. As such, GKD can leverage hyperparameter tuning insights from RLHF and can be combined with RLHF with small compute overhead and no additional hyperparameters.</p>
+          </div>
+          <div class="zh">
+            <p>与"随机初始化的 student"不同,我们假设可以访问一个能生成"过得去的序列"的 student——这样 teacher 才有意义可言的反馈可给。我们实验里都是从经过有监督微调的 student 开始的。这与 LM 上广泛使用的两阶段 RLHF 训练同构:先 SFT,再做 online RL 微调。因此 GKD 可以直接借用 RLHF 的超参调优经验,并以很小的计算开销、不引入额外超参的方式与 RLHF 组合。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">Choice of Divergence in GKD / GKD 中散度的选择</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While forward KL is commonly-used for distillation, it requires the student to cover the entire support of the teacher token-level distribution $p_T(\cdot|y_{<n}, x)$. In doing so, the student might end up assigning probability mass to tokens $v$ which have low probability under $p_T(\cdot|y_{<n}, x)$, which can result in hallucination and low-quality generations. When the student has much lower model capacity than the teacher, this issue is likely to happen with temperature sampling (e.g., Figure A.16). Alternatively, mode-seeking divergences, such as reverse KL, prioritize the tokens where the teacher assigns high probability, which can avoid low-quality generations but at the expense of less diverse generations for a given input. Our experiments indicate that optimal divergence seems to be task-dependent. Overall, the diversity and performance trade-offs for a particular task needs to be considered when choosing the GKD divergence (e.g., Figure 4, 10).</p>
+          </div>
+          <div class="zh">
+            <p>forward KL 是蒸馏里最常用的散度,但它要求 student 覆盖 teacher token 级分布 $p_T(\cdot|y_{<n}, x)$ 的整个支撑集。这样一来,student 可能会把概率质量分配到在 $p_T(\cdot|y_{<n}, x)$ 下本来概率很低的 token $v$ 上,从而带来幻觉与低质量生成。当 student 容量远小于 teacher 时,这个问题在温度采样下尤为突出(图 A.16)。反之,reverse KL 这种<em>追众数</em>的散度会优先关注 teacher 高概率的 token,可以避免低质量生成,但代价是给定输入下的生成多样性更低。我们的实验表明,最优散度似乎是<em>任务相关</em>的。总体来说,在为某个任务选择 GKD 散度时,需要权衡多样性与性能的得失(参见图 4、图 10)。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4d">
+      <summary>
+        <span>§3.2 RL Fine-Tuning + On-Policy GKD<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In some tasks, it is plausible that distilling from a teacher model only provides a proxy to our main objective, which can also be non-differentiable. We can directly optimize this objective with reinforcement learning (RL). Conveniently, on-policy GKD can be easily combined with RL fine-tuning from human (RLHF) or AI feedback (RLAIF), as it only requires output samples from the student. Indeed, consider that one wants to optimize the student policy for a scalar reward $r$, while staying close to a teacher policy, then we get a regularized RL fine-tuning objective of the form:</p>
+            <div class="bi-eq">$$\mathbb{E}_{x\sim X}\!\left[\underbrace{(1-\alpha)\,\mathbb{E}_{y\sim p_S^\theta(\cdot|x)}[r(y)]}_{\text{RL objective}} - \underbrace{\alpha\,\mathbb{E}_{y\sim p_S(\cdot|x)}\!\left[D(p_T\|p_S^\theta)(y|x)\right]}_{\text{Generalized On-Policy Distillation}}\right], \quad (5)$$</div>
+            <p>where $\alpha \in [0, 1]$ controls the strength of the distillation loss compared to the RL objective. With $\alpha = 1$, it will perform only distillation. The above objective allows us to maximize reward while improving other model capabilities via distillation, which can possibly reduce the "alignment tax" decrease in general model capabilities when aligning language models with human preferences (Ouyang et al., 2022). We apply the above idea to mitigate hallucination using RLAIF, while simultaneously improving downstream performance via distillation (Figure 5).</p>
+          </div>
+          <div class="zh">
+            <p>在一些任务中,从 teacher 蒸馏得来的目标也许只是我们真正目标的一个代理,而真正的目标可能本身就是不可微的。这时我们可以用强化学习(RL)直接优化它。方便的是,on-policy GKD 可以很容易地与从人类反馈(RLHF)或 AI 反馈(RLAIF)的 RL 微调相结合,因为它只需要 student 的输出采样。具体来说,假设我们想要在保持靠近一个 teacher 策略的同时,优化 student 策略以最大化标量奖励 $r$,则可得到如下形式的带正则 RL 微调目标:</p>
+            <div class="bi-eq">$$\mathbb{E}_{x\sim X}\!\left[\underbrace{(1-\alpha)\,\mathbb{E}_{y\sim p_S^\theta(\cdot|x)}[r(y)]}_{\text{RL 目标}} - \underbrace{\alpha\,\mathbb{E}_{y\sim p_S(\cdot|x)}\!\left[D(p_T\|p_S^\theta)(y|x)\right]}_{\text{广义 on-policy 蒸馏}}\right], \quad (5)$$</div>
+            <p>其中 $\alpha \in [0, 1]$ 控制蒸馏损失相对 RL 目标的强度。当 $\alpha = 1$ 时,目标退化为纯蒸馏。上述目标允许我们一边最大化奖励、一边通过蒸馏改善模型的其他能力,从而有望减轻在将 LM 对齐人类偏好时的"alignment tax"——即整体能力下降(Ouyang et al., 2022)。我们将这一思路用于 RLAIF 上缓解幻觉,同时通过蒸馏改善下游性能(图 5)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Remark.</strong> In RLHF or RLAIF, we typically use reverse KL to constrain the learned policy to stay close to the initial policy. If one wants to only make slight modifications to existing RL fine-tuning workflows, we recommend using reverse KL or $\mathrm{JSD}(0.9)$ when integrating GKD with RL.</p>
+          </div>
+          <div class="zh">
+            <p><strong>注记:</strong>在 RLHF / RLAIF 中,我们通常用 reverse KL 把所学策略约束在初始策略附近。如果只想在已有的 RL 微调工作流里做小幅改动,我们推荐在将 GKD 与 RL 集成时使用 reverse KL 或 $\mathrm{JSD}(0.9)$。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5a">
+      <summary>
+        <span>§4 Experiments / 实验<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this section, we evaluate GKD for distilling language models, a typical class of auto-regressive sequence models, on abstractive summarization, machine translation, and arithmetic reasoning.</p>
+            <p><strong>Student / Teacher Models.</strong> Our experiments start from student and teacher models with different sizes, specifically open-sourced T5 models (Raffel et al., 2020), that are pretrained on the same datasets. We use supervised fine-tuned T5-XL (~3B params) as the teacher. For students, we use T5-small (77M params), T5-base (250M params), and T5-large (800M params), which are smaller than the teacher by a factor of 38×, 12× and 3.8× respectively.</p>
+            <p><strong>GKD Variants.</strong> For choice of divergence $D$ in GKD in Algorithm 1, we use forward KL, reverse KL and three variants of $\mathrm{JSD}(\beta)$: $\mathrm{JSD}(0.1)$, $\mathrm{JSD}(0.5)$ and $\mathrm{JSD}(0.9)$. For student data fraction $\lambda$, we try $\lambda = 1$ (On-policy), $\lambda = 0.5$ (Mixed) and $\lambda = 0$ (Supervised). In particular, we are interested in the on-policy variants ($\lambda = 1$), which have not been previously explored.</p>
+            <p><strong>Baselines.</strong> We compare to the widely-used KD methods discussed in Section 3: SeqKD and Supervised KD. We also evaluate ImitKD (Lin et al., 2020) and f-distill (Wen et al., 2023), which can be viewed as "mixed" data variants of GKD ($\lambda = 0.5$) with forward KL and total variation distance as divergence. All the baselines start from the same supervised fine-tuned student checkpoint as GKD.</p>
+          </div>
+          <div class="zh">
+            <p>在本节中,我们在抽象式摘要、机器翻译与算术推理三个任务上评测 GKD 对语言模型(自回归序列模型的代表)的蒸馏效果。</p>
+            <p><strong>Student / Teacher 模型。</strong>我们的实验从尺寸不同的 student 与 teacher 模型出发,具体使用开源的 T5(Raffel et al., 2020),它们都在同样的数据集上预训练。我们用有监督微调过的 T5-XL(~3B 参数)作为 teacher。student 我们用 T5-small(77M)、T5-base(250M)、T5-large(800M),分别比 teacher 小 38×、12×、3.8×。</p>
+            <p><strong>GKD 变体。</strong>在 Algorithm 1 中散度 $D$ 的选择上,我们用 forward KL、reverse KL 以及三种 $\mathrm{JSD}(\beta)$:$\mathrm{JSD}(0.1)$、$\mathrm{JSD}(0.5)$、$\mathrm{JSD}(0.9)$。student 数据占比 $\lambda$ 我们尝试 $\lambda = 1$(纯 on-policy)、$\lambda = 0.5$(混合)、$\lambda = 0$(纯有监督)。我们特别关注此前未被探索过的 on-policy 变体($\lambda = 1$)。</p>
+            <p><strong>基线。</strong>我们与第 3 节里讨论的常用 KD 方法对比:SeqKD 与 Supervised KD。此外还评估 ImitKD(Lin et al., 2020)与 f-distill(Wen et al., 2023),它们可被视作 GKD 的"混合数据"变体($\lambda = 0.5$),散度分别为 forward KL 与 total variation distance。所有基线都从与 GKD 相同的有监督微调 student checkpoint 出发。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5b">
+      <summary>
+        <span>§4.1 Case Study: Abstractive Summarization (XSum) / 抽象式摘要<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We start by evaluating GKD on an abstractive summarization task of generating a summary that captures salient ideas of the input document. To do so, we use the XSum dataset (Narayan et al., 2018), which consists of news articles paired with human-written summaries. Following PaLM (Chowdhery et al., 2022), we evaluate performance using ROUGE-2 score (Lin, 2004) of predicted summaries on the validation split of XSum but observe similar trends in ROUGE-L and ROUGE-1. We use T5 models supervised fine-tuned on XSum as students for distillation while the fine-tuned T5-XL as the teacher.</p>
+            <p><strong>Comparison to baselines.</strong> First, we explore how GKD compares to widely-used KD approaches, namely SeqKD and Supervised KD, across different student model sizes. As shown in Figure 1, we observe consistent improvements with GKD, which demonstrates the scalability of GKD with respect to the student capacity. Notably, GKD allows us to surpass the few-shot performance of PaLM (540B) using a 7000× smaller T5 model. We also compare GKD variants with ImitKD and f-distill, and evaluate performance with greedy sampling and temperature sampling ($\gamma = 1$) in Figure 2. On-policy GKD with $\mathrm{JSD}(0.9)$ outperforms these additional baselines in both scenarios.</p>
+          </div>
+          <div class="zh">
+            <p>我们首先在抽象式摘要任务上评测 GKD——这个任务要求生成能抓住输入文档主要思想的摘要。为此我们使用 XSum 数据集(Narayan et al., 2018),它由新闻文章与人工撰写的摘要配对组成。遵循 PaLM(Chowdhery et al., 2022),我们在 XSum 验证集上用 ROUGE-2(Lin, 2004)评测预测摘要的性能,在 ROUGE-L 与 ROUGE-1 上看到的趋势类似。我们以在 XSum 上有监督微调过的 T5 作为 student,以微调过的 T5-XL 作为 teacher。</p>
+            <p><strong>与基线对比。</strong>首先我们看 GKD 相对常用 KD 方法(SeqKD 与 Supervised KD)在不同 student 尺寸下的表现。如图 1 所示,GKD 带来稳定的提升,体现了它在 student 容量上的可扩展性。值得一提的是,GKD 让我们用一个比 PaLM(540B)小 7000× 的 T5 模型超过了 PaLM 的 few-shot 性能。我们还在图 2 中比较了 GKD 变体与 ImitKD、f-distill,在贪心采样与温度采样($\gamma = 1$)两种场景下评估。on-policy GKD 配 $\mathrm{JSD}(0.9)$ 在两种场景下都优于这些额外的基线。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Data efficiency and scaling.</strong> To evaluate the efficiency and scalability of GKD, we distilled the T5-XL teacher using subsampled XSum training datasets: 1K (0.5%), 10K (5%), and 50K (25%) examples. We used T5-small as the student and report data scaling curves in Figure 3. Notably, on-policy GKD on the 5% subsampled dataset, without any ground-truth summaries, outperforms supervised KD and ImitKD with entire training dataset with ground-truth summaries.</p>
+            <p><strong>GKD Ablations.</strong> We ablated different divergences and student data fractions in GKD for various student sizes in Figure A.12 and A.13. On-policy and mixed variants consistently outperform supervised variants. Mode-seeking divergences perform better when evaluation is done using temperature sampling while the choice of divergence doesn't affect performance much with greedy sampling.</p>
+          </div>
+          <div class="zh">
+            <p><strong>数据效率与扩展。</strong>为评估 GKD 的效率与可扩展性,我们用子采样后的 XSum 训练集(1K 即 0.5%、10K 即 5%、50K 即 25%)蒸馏 T5-XL teacher。以 T5-small 作为 student,我们在图 3 中给出数据规模扩展曲线。值得注意的是,on-policy GKD 在 5% 子采样的数据上(并且没有 ground-truth 摘要),就已超过用完整数据集+ground-truth 摘要训练的 supervised KD 与 ImitKD。</p>
+            <p><strong>GKD 消融。</strong>在图 A.12 与 A.13 中,我们对不同 student 尺寸上的散度与 student 数据占比做了消融。on-policy 与 mixed 变体稳定优于 supervised 变体。<em>追众数</em>的散度在温度采样下评测时效果更好;在贪心采样下,散度选择对性能影响不大。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Choosing GKD Divergence.</strong> The divergence chosen for distillation is crucial in determining the trade-off between summarization quality and diversity. As the sampling temperature can also be adjusted to balance summary quality and diversity, the optimal choice of divergence is temperature-dependent. To understand this dependence, we evaluate T5-small distilled using on-policy GKD with different divergences. As shown in Figure 4, certain divergences, like $\mathrm{JSD}(0.5)$ and $\mathrm{JSD}(0.9)$, offer better quality but less diversity at high temperatures. However, as temperature decreases, the difference in quality among divergences narrows, while diversity also drops.</p>
+            <p><strong>On-policy GKD with RL.</strong> In summarization, we want model-generated summaries to be factually consistent with their input documents. However, distillation alone might not improve factual consistency as even large models hallucinate and generate inconsistent summaries. Recently, Roit et al. (2023) mitigate hallucination on summarization tasks by using RL with textual entailment feedback as the reward (RLEF), as faithful summaries must be textually entailed from their input documents. Inspired by their success, we explore combining RL fine-tuning using a REINFORCE-like objective with on-policy GKD, as described in Section 3.2. As shown in Figure 5, GKD with RL fine-tuning substantially improves factual consistency compared to the teacher model while obtaining large improvements in summarization quality for the distilled student model.</p>
+          </div>
+          <div class="zh">
+            <p><strong>如何选 GKD 散度。</strong>蒸馏散度的选择,关键性地决定了"摘要质量 vs 多样性"的权衡。采样温度同样会权衡质量与多样性,因此最优散度本身是<em>温度相关</em>的。为理解这一相关性,我们评测了用 on-policy GKD + 不同散度蒸馏出的 T5-small。如图 4 所示,在高温度下,某些散度(如 $\mathrm{JSD}(0.5)$ 与 $\mathrm{JSD}(0.9)$)提供更好的质量但多样性更低。但随着温度下降,各散度间的质量差异变小,同时多样性也跟着下降。</p>
+            <p><strong>On-policy GKD + RL。</strong>在摘要任务上,我们希望模型生成的摘要与输入文档<em>事实一致</em>。但单靠蒸馏未必能改善事实一致性,因为即便大模型也会幻觉并生成不一致的摘要。最近,Roit et al.(2023)用"以文本蕴含分数作为奖励的 RL"(RLEF)来缓解摘要任务上的幻觉——因为忠实的摘要必须在文本上蕴含自输入文档。受此启发,我们按第 3.2 节所述,把 REINFORCE 风格的 RL 微调与 on-policy GKD 结合。如图 5 所示,GKD + RL 微调相对 teacher 模型显著改善了事实一致性,同时给蒸馏 student 带来很大的摘要质量提升。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5c">
+      <summary>
+        <span>§4.2 Machine Translation (WMT) / 机器翻译<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To evaluate GKD beyond summarization, we consider the task on translating English to German using WMT14 en-de (Bojar et al., 2014). We report performance on the validation split using the BLEU score, which measures the similarity of machine-translated text to high quality reference translations. We use supervised fine-tuned T5-XL as the teacher with a softmax-temperature of 1.0 (BLEU score of 28).</p>
+            <p><strong>Results.</strong> Figure 1 and A.15 show that on-policy GKD outperforms commonly-used KD approaches. Furthermore, we ablate GKD variants using T5-small and T5-base as students in Figure 6. We observe that generalized JSD divergences perform better than forward or reverse KL but their performance gap reduces when using a larger student. Moreover, using purely on-policy and mixed data distributions consistently outperform GKD variants only using a fixed supervised dataset, showing the importance of generating on-policy output sequences from the student. The efficacy of on-policy data on WMT aligns with our findings on XSum.</p>
+          </div>
+          <div class="zh">
+            <p>为评估 GKD 在摘要之外的效果,我们考虑使用 WMT14 en-de(Bojar et al., 2014)的英德翻译任务。我们在验证集上用 BLEU 分数(衡量机器翻译文本与高质量参考译文之间相似度)汇报性能。我们以有监督微调过的 T5-XL 作为 teacher,softmax 温度为 1.0(BLEU 分数 28)。</p>
+            <p><strong>结果。</strong>图 1 与图 A.15 显示 on-policy GKD 优于常用 KD 方法。此外,我们在图 6 中以 T5-small 与 T5-base 作为 student 做 GKD 变体消融。我们观察到:generalized JSD 散度优于 forward KL 与 reverse KL,但用更大 student 时这种差距会缩小。此外,纯 on-policy 与 mixed 数据分布稳定优于仅用固定有监督数据集的 GKD 变体,这说明<em>让 student 生成 on-policy 输出序列</em>的重要性。on-policy 数据在 WMT 上的有效性与我们在 XSum 上的发现一致。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5d">
+      <summary>
+        <span>§4.3 Arithmetic Reasoning (GSM8K) / 算术推理<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Wei et al. (2022) show that reasoning abilities only appear to emerge in LLMs with at least several billions parameters, making KD important for improving reasoning abilities of smaller models. To this end, we evaluate GKD on GSM8K (Cobbe et al., 2021), a high-quality dataset of grade school math word problems requiring multi-step logical inference. Here, we explore GKD in conjunction with chain-of-thought (CoT) (Wei et al., 2022), a common approach to improve reasoning abilities of LLMs by prompting them to produce intermediate reasoning steps before giving the final answer.</p>
+            <p><strong>Setup.</strong> We perform few-shot prompting by prepending the math problems in GSM8K with the first 4 CoT input-output exemplars from Wei et al. (2022). For evaluation, we report accuracy on the test split by checking whether the target answer matches the final answer given an external calculator, akin to Cobbe et al. (2021). For supervised training, we use the CoT outputs generated by Magister et al. (2022), resulting in around 5.3K (problem, CoTs) pairs in the original training split of GSM8K. We use Flan-T5 models (Chung et al., 2022) supervised fine-tuned for 10K steps on the above CoT dataset as a starting point for distillation. We use the fine-tuned FLAN T5-XL as the teacher, which obtains a test accuracy of 27.9.</p>
+          </div>
+          <div class="zh">
+            <p>Wei et al.(2022)显示推理能力只在数十亿参数以上的 LLM 中才出现,这让 KD 对提升小模型推理能力变得重要。为此我们在 GSM8K(Cobbe et al., 2021)上评测 GKD——这是一个高质量的小学数学应用题数据集,要求多步逻辑推理。这里我们把 GKD 与 chain-of-thought(CoT)(Wei et al., 2022)结合——CoT 是一种常用的提升 LLM 推理能力的做法,通过 prompt 模型在给出最终答案前先输出中间推理步骤。</p>
+            <p><strong>设置。</strong>我们做 few-shot prompting:在 GSM8K 的数学题前面拼上 Wei et al.(2022)的前 4 个 CoT 输入-输出示例。评估时,我们在测试集上汇报准确率——参考 Cobbe et al.(2021)的做法,用外部计算器辅助下检查目标答案与最终答案是否匹配。有监督训练上,我们使用 Magister et al.(2022)生成的 CoT 输出,在 GSM8K 原训练集上得到约 5.3K 个(题目,CoT)对。我们以在该 CoT 数据集上有监督微调 10K 步的 Flan-T5(Chung et al., 2022)作为蒸馏起点。teacher 是微调过的 FLAN T5-XL,测试准确率 27.9。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Results.</strong> We first ablate GKD variants and report results in Figure 7 and A.14. We observe that when using only the fixed CoT dataset or mixing it with student-generated CoTs, performance consistently falls short of using solely the student-generated CoTs. Furthermore, forward KL performs quite well, similar to our findings on XSum with greedy sampling. Notably, reverse KL also performs well, especially when training using only a fixed dataset. Additionally, Figure 8 shows that performance consistently improves as the proportion of on-policy data increases, provided that at least 25% of the data is on-policy. Moreover, we demonstrate that on-policy GKD have superior performance compared to baseline KD methods, across all student sizes, as shown in Figure 9. Finally, we observe promising results with GKD for self-distillation on GSM8k, as shown in Appendix A.1.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结果。</strong>我们先对 GKD 变体做消融,结果见图 7 与图 A.14。我们观察到:无论是只用固定 CoT 数据集,还是将其与 student 生成的 CoT 混合,性能都<em>稳定</em>不如<em>只用</em> student 自己生成的 CoT。此外,forward KL 表现也很好——与我们在 XSum 贪心采样下的发现一致。值得注意的是,reverse KL 也表现不错,尤其是只用固定数据集训练时。此外,图 8 显示:只要 on-policy 数据比例不低于 25%,性能就会随其增加而稳定提升。我们还在图 9 中展示,在所有 student 尺寸下,on-policy GKD 都优于基线 KD 方法。最后,我们在附录 A.1 中观察到 GKD 用于 GSM8K 自蒸馏(self-distillation)的可喜结果。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5e">
+      <summary>
+        <span>§4.4 Task-Agnostic Distillation: Instruction Tuning / 任务无关蒸馏:指令微调<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While task-specific distillation provides optimized performance for predefined tasks, which is often crucial for deployment purposes, task-agnostic distillation offers a compelling alternative in scenarios where the exact nature of the task is not known beforehand and can vary during deployment. As highlighted by Sanh et al. (2019), the allure of task-agnostic distillation lies in its efficiency: once distilled, a model can be re-purposed for multiple downstream tasks via prompting or fine-tuning.</p>
+            <p><strong>Setup.</strong> To study task-agnostic KD, we focus on instruction tuning (Chung et al., 2022). Our aim is to enhance the distilled model's proficiency to handle diverse tasks presented in the form of instructions. To achieve this, we employ the FLAN T5-XL model as our teacher and distill its knowledge into the FLAN T5-Base, as introduced by Chung et al. (2022). Our distillation process utilizes the comprehensive FLAN2021 instruction tuning dataset, which boasts 5.36 million examples spanning 62 distinct language understanding and generation tasks.</p>
+          </div>
+          <div class="zh">
+            <p>任务专属蒸馏针对预先确定的任务能取得最优性能(对部署而言这常常很关键),但任务无关蒸馏在另一个场景里很有吸引力:当事先并不确定任务的确切性质、且任务在部署时还可能变化的时候。Sanh et al.(2019)指出,任务无关蒸馏的魅力在于效率——一旦蒸馏完成,这个模型就能通过 prompt 或微调被复用到多个下游任务上。</p>
+            <p><strong>设置。</strong>为研究任务无关 KD,我们聚焦于指令微调(Chung et al., 2022)。我们的目标是提升蒸馏后模型处理"以指令形式呈现"的多样任务的能力。为此我们以 FLAN T5-XL 为 teacher,把其知识蒸馏到 FLAN T5-Base(由 Chung et al., 2022 引入)。蒸馏过程使用全量的 FLAN2021 指令微调数据集——它包含 536 万个例子,横跨 62 项不同的语言理解与生成任务。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Evaluation.</strong> To gauge the versatility of a task-agnostic model, it is essential to test it across a diverse set of tasks. In line with Chung et al. (2022), we evaluate our distilled T5-base student on two held-out benchmark suites: (1) MMLU (Massive Multitask Language Understanding) includes exam questions from 57 tasks such as mathematics, history, law, and medicine, and (2) BBH (BIG-Bench Hard) includes 23 tasks from BIG-Bench for which PaLM 540B (Chowdhery et al., 2022) performs below average human raters. For performance, we report the distilled model's ability to directly predict the answer via standard few-shot prompting, averaged across tasks in MMLU and BBH.</p>
+            <p><strong>Results.</strong> We report the performance of distilled checkpoints obtained after 50K training steps for various methods in Figure 10. We find that on-policy GKD with reverse KL substantially outperforms supervised KD and ImitKD. Notably, in the context of instruction tuning, we find that using reverse KL performs much better than forward KL. We hypothesize that the efficacy of reverse KL in instruction tuning may stem from its mode-seeking nature as it ensures that the model zeroes in on the main intent or behavior specified by the instruction. As a result, the model might prioritize core behaviors over less relevant details, leading to better performance on held-out tasks.</p>
+          </div>
+          <div class="zh">
+            <p><strong>评估。</strong>要衡量一个任务无关模型的通用性,必须在多样的任务集合上测试。遵循 Chung et al.(2022),我们在两个 held-out 基准上评估蒸馏后的 T5-base student:(1)MMLU(Massive Multitask Language Understanding)包含数学、历史、法律、医学等 57 个任务的考试题;(2)BBH(BIG-Bench Hard)包含 BIG-Bench 中 PaLM-540B(Chowdhery et al., 2022)都低于人类平均分的 23 个任务。性能上,我们汇报蒸馏模型用标准 few-shot prompting 直接预测答案的能力,在 MMLU 与 BBH 内取任务上的平均。</p>
+            <p><strong>结果。</strong>我们在图 10 中报告各方法训练 50K 步后蒸馏 checkpoint 的性能。我们发现:on-policy GKD 配 reverse KL 显著优于 supervised KD 与 ImitKD。值得注意的是,在指令微调场景里,reverse KL 明显比 forward KL 好。我们猜测 reverse KL 在指令微调中的有效性,可能源于其<em>追众数</em>的本质:它会确保模型聚焦于指令所指定的"主要意图/行为"。结果是,模型可能会优先建模核心行为而非不太相关的细节,从而在 held-out 任务上获得更好的性能。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§5 Related Work / 相关工作<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">Knowledge distillation / 知识蒸馏</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Supervised KD (Bucilua et al., 2006; Hinton et al., 2015) is a classic approach and has been successfully used for distilling auto-regressive models (Sanh et al., 2019). Another approach for distilling such models is sequence-level KD (Kim & Rush, 2016). On-policy GKD substantially outperforms supervised KD and SeqKD (Figure 1). Other KD approaches train the student to match different quantities obtained from the teacher, such as hidden states (Jiao et al., 2020) or attention scores (Wang et al., 2020). However, none of these approaches make the connection between distillation and imitation learning, and a purely supervised approach can suffer from train-inference mismatch, also known as exposure bias (Ranzato et al., 2015; Bengio et al., 2015). While He et al. (2019) argue that this mismatch may not be critical, several papers demonstrate that exposure bias leads to poor text generation (Zhang et al., 2019; Chiang & Chen, 2021; Arora et al., 2022).</p>
+          </div>
+          <div class="zh">
+            <p>Supervised KD(Bucilua et al., 2006; Hinton et al., 2015)是经典做法,并已被成功用于蒸馏自回归模型(Sanh et al., 2019)。另一种思路是序列级 KD(Kim & Rush, 2016)。on-policy GKD 显著优于 supervised KD 与 SeqKD(图 1)。还有一些 KD 方法是让 student 去匹配从 teacher 得到的其他量,如隐状态(Jiao et al., 2020)或注意力分数(Wang et al., 2020)。然而这些方法都没有把蒸馏与模仿学习联系起来,纯有监督的方法会受困于训练-推理偏移——也称为 <em>exposure bias</em>(Ranzato et al., 2015; Bengio et al., 2015)。虽然 He et al.(2019)认为这种偏移可能并不关键,但多篇工作都表明 exposure bias 会导致糟糕的文本生成(Zhang et al., 2019; Chiang & Chen, 2021; Arora et al., 2022)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>ImitKD (Lin et al., 2020) identifies this connection by sampling sequences from both the student and a fixed dataset but does not push the idea further. Unlike GKD, ImitKD does not explore purely on-policy data collection, nor does it integrate RL fine-tuning. Moreover, ImitKD keeps the forward KL at the token level, which is not necessary when one has access to the teacher's log-probabilities, rather than just samples. Furthermore, GKD demonstrates the scalability of the idea, handling student models roughly 26× larger than those explored by ImitKD. ImitKD can be viewed as GKD with forward KL and a non-increasing schedule on $\lambda$, a simple choice being $\lambda = 0.5$. More recently, f-distill (Wen et al., 2023) formulates sequence-level KD as minimizing an f-divergence and propose an tractable objective based on total variation distance between the token-level student and teacher distributions. In essence, both ImitKD and f-distill are specific instances of GKD, which we demonstrate lead to worse empirical results than on-policy GKD (Figure 2, 9).</p>
+          </div>
+          <div class="zh">
+            <p>ImitKD(Lin et al., 2020)注意到了这一联系,从 student 与一个固定数据集二者中采样序列,但并未把这一思路推得更远。与 GKD 不同,ImitKD 既不探索纯 on-policy 的数据收集,也不与 RL 微调整合。此外,ImitKD 把 forward KL 保留在 token 级——这在我们能访问 teacher 的 log-prob(而不只是采样)时其实是没必要的。此外,GKD 展示了这一想法的可扩展性:处理的 student 模型规模大约比 ImitKD 探索过的大 26×。ImitKD 可以视作 GKD 在 forward KL + $\lambda$ 非增调度下的特例(最简单的选择是 $\lambda = 0.5$)。最近,f-distill(Wen et al., 2023)把序列级 KD 表述为最小化一个 f-散度,并提出一个基于 token 级 student/teacher 分布之间 total variation distance 的可处理目标。本质上,ImitKD 与 f-distill 都是 GKD 的特例;我们的实验显示它们的经验结果都不如 on-policy GKD(图 2、图 9)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The concurrent work on MiniLLM (Gu et al., 2023) also exploits the link to imitation and frame distillation as an RL problem. In particular, MiniLLM optimizes reverse KL between the teacher and the student at the sequence level (while likelihood maximization is the forward one) using a policy gradient approach. However, we argue that GKD is simpler and more stable, being closer to supervised training, since it does not backpropagate through the student's sampling process. Indeed, MiniLLM relies on a number of stabilizing tricks, to tackle high variance, reward hacking, and generation length bias. GKD is also more general as it can also be used with other divergences such as forward KL or JSD, which can perform better than reverse KL (Figure 6, 7).</p>
+          </div>
+          <div class="zh">
+            <p>同期工作 MiniLLM(Gu et al., 2023)也利用了"蒸馏与模仿学习的联系",并把蒸馏框架化成一个 RL 问题。具体地,MiniLLM 用 policy gradient 在<em>序列</em>级优化 teacher 与 student 之间的 reverse KL(与之相对,似然最大化是 forward KL)。然而我们认为 GKD 更简单、更稳定,因为它<em>不</em>对 student 的采样过程反传——这让它更接近有监督训练。事实上,MiniLLM 依赖一系列稳定化技巧来应对高方差、reward hacking 与生成长度偏置。GKD 也更通用,因为它还可以使用其他散度——例如 forward KL 或 JSD,这些散度有时比 reverse KL 表现更好(图 6、图 7)。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">RL fine-tuning / RL 微调</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>There are now numerous examples of language models being fine-tuned with RL, be the reward optimizing for some metric (Wu et al., 2018), or learned using human feedback (Ouyang et al., 2022). In these approaches, it is typical to regularize the RL fine-tuned model towards the initial (usually supervised fine-tuned) model. However, as far as we know, we are the first to perform distillation and RL fine-tuning at the same time (Figure 5). If it may seem natural, it is quite different from an optimization perspective, as it changes the regularization towards the initial policy to towards the teacher policy, and we show empirically that it is a viable approach.</p>
+          </div>
+          <div class="zh">
+            <p>现在已有大量语言模型用 RL 做微调的例子,奖励要么是对某个指标的优化(Wu et al., 2018),要么是通过人类反馈学习得来的(Ouyang et al., 2022)。这些方法通常会把 RL 微调过的模型向初始(往往是 SFT 后的)模型做正则化。然而据我们所知,我们是首个<em>同时</em>做蒸馏与 RL 微调的工作(图 5)。这看起来很自然,但从优化角度看其实相当不同——它把"向初始策略的正则化"换成了"向 teacher 策略的正则化",我们的实证表明这是一种可行的做法。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">Distillation with reasoning traces / CoT 蒸馏 & Speculative decoding</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Chain-of-Thought prompting (Nye et al., 2021; Wei et al., 2022) has recently demonstrated that LLMs can solve complex reasoning tasks, step by step, just by prompting. This idea was quickly adapted to KD, by extending the teacher dataset with CoT prompts for fine-tuning the student (Magister et al., 2022; Ho et al., 2022; Hsieh et al., 2023). The distillation is still done in a supervised way, and other kind of enhanced prompts could be considered (Li et al., 2022; Mukherjee et al., 2023). We adopt the same approach, but combine it with on-policy distillation with various divergences. It shows the versatility of GKD, and improves upon the purely supervised approaches, as seen in our results on GSM8K (Figure 9). <strong>Application to speculative decoding.</strong> Zhou et al. (2023) and Liu et al. (2023) apply GKD to improve the alignment between draft and target model for better inference speedup from speculative decoding.</p>
+          </div>
+          <div class="zh">
+            <p>Chain-of-Thought prompting(Nye et al., 2021; Wei et al., 2022)最近证明了 LLM 可以仅靠 prompt 就一步步解决复杂推理任务。这一思路很快被搬到了 KD 里——通过把 teacher 数据集扩展为 CoT prompts 来微调 student(Magister et al., 2022; Ho et al., 2022; Hsieh et al., 2023)。这种蒸馏仍以有监督方式进行,也可以考虑其他类型的增强 prompt(Li et al., 2022; Mukherjee et al., 2023)。我们采用了同样的方式,但将其与"使用多种散度的 on-policy 蒸馏"结合。这体现了 GKD 的多面性,且优于纯有监督做法,我们在 GSM8K 上的结果证明了这一点(图 9)。<strong>在投机解码上的应用。</strong>Zhou et al.(2023)与 Liu et al.(2023)用 GKD 改善草稿模型与目标模型的对齐,以从投机解码中获得更好的推理加速。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§6 Conclusion / 结论<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we proposed GKD to address the train-inference distribution mismatch when distilling auto-regressive language models. GKD consistently outperformed commonly-used knowledge distillation approaches on three language generation tasks: abstractive summarization, machine translation, and arithmetic reasoning. We further showed that GKD can be combined with reinforcement learning to optimize a sequence-level reward in addition to distilling the knowledge of a large teacher model, which we believe can improve the widely-used RLHF training phase for language models. One interesting direction for future work would be extending GKD to auto-regressive sequence models for audio (Radford et al., 2023), video (Villegas et al., 2022) and text-to-image generation (Yu et al., 2022). We hope that our work will be valuable for researchers and practitioners who are working on improving performance and efficiency of generative auto-regressive sequence models.</p>
+          </div>
+          <div class="zh">
+            <p>在本文中,我们提出 GKD 来解决自回归语言模型蒸馏时的训练-推理分布偏移问题。GKD 在抽象式摘要、机器翻译、算术推理三个语言生成任务上都稳定优于常用的知识蒸馏方法。我们进一步展示了 GKD 可以与强化学习结合,在蒸馏大 teacher 模型知识的同时优化一个序列级奖励——我们相信这能改进语言模型上广泛使用的 RLHF 训练阶段。未来一个有意思的方向是将 GKD 扩展到自回归序列模型的其他模态:音频(Radford et al., 2023)、视频(Villegas et al., 2022)与文生图(Yu et al., 2022)。我们希望本工作对致力于改进生成式自回归序列模型性能与效率的研究者与实践者有所助益。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>References / 参考文献<span class="sec-page">p.11</span></span>
+      </summary>
+      <div class="sec-content"><p style="color:var(--text-faint);font-style:italic;">参考文献 stub:本节省略,共约 50+ 条,涵盖 Agarwal, Arora, Bengio, Bojar, Bucilua, Chiang, Chowdhery, Chung, Cobbe, Gu, He, Hinton, Ho, Hsieh, Huszár, Jiao, Kaplan, Kelly, Kim & Rush, Le, Li, Lin, Magister, Mukherjee, Narayan, Nye, Ouyang, Parisotto, Pomerleau, Radford, Raffel, Ranzato, Roit, Ross, Sanh, Shazeer, Singh, Villegas, Wang, Wei, Wen, Wu, Yim, Yu, Zhang, Zhou, Zhu 等。Appendix A.1–A.7 含 self-distillation 实验、超参数 Table A.1–A.4、few-shot CoT prompt、以及图 A.11–A.16(mode-seeking vs mode-covering KL 示意)。详见原 PDF p.11–18。</p></div>
+    </details>
+
+
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

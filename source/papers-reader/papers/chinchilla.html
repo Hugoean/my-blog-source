@@ -1,0 +1,1034 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Compute-Optimal Large Language Models · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2203.15556 · 36 页 · 1 张图</div>
+    <h1>Training Compute-Optimal Large Language Models</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-skim">优先级 skim</span>
+      <span>W5</span>
+      <span>Theory</span>
+      <span><a href="https://arxiv.org/abs/2203.15556" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2203.15556.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>在给定的训练 FLOPs 预算下,模型参数量 $N$ 与训练 token 数 $D$ 应当<em>等比例</em>扩张(每翻倍模型规模就要翻倍数据量),compute-optimal 时大致满足 $N \approx D/20$——也即每个参数对应约 <strong>20 个训练 tokens</strong>;以此训练的 70B Chinchilla 在与 280B Gopher 同等 FLOPs 下全面胜出,颠覆了 Kaplan 等人 (2020) "继续往大堆参数" 的扩展法则。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>三种方法(必默写)</strong>:论文用三条相互印证的路子估计 $(N_{opt}, D_{opt})$:
+          <ul>
+            <li><strong>Approach 1 / 固定模型、改训练步数</strong>:对 70M~10B 多档模型,每档跑 4 个不同的 cosine 调度长度,从所有 loss 曲线取 FLOP-loss 包络,拟合 $N_{opt}\propto C^a,\;D_{opt}\propto C^b$,得 $a=0.50,\;b=0.50$。</li>
+            <li><strong>Approach 2 / IsoFLOP profiles</strong>:固定 9 个 FLOPs 预算,改变模型大小,在每个 IsoFLOP 切片上找 loss 谷底,拟合得 $a=0.49,\;b=0.51$。</li>
+            <li><strong>Approach 3 / 参数化损失</strong>:对 Approach 1&2 的所有终态 loss 拟合解析式 $L(N,D)=E+\tfrac{A}{N^\alpha}+\tfrac{B}{D^\beta}$,在 $\mathrm{FLOPs}\approx 6ND$ 约束下闭式得 $a=\tfrac{\beta}{\alpha+\beta}=0.46,\;b=0.54$。三者一致指向 $a\approx b\approx 0.5$,与 Kaplan 的 $a=0.73,b=0.27$ 显著不同。
+            </li>
+          </ul>
+        </li>
+        <li><strong>"20 tokens / 参数"经验法则</strong>:由 Table 3 反推——175B 模型应配 4.2T tokens,280B 模型应配 6.8T tokens,1T 模型要 $10^{26}$ FLOPs 才优。粗略 $D/N\approx 20$,故 Chinchilla 70B → 1.4T tokens。这是后续 LLaMA-2/3、DeepSeek 选数据量的<em>事实标准</em>。</li>
+        <li><strong>参数化损失公式</strong>:$L(N,D)=E+\tfrac{A}{N^\alpha}+\tfrac{B}{D^\beta}$,其中 $E$ 是文本熵下界,$\tfrac{A}{N^\alpha}$ 反映"理想训练但模型容量有限"的差距,$\tfrac{B}{D^\beta}$ 反映"数据有限、未训到收敛"的差距。拟合用 Huber loss + L-BFGS,$\delta=10^{-3}$。</li>
+        <li><strong>Chinchilla 70B vs Gopher 280B</strong>:同样的 FLOPs(约 $5.76\times 10^{23}$),Chinchilla 是 1/4 规模 + 4× 数据,MMLU 5-shot 由 60.0% → 67.6%(+7.6%),BIG-bench 由 54.4% → 65.1%(+10.7%),并且推理/微调显存与延迟都低 4×。</li>
+        <li><strong>为何 Kaplan 错了?</strong>① Kaplan 对所有 size 用<em>固定</em> cosine 长度(130B tokens),小 $D'$ 的中间 loss 高估了"按 $D'$ 训"的真实最优 loss;② Kaplan 的模型主要 &lt;100M,曲率被外推放大;③ 没单独建模 LR schedule 的影响。Chinchilla 让 cosine 长度 ≈ token 数,这一改 frontier 就斜率反转。</li>
+        <li><strong>对 GPT-3 / PaLM / MT-NLG 的解读</strong>:GPT-3 (175B, 300B tokens)、MT-NLG (530B, 270B tokens)、Gopher (280B, 300B tokens) 在 Chinchilla frontier 看来都属于"训练不足"——他们要么应该用更小的模型 + 更多数据,要么应该用同样模型 + 10× 数据。这直接说明了"加 size 不如加 data"。</li>
+        <li><strong>对 LLaMA / DeepSeek 的影响</strong>:LLaMA-1 7B 训 1T tokens(已超 Chinchilla optimum,即"过训"以换推理便宜)、LLaMA-2 7B 训 2T、LLaMA-3 8B 训 15T——业界已普遍承认推理成本远大于训练成本,因此在 Chinchilla optimum 基础上<em>故意过训</em>小模型,以摊薄推理。Chinchilla 仍是 ratio 的起点。</li>
+        <li><strong>$\mathrm{FLOPs}\approx 6ND$ 来自哪里?</strong>Transformer 每 token 前向 ≈ $2N$ FLOPs,反向 ≈ $4N$ FLOPs,共 $6N$;乘以 $D$ tokens 就是 $6ND$。这是所有 scaling-law 推导的工程根基(详见 Appendix F)。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      修正 Kaplan,现行标准
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble · Title / Authors</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-4">§2 Related Work / 相关工作</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-5">§3 三种 compute-optimal 方法 / Three Approaches</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-5a">§3.1 Approach 1 · 训练曲线包络</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-5b">§3.2 Approach 2 · IsoFLOP profiles</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-5c">§3.3 Approach 3 · 参数化损失拟合</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-5d">§3.4 Optimal model scaling / 最优规模</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-6">§4 Chinchilla 模型</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-6a">§4.1 Model and training details / 架构与训练</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-6b">§4.2 Results / 评测结果</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-7">§5 Discussion &amp; Conclusion / 讨论与结论</a><span class="toc-page">p.14</span></li>
+
+      <li><a href="#sec-8">References / 参考文献</a><span class="toc-page">p.16</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (1 张) · 点击放大</h2>
+    <div class="figure-grid">
+
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2203.15556_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.1 · 875×216</div>
+          <div class="fig-caption">Figure 1: Overlaid predictions / 三种方法叠加预测(注:此 PNG 实际是 DeepMind logo,真正 Fig.1 含义在下方文字解读)</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>论文 Figure 1 把三种 Approach 给出的 compute-optimal $N(C)$ 预测以及 Kaplan et al. (2020) 的预测,叠加在同一张 log-log 图上(横轴 FLOPs $10^{17}\sim10^{25}$,纵轴 Parameters $10^7\sim10^{12}$)。同时把当时所有"已训大模型"作为散点标在图上:Gopher 280B、GPT-3 175B、MT-NLG 530B,与 Chinchilla 70B。</p>
+          <p><strong>② 关键数据 / 对照:</strong>三条 Chinchilla 曲线斜率几乎相同($N_{opt}\propto C^{0.5}$),与 Kaplan 的 $N_{opt}\propto C^{0.73}$ 斜率明显更陡形成对比。在 Gopher 的 FLOPs 预算下($5.76\times 10^{23}$),三种方法都把 optimal $N$ 落到 40–70B,而 Gopher 实际选了 280B → 严重偏离 frontier 的右上方。GPT-3、MT-NLG 同样落在"过大"那侧。</p>
+          <p><strong>③ 启示:</strong>① 这张图是 Chinchilla 论文最强的"图反证":三套相互独立的估计共指同一结论,说明这不是某一方法的偶然结果;② Kaplan 曲线斜率为何更陡——源于 fix-LR-schedule + 小模型主导拟合(详见 §2 Related Work);③ 工程意义:在固定预算下,与其继续堆参数,不如把模型缩 4× 并训 4× 数据,这就是 Chinchilla 70B 的来历。<em>(本仓库的 PNG 文件 <code>2203.15556_fig_1.png</code> 内容是 DeepMind logo,并非真实 Fig.1;真实图请见 arXiv PDF。)</em></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(双语逐段对照,按章节折叠)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble · Title / Authors<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>Training Compute-Optimal Large Language Models. Jordan Hoffmann★, Sebastian Borgeaud★, Arthur Mensch★, Elena Buchatskaya, Trevor Cai, Eliza Rutherford, Diego de Las Casas, Lisa Anne Hendricks, Johannes Welbl, Aidan Clark, Tom Hennigan, Eric Noland, Katie Millican, George van den Driessche, Bogdan Damoc, Aurelia Guy, Simon Osindero, Karen Simonyan, Erich Elsen, Jack W. Rae, Oriol Vinyals and Laurent Sifre★. DeepMind. ★Equal contributions. Corresponding authors: {jordanhoffmann|sborgeaud|amensch|sifre}@deepmind.com. arXiv:2203.15556v1 [cs.CL] 29 Mar 2022.</p></div>
+    </details>
+
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We investigate the optimal model size and number of tokens for training a transformer language model under a given compute budget. We find that current large language models are significantly undertrained, a consequence of the recent focus on scaling language models whilst keeping the amount of training data constant. By training over 400 language models ranging from 70 million to over 16 billion parameters on 5 to 500 billion tokens, we find that for compute-optimal training, the model size and the number of training tokens should be scaled equally: for every doubling of model size the number of training tokens should also be doubled. We test this hypothesis by training a predicted compute-optimal model, Chinchilla, that uses the same compute budget as Gopher but with 70B parameters and 4× more data. Chinchilla uniformly and significantly outperforms Gopher (280B), GPT-3 (175B), Jurassic-1 (178B), and Megatron-Turing NLG (530B) on a large range of downstream evaluation tasks. This also means that Chinchilla uses substantially less compute for fine-tuning and inference, greatly facilitating downstream usage. As a highlight, Chinchilla reaches a state-of-the-art average accuracy of 67.5% on the MMLU benchmark, greater than a 7% improvement over Gopher.</p>
+          </div>
+          <div class="zh">
+            <p>我们研究在给定的算力(compute)预算下,训练一个 Transformer 语言模型的最优模型规模与训练 token 数。我们发现:当前的大语言模型显著<em>训练不足</em>——这是近期"在保持训练数据量不变的前提下不断扩大模型规模"这一倾向所致。通过训练 400 多个语言模型(从 7 千万到超过 160 亿参数,在 50 亿到 5000 亿 tokens 上训练),我们发现:对于 compute-optimal 训练,<em>模型规模与训练 token 数应当等比例扩张</em>——模型每翻倍,训练 tokens 也应翻倍。我们通过训练一个根据预测得到的 compute-optimal 模型 Chinchilla 来验证该假设:它使用与 Gopher 相同的算力预算,但只有 70B 参数,搭配 4× 的数据。在大量下游评测任务上,Chinchilla 一致且显著地超越了 Gopher(280B)、GPT-3(175B)、Jurassic-1(178B) 和 Megatron-Turing NLG(530B)。这也意味着 Chinchilla 在微调与推理时消耗的算力大幅减少,极大方便了下游使用。亮点之一:Chinchilla 在 MMLU 上达到 67.5% 的平均准确率,相比 Gopher 提升超过 7%,刷新 SOTA。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Recently a series of Large Language Models (LLMs) have been introduced (Brown et al., 2020; Lieber et al., 2021; Rae et al., 2021; Smith et al., 2022; Thoppilan et al., 2022), with the largest dense language models now having over 500 billion parameters. These large autoregressive transformers (Vaswani et al., 2017) have demonstrated impressive performance on many tasks using a variety of evaluation protocols such as zero-shot, few-shot, and fine-tuning. The compute and energy cost for training large language models is substantial and rises with increasing model size. In practice, the allocated training compute budget is often known in advance: how many accelerators are available and for how long we want to use them. Since it is typically only feasible to train these large models once, accurately estimating the best model hyperparameters for a given compute budget is critical (Tay et al., 2021).</p>
+          </div>
+          <div class="zh">
+            <p>近来一系列大语言模型(LLMs)相继问世,目前最大的稠密语言模型已超过 5000 亿参数。这些大型自回归 Transformer(Vaswani et al., 2017)在多种评测协议(zero-shot、few-shot、微调)下,于诸多任务上展现出令人印象深刻的表现。然而,训练大语言模型的算力与能源开销极为可观,并随模型规模增长而上升。在实际工程中,分配给训练的算力预算通常事先就已知道:有多少块加速卡、打算用多长时间。由于通常只能训练这些超大模型<em>一次</em>,精确估计给定算力预算下的最佳超参,就成了关键问题。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Kaplan et al. (2020) showed that there is a power law relationship between the number of parameters in an autoregressive language model (LM) and its performance. As a result, the field has been training larger and larger models, expecting performance improvements. One notable conclusion in Kaplan et al. (2020) is that large models should not be trained to their lowest possible loss to be compute optimal. Whilst we reach the same conclusion, we estimate that large models should be trained for many more training tokens than recommended by the authors. Specifically, given a 10× increase computational budget, they suggest that the size of the model should increase 5.5× while the number of training tokens should only increase 1.8×. Instead, we find that model size and the number of training tokens should be scaled in equal proportions. Following Kaplan et al. (2020) and the training setup of GPT-3 (Brown et al., 2020), many of the recently trained large models have been trained for approximately 300 billion tokens (Table 1), in line with the approach of predominantly increasing model size when increasing compute.</p>
+          </div>
+          <div class="zh">
+            <p>Kaplan 等人(2020)证明了自回归语言模型(LM)的参数数与性能之间存在幂律关系。受此影响,业界一直在训越来越大的模型以期获得更好性能。Kaplan 等人一个重要结论是:为达到 compute-optimal,大模型<em>不应</em>训练到尽可能低的 loss。我们也得出了同样的结论,但我们估计大模型应该用<em>远多于</em>该论文推荐的 tokens 进行训练。具体地,算力预算 10× 时,他们建议模型规模放大 5.5× 而 tokens 仅放大 1.8×;而我们发现模型规模与训练 tokens 应当<em>等比例</em>扩张。沿用 Kaplan 等人(2020)和 GPT-3(Brown et al., 2020)的训练设置,最近训练的许多大模型都用了大约 3000 亿 tokens(见表 1),正符合"算力增加时主要增加模型大小"这条路径。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this work, we revisit the question: Given a fixed FLOPs budget, how should one trade-off model size and the number of training tokens? To answer this question, we model the final pre-training loss $L(N, D)$ as a function of the number of model parameters $N$, and the number of training tokens, $D$. Since the computational budget $C$ is a deterministic function $\mathrm{FLOPs}(N, D)$ of the number of seen training tokens and model parameters, we are interested in minimizing $L$ under the constraint $\mathrm{FLOPs}(N, D) = C$:</p>
+            <div class="bi-eq">$$N_{opt}(C),\;D_{opt}(C) \;=\; \underset{N,\,D\ \text{s.t.}\ \mathrm{FLOPs}(N,D)=C}{\arg\min}\; L(N, D). \quad (1)$$</div>
+            <p>The functions $N_{opt}(C)$ and $D_{opt}(C)$ describe the optimal allocation of a computational budget $C$. We empirically estimate these functions based on the losses of over 400 models, ranging from under 70M to over 16B parameters, and trained on 5B to over 400B tokens — with each model configuration trained for several different training horizons. Our approach leads to considerably different results than that of Kaplan et al. (2020). We highlight our results in Figure 1 and how our approaches differ in Section 2.</p>
+          </div>
+          <div class="zh">
+            <p>本文重新审视这个问题:给定固定的 FLOPs 预算,该如何在<em>模型规模</em>与<em>训练 token 数</em>之间做权衡?为此,我们把预训练终态损失 $L(N, D)$ 建模为模型参数数 $N$ 和训练 tokens 数 $D$ 的函数。由于算力预算 $C$ 是 $N, D$ 的确定性函数 $\mathrm{FLOPs}(N, D)$,我们关心的就是在约束 $\mathrm{FLOPs}(N, D) = C$ 下最小化 $L$,即公式 (1)。函数 $N_{opt}(C)$ 与 $D_{opt}(C)$ 描述了预算 $C$ 下的<em>最优分配</em>。我们基于 400 多个模型(参数 70M 至 16B,训练 5B 至 400B tokens,每个配置以多个不同训练步长跑过)的 loss 进行经验估计。我们的方法得到的结论与 Kaplan 等人(2020)有显著差别;关键结果见 Figure 1,方法分歧在 §2 详述。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Based on our estimated compute-optimal frontier, we predict that for the compute budget used to train Gopher, an optimal model should be 4 times smaller, while being trained on 4 times more tokens. We verify this by training a more compute-optimal 70B model, called Chinchilla, on 1.4 trillion tokens. Not only does Chinchilla outperform its much larger counterpart, Gopher, but its reduced model size reduces inference cost considerably and greatly facilitates downstream uses on smaller hardware. The energy cost of a large language model is amortized through its usage for inference and fine-tuning. The benefits of a more optimally trained smaller model, therefore, extend beyond the immediate benefits of its improved performance.</p>
+          </div>
+          <div class="zh">
+            <p>基于我们估计的 compute-optimal 前沿,我们预测:在训练 Gopher 所用的算力预算下,最优模型应该<em>小 4 倍</em>、训练 tokens <em>多 4 倍</em>。我们通过训练一个更"compute-optimal"的 70B 模型——Chinchilla——在 1.4T tokens 上验证了这一点。Chinchilla 不仅超越了规模大得多的 Gopher,而且因为模型更小,推理开销显著下降,并且更容易在小硬件上用于下游应用。大语言模型的能源开销会被后续的推理与微调摊薄;因此"训练得更优的小模型"所带来的收益,远不止"性能更好"这一直接好处。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§2 Related Work / 相关工作<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Large language models.</strong> A variety of large language models have been introduced in the last few years. These include both dense transformer models (Brown et al., 2020; Lieber et al., 2021; Rae et al., 2021; Smith et al., 2022; Thoppilan et al., 2022) and mixture-of-expert (MoE) models (Du et al., 2021; Fedus et al., 2021; Zoph et al., 2022). The largest dense transformers have passed 500 billion parameters. The drive to train larger and larger models is clear — so far increasing the size of language models has been responsible for improving the state-of-the-art in many language modelling tasks. Nonetheless, large language models face several challenges, including their overwhelming computational requirements and the need for acquiring more high-quality training data. In fact, in this work we find that larger, high quality datasets will play a key role in any further scaling of language models.</p>
+          </div>
+          <div class="zh">
+            <p><strong>大语言模型。</strong>过去几年涌现了多种大语言模型,包括稠密 Transformer 模型(Brown 等 2020;Lieber 等 2021;Rae 等 2021;Smith 等 2022;Thoppilan 等 2022)与混合专家(MoE)模型(Du 等 2021;Fedus 等 2021;Zoph 等 2022)。最大的稠密 Transformer 已经突破 5000 亿参数。"训更大的模型"的动力很清楚——到目前为止,扩大 LM 规模一直是诸多语言建模任务上 SOTA 提升的主要原因。但大模型也面临若干挑战:其压倒性的算力需求(训练和推理成本都随模型规模上升),以及获取更多<em>高质量</em>训练数据的需要。事实上,本文发现:<em>更大、更优质的数据集</em>将是语言模型继续扩展时的关键。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Modelling the scaling behavior.</strong> Understanding the scaling behaviour of language models and their transfer properties has been important in the development of recent large models (Hernandez et al., 2021; Kaplan et al., 2020). Kaplan et al. (2020) first showed a predictable relationship between model size and loss over many orders of magnitude. The authors investigate the question of choosing the optimal model size to train for a given compute budget. Similar to us, they address this question by training various models. Our work differs from Kaplan et al. (2020) in several important ways. First, the authors use a fixed number of training tokens and learning rate schedule for all models; this prevents them from modelling the impact of these hyperparameters on the loss. In contrast, we find that setting the learning rate schedule to approximately match the number of training tokens results in the best final loss regardless of model size — see Figure A1. For a fixed learning rate cosine schedule to 130B tokens, the intermediate loss estimates (for $D' \ll 130\mathrm{B}$) are therefore overestimates of the loss of a model trained with a schedule length matching $D'$. Using these intermediate losses results in underestimating the effectiveness of training models on less data than 130B tokens, and eventually contributes to the conclusion that model size should increase faster than training data size as compute budget increases. In contrast, our analysis predicts that both quantities should scale at roughly the same rate. Secondly, we include models with up to 16B parameters, as we observe that there is slight curvature in the FLOP-loss frontier (see Appendix E) — in fact, the majority of the models used in our analysis have more than 500 million parameters, in contrast the majority of runs in Kaplan et al. (2020) are significantly smaller — many being less than 100M parameters.</p>
+          </div>
+          <div class="zh">
+            <p><strong>建模扩展行为。</strong>理解语言模型的扩展行为与迁移性质,对近期大模型的研发至关重要(Hernandez 等 2021;Kaplan 等 2020)。Kaplan 等(2020)首次在多个数量级上展示了模型大小与 loss 之间可预测的关系,他们也研究了"给定算力预算下选何种最优模型规模"的问题,并和我们一样用训练多个模型来回答。但我们与 Kaplan 等(2020)有几处<em>关键不同</em>:① 他们对所有模型使用<em>固定的</em>训练 tokens 数与学习率(LR)调度,这让他们<em>无法</em>建模这两个超参对 loss 的影响。相反,我们发现:把 LR cosine 调度长度<em>大致匹配</em>训练 tokens 数,无论模型大小都能得到最好的终态 loss(见 Figure A1)。当采用"固定调度到 130B tokens"时,对于 $D' \ll 130\mathrm{B}$ 的中间 loss 估计就<em>系统性高估</em>了"按 $D'$ 长度训练"模型的真实最优 loss。使用这些中间 loss 会低估"用少于 130B tokens 训练"的有效性,从而推出"算力加大时模型规模应增长得比 tokens 更快"这一错误结论。② 我们的分析涵盖<em>多达 16B 参数</em>的模型,因为我们观察到 FLOP-loss 前沿有轻微曲率(见 Appendix E)——事实上,我们分析中绝大多数模型超过 5 亿参数,而 Kaplan 等(2020)的多数 runs 远小,常常不到 1 亿参数。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Estimating hyperparameters for large models.</strong> The model size and the number of training tokens are not the only two parameters to choose when selecting a language model and a procedure to train it. Other important factors include learning rate, learning rate schedule, batch size, optimiser, and width-to-depth ratio. In this work, we focus on model size and the number of training steps, and we rely on existing work and provided experimental heuristics to determine the other necessary hyperparameters. Yang et al. (2021) investigates how to choose a variety of these parameters for training an autoregressive transformer, including the learning rate and batch size. McCandlish et al. (2018) finds only a weak dependence between optimal batch size and model size.</p>
+            <p><strong>Improved model architectures.</strong> Recently, various promising alternatives to traditional dense transformers have been proposed. For example, through the use of conditional computation large MoE models like the 1.7 trillion parameter Switch transformer (Fedus et al., 2021), the 1.2 Trillion parameter GLaM model (Du et al., 2021), and others are able to provide a large effective model size despite using relatively fewer training and inference FLOPs. However, for very large models the computational benefits of routed models seems to diminish (Clark et al., 2022). An orthogonal approach to improving language models is to augment transformers with explicit retrieval mechanisms (Borgeaud et al., 2021; Guu et al., 2020; Lewis et al., 2020). This approach effectively increases the number of data tokens seen during training (by a factor of ~10 in Borgeaud et al., 2021). This suggests that the performance of language models may be more dependant on the size of the training data than previously thought.</p>
+          </div>
+          <div class="zh">
+            <p><strong>大模型超参的估计。</strong>选择一个 LM 及其训练方案时,模型规模与训练 tokens 并非仅有的两个参数,其他重要因素包括 LR、LR 调度、batch size、优化器、宽深比等。本工作聚焦于"模型规模"与"训练步数"这两项,其它必要超参沿用已有工作与实验启发式来确定。Yang 等(2021)研究了为自回归 Transformer 选取诸多此类参数(包括 LR 与 batch size)的方法;McCandlish 等(2018)发现最优 batch size 与模型规模仅<em>弱依赖</em>。</p>
+            <p><strong>改进的模型架构。</strong>近来,传统稠密 Transformer 的几种有希望的替代方案被提出。例如通过条件计算(conditional computation),大型 MoE 模型如 1.7T 参数的 Switch Transformer(Fedus 等 2021)、1.2T 参数的 GLaM(Du 等 2021)等,能在相对较少的训练/推理 FLOPs 下提供巨大的<em>有效</em>模型规模。然而对于<em>非常大</em>的模型,路由模型的算力优势似乎在缩小(Clark 等 2022)。另一种正交方向是给 Transformer 加显式检索机制(Borgeaud 等 2021;Guu 等 2020;Lewis 等 2020),实际上是把训练时见到的数据 token 数放大(在 Borgeaud 等 2021 中约 10×)。这些都提示:LM 的性能可能比此前以为的更依赖于<em>训练数据量</em>。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§3 三种 compute-optimal 方法 / Three Approaches<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We present three different approaches to answer the question driving our research: Given a fixed FLOPs budget, how should one trade-off model size and the number of training tokens? In all three cases we start by training a range of models varying both model size and the number of training tokens and use the resulting training curves to fit an empirical estimator of how they should scale. We assume a power-law relationship between compute and model size as done in Clark et al. (2022); Kaplan et al. (2020), though future work may want to include potential curvature in this relationship for large model sizes. The resulting predictions are similar for all three methods and suggest that parameter count and number of training tokens should be increased equally with more compute — with proportions reported in Table 2. This is in clear contrast to previous work on this topic and warrants further investigation.</p>
+          </div>
+          <div class="zh">
+            <p>我们提出三种不同的方法来回答驱动本研究的问题:给定固定的 FLOPs 预算,应如何在模型规模与训练 token 数之间权衡?三种方法都从训练一系列模型(同时改变规模与 tokens 数)开始,再用得到的训练曲线拟合一个"应当如何 scale"的经验估计器。我们沿用 Clark 等(2022)、Kaplan 等(2020)的做法,假定算力与模型规模之间<em>幂律</em>关系——未来工作或可在大模型处加入对曲率的建模。最终,三种方法给出的预测高度一致:随算力增加,参数数与训练 tokens 数应当<em>等比例</em>扩张(比例见 Table 2)。这与该主题以往工作形成鲜明对比,值得进一步研究。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5a">
+      <summary>
+        <span>§3.1 Approach 1 · 训练曲线包络<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Approach 1: Fix model sizes and vary number of training tokens.</strong> In our first approach we vary the number of training steps for a fixed family of models (ranging from 70M to over 10B parameters), training each model for 4 different numbers of training sequences. From these runs, we are able to directly extract an estimate of the minimum loss achieved for a given number of training FLOPs. For each parameter count $N$ we train 4 different models, decaying the learning rate by a factor of 10× over a horizon (measured in number of training tokens) that ranges by a factor of 16×. Then, for each run, we smooth and then interpolate the training loss curve. From this, we obtain a continuous mapping from FLOP count to training loss for each run. Then, for each FLOP count, we determine which run achieves the lowest loss. Using these interpolants, we obtain a mapping from any FLOP count $C$, to the most efficient choice of model size $N$ and number of training tokens $D$ such that $\mathrm{FLOPs}(N, D) = C$. At 1500 logarithmically spaced FLOP values, we find which model size achieves the lowest loss of all models along with the required number of training tokens. Finally, we fit power laws to estimate the optimal model size and number of training tokens for any given amount of compute (see the center and right panels of Figure 2), obtaining a relationship $N_{opt} \propto C^a$ and $D_{opt} \propto C^b$. We find that $a = 0.50$ and $b = 0.50$ — as summarized in Table 2. In Section D.4, we show a head-to-head comparison at $10^{21}$ FLOPs, using the model size recommended by our analysis and by the analysis of Kaplan et al. (2020) — using the model size we predict has a clear advantage.</p>
+          </div>
+          <div class="zh">
+            <p><strong>方法 1:固定模型规模、改训练 token 数。</strong>第一种方法对一组固定的模型家族(从 70M 到 10B 以上参数)改变训练步数,每个模型用 4 种不同的训练序列数训练。由这些 run,我们可以直接读出"给定 FLOPs 下的最低 loss"。对每个参数数 $N$,我们训 4 个模型,LR 在一个"以训练 tokens 数衡量、跨度 16×"的区间上衰减 10×。然后对每个 run 把训练 loss 曲线先平滑、再插值,得到 "FLOPs → loss" 的连续映射;对每个 FLOPs 值,选出最低 loss 的那次 run。这样我们就得到:对任意 FLOPs $C$,最高效的 $(N, D)$ 选择,满足 $\mathrm{FLOPs}(N, D) = C$。我们在 1500 个对数等间隔的 FLOPs 值上找出最优模型规模与对应所需 token 数,再用幂律拟合(Figure 2 中、右两栏),得到关系 $N_{opt} \propto C^a,\;D_{opt} \propto C^b$。结果是 $a = 0.50,\;b = 0.50$——总结于 Table 2。§D.4 在 $10^{21}$ FLOPs 上对我们的预测与 Kaplan 等(2020)预测进行了正面对比,我们预测的模型规模明显占优。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5b">
+      <summary>
+        <span>§3.2 Approach 2 · IsoFLOP profiles<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Approach 2: IsoFLOP profiles.</strong> In our second approach we vary the model size for a fixed set of 9 different training FLOP counts (ranging from $6 \times 10^{18}$ to $3 \times 10^{21}$ FLOPs), and consider the final training loss for each point. In contrast with Approach 1 that considered points $(N, D, L)$ along the entire training runs, this allows us to directly answer the question: For a given FLOP budget, what is the optimal parameter count? For each FLOP budget, we plot the final loss (after smoothing) against the parameter count in Figure 3 (left). In all cases, we ensure that we have trained a diverse enough set of model sizes to see a clear minimum in the loss. We fit a parabola to each IsoFLOPs curve to directly estimate at what model size the minimum loss is achieved (Figure 3 (left)). As with the previous approach, we then fit a power law between FLOPs and loss-optimal model size and number of training tokens, shown in Figure 3 (center, right). Again, we fit exponents of the form $N_{opt} \propto C^a$ and $D_{opt} \propto C^b$ and we find that $a = 0.49$ and $b = 0.51$ — as summarized in Table 2.</p>
+          </div>
+          <div class="zh">
+            <p><strong>方法 2:IsoFLOP 剖面。</strong>第二种方法在 9 个固定的 FLOPs 预算(从 $6 \times 10^{18}$ 到 $3 \times 10^{21}$ FLOPs)下改变模型规模,只关心<em>终态</em> loss。与方法 1 沿整段训练考虑 $(N, D, L)$ 不同,这能直接回答:给定 FLOPs 预算时,最优参数量是多少?对每个 FLOPs 预算,在 Figure 3(左)中以模型规模为横轴绘制(平滑后的)终态 loss。我们都确保训练了足够多样的模型规模,看清 loss 的<em>谷底</em>。对每条 IsoFLOPs 曲线拟合一条抛物线,直接估出"最低 loss 处的模型规模"(Figure 3 左)。如方法 1 一样,我们再在"FLOPs → 最优模型规模"与"FLOPs → 最优 tokens 数"上做幂律拟合(Figure 3 中、右),拟合指数 $N_{opt} \propto C^a,\;D_{opt} \propto C^b$,得到 $a = 0.49,\;b = 0.51$——见 Table 2。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5c">
+      <summary>
+        <span>§3.3 Approach 3 · 参数化损失拟合<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Approach 3: Fitting a parametric loss function.</strong> Lastly, we model all final losses from experiments in Approach 1 &amp; 2 as a parametric function of model parameter count and the number of seen tokens. Following a classical risk decomposition (see Section D.2), we propose the following functional form</p>
+            <div class="bi-eq">$$\hat L(N, D) \;\triangleq\; E \;+\; \frac{A}{N^\alpha} \;+\; \frac{B}{D^\beta}. \quad (2)$$</div>
+            <p>The first term captures the loss for an ideal generative process on the data distribution, and should correspond to the entropy of natural text. The second term captures the fact that a perfectly trained transformer with $N$ parameters underperforms the ideal generative process. The final term captures the fact that the transformer is not trained to convergence, as we only make a finite number of optimisation steps, on a sample of the dataset distribution.</p>
+            <p><strong>Model fitting.</strong> To estimate $(A, B, E, \alpha, \beta)$, we minimize the Huber loss (Huber, 1964) between the predicted and observed log loss using the L-BFGS algorithm (Nocedal, 1980):</p>
+            <div class="bi-eq">$$\min_{A,B,E,\alpha,\beta}\;\sum_{\text{Runs } i}\;\mathrm{Huber}_\delta\!\left(\log \hat L(N_i, D_i) - \log L_i\right). \quad (3)$$</div>
+            <p>We account for possible local minima by selecting the best fit from a grid of initialisations. The Huber loss ($\delta = 10^{-3}$) is robust to outliers, which we find important for good predictive performance over held-out data points.</p>
+          </div>
+          <div class="zh">
+            <p><strong>方法 3:拟合参数化损失函数。</strong>最后,我们把方法 1 与方法 2 实验中的所有终态 loss,建模为关于模型参数数与所见 tokens 数的<em>参数化</em>函数。沿用经典的"风险分解"(见 §D.2),我们提出公式 (2) 的函数形式。其中:<em>第一项</em> $E$ 反映数据分布上"理想生成过程"的 loss,应对应自然文本的熵;<em>第二项</em> $A / N^\alpha$ 反映"参数数 $N$ 的、训得完美的 Transformer 比理想生成过程差多少";<em>第三项</em> $B / D^\beta$ 反映"未训到收敛"的差距——因为我们只对数据分布的一个样本做有限步优化。</p>
+            <p><strong>模型拟合。</strong>为估计 $(A, B, E, \alpha, \beta)$,我们用 L-BFGS(Nocedal, 1980)最小化预测的 log loss 与观测的 log loss 之间的 Huber loss(Huber, 1964),即公式 (3)。为避免局部极小,我们从一组初始化中挑最优拟合。Huber loss($\delta = 10^{-3}$)对离群点稳健,这对在留出点上的预测性能至关重要。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Efficient frontier.</strong> We can approximate the functions $N_{opt}$ and $D_{opt}$ by minimizing the parametric loss $\hat L$ under the constraint $\mathrm{FLOPs}(N, D) \approx 6 N D$ (Kaplan et al., 2020). The resulting $N_{opt}$ and $D_{opt}$ balance the two terms in Equation (2) that depend on model size and data. By construction, they have a power-law form:</p>
+            <div class="bi-eq">$$N_{opt}(C) = G\!\left(\tfrac{C}{6}\right)^a,\quad D_{opt}(C) = G^{-1}\!\left(\tfrac{C}{6}\right)^b,\quad G = \left(\tfrac{\alpha A}{\beta B}\right)^{\tfrac{1}{\alpha+\beta}},\;\; a = \tfrac{\beta}{\alpha+\beta},\;\; b = \tfrac{\alpha}{\alpha+\beta}. \quad (4)$$</div>
+            <p>We show contours of the fitted function $\hat L$ in Figure 4 (left), and the closed-form efficient computational frontier in blue. From this approach, we find that $a = 0.46$ and $b = 0.54$ — as summarized in Table 2.</p>
+          </div>
+          <div class="zh">
+            <p><strong>高效前沿。</strong>我们可以在约束 $\mathrm{FLOPs}(N, D) \approx 6 N D$(Kaplan et al., 2020)下最小化参数化 loss $\hat L$ 来近似 $N_{opt},\;D_{opt}$。所得的 $N_{opt},\;D_{opt}$ 平衡了公式 (2) 中依赖模型规模和数据的两个项。由构造,它们具有幂律形式(公式 (4))。Figure 4(左)展示了拟合函数 $\hat L$ 的等高线,蓝色曲线即为闭式的"高效算力前沿"。该方法得到 $a = 0.46,\;b = 0.54$——见 Table 2。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5d">
+      <summary>
+        <span>§3.4 Optimal model scaling / 最优规模<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Optimal model scaling.</strong> We find that the three approaches, despite using different fitting methodologies and different trained models, yield comparable predictions for the optimal scaling in parameters and tokens with FLOPs (shown in Table 2). All three approaches suggest that as compute budget increases, model size and the amount of training data should be increased in approximately equal proportions. The first and second approaches yield very similar predictions for optimal model sizes, as shown in Figure 1 and Figure A3. The third approach predicts even smaller models being optimal at larger compute budgets. We note that the observed points $(L, N, D)$ for low training FLOPs ($C \le 10^{21}$) have larger residuals $\| L - \hat L(N, D) \|_2^2$ than points with higher computational budgets. The fitted model places increased weight on the points with more FLOPs — automatically considering the low-computational budget points as outliers due to the Huber loss. As a consequence of the empirically observed negative curvature in the frontier $C \to N_{opt}$ (see Appendix E), this results in predicting a lower $N_{opt}$ than the two other approaches.</p>
+          </div>
+          <div class="zh">
+            <p><strong>最优规模。</strong>我们发现:尽管三种方法采用了不同的拟合方法、训练了不同的模型,它们对"参数数与 tokens 数随 FLOPs 的最优扩展"给出了高度一致的预测(见 Table 2)。三种方法都表明:随算力预算增加,模型规模与训练数据量应当<em>等比例</em>增加。方法 1 与方法 2 对最优模型规模的预测非常相近(Figure 1、Figure A3);方法 3 在更大算力下预测<em>更小</em>的模型才是最优。我们注意到,低 FLOPs($C \le 10^{21}$)处观测点 $(L, N, D)$ 的残差 $\| L - \hat L(N, D) \|_2^2$ 更大;拟合模型对高 FLOPs 点赋予更大权重(Huber loss 自动把低预算点视为离群)。结合经验上 $C \to N_{opt}$ 前沿的<em>负曲率</em>(见 Appendix E),方法 3 因此预测出更小的 $N_{opt}$。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In Table 3 we show the estimated number of FLOPs and tokens that would ensure that a model of a given size lies on the compute-optimal frontier. Our findings suggest that the current generation of large language models are considerably over-sized, given their respective compute budgets, as shown in Figure 1. For example, we find that a 175 billion parameter model should be trained with a compute budget of $4.41 \times 10^{24}$ FLOPs and on over 4.2 trillion tokens. A 280 billion Gopher-like model is the optimal model to train given a compute budget of approximately $10^{25}$ FLOPs and should be trained on 6.8 trillion tokens. Unless one has a compute budget of $10^{26}$ FLOPs (over 250× the compute used to train Gopher), a 1 trillion parameter model is unlikely to be the optimal model to train. Furthermore, the amount of training data that is projected to be needed is far beyond what is currently used to train large models, and underscores the importance of dataset collection in addition to engineering improvements that allow for model scale. While there is significant uncertainty extrapolating out many orders of magnitude, our analysis clearly suggests that given the training compute budget for many current LLMs, smaller models should have been trained on more tokens to achieve the most performant model. In Appendix C, we reproduce the IsoFLOP analysis on two additional datasets: C4 (Raffel et al., 2020a) and GitHub code (Rae et al., 2021). In both cases we reach the similar conclusion that model size and number of training tokens should be scaled in equal proportions.</p>
+          </div>
+          <div class="zh">
+            <p>Table 3 给出了"使某指定规模的模型恰好落在 compute-optimal 前沿"所需的 FLOPs 与 tokens 估计。我们的结果表明:当前一代大语言模型在各自算力预算下都<em>显著过大</em>(见 Figure 1)。例如:一个 175B 参数的模型应当配以 $4.41 \times 10^{24}$ FLOPs 与 4.2T+ tokens;一个 280B 的 Gopher-类模型在约 $10^{25}$ FLOPs 预算下才是最优,且应训 6.8T tokens。除非你有 $10^{26}$ FLOPs(超过训练 Gopher 算力的 250×)的预算,一个 1T 参数的模型几乎不可能是 compute-optimal。此外,所需训练数据量远超目前大模型实际用量,这强调了"数据集采集"与"使模型变大的工程改进"同等重要。虽然外推许多数量级时不确定性大,但我们的分析清楚地指出:在当前许多 LLM 所用的算力预算下,本应用<em>更小</em>的模型在<em>更多</em>的 tokens 上训练,才能得到最高性能。Appendix C 中我们在 C4(Raffel 等 2020a)与 GitHub code(Rae 等 2021)两个额外数据集上重复了 IsoFLOP 分析,均得到相同结论:模型规模与训练 tokens 数应等比例扩张。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§4 Chinchilla 模型<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Based on our analysis in Section 3, the optimal model size for the Gopher compute budget is somewhere between 40 and 70 billion parameters. We test this hypothesis by training a model on the larger end of this range — 70B parameters — for 1.4T tokens, due to both dataset and computational efficiency considerations. In this section we compare this model, which we call Chinchilla, to Gopher and other LLMs. Both Chinchilla and Gopher have been trained for the same number of FLOPs but differ in the size of the model and the number of training tokens. While pre-training a large language model has a considerable compute cost, downstream fine-tuning and inference also make up substantial compute usage (Rae et al., 2021). Due to being 4× smaller than Gopher, both the memory footprint and inference cost of Chinchilla are also smaller.</p>
+          </div>
+          <div class="zh">
+            <p>根据 §3 的分析,Gopher 算力预算下的最优模型规模处于 40B 至 70B 参数之间。出于数据集与算力效率的双重考虑,我们用这一区间<em>偏上端</em>的 70B 参数,在 1.4T tokens 上训练了一个模型——本节将其命名为 Chinchilla,并与 Gopher 及其它 LLM 做比较。Chinchilla 与 Gopher 的训练 FLOPs<em>相同</em>,但模型规模和训练 tokens 数<em>不同</em>。虽然预训练大模型的算力成本相当可观,但下游微调与推理也是显著的算力消耗(Rae 等 2021)。由于比 Gopher 小 4×,Chinchilla 的显存占用与推理开销也更小。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6a">
+      <summary>
+        <span>§4.1 Model and training details / 架构与训练<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Model and training details.</strong> The full set of hyperparameters used to train Chinchilla are given in Table 4. Chinchilla uses the same model architecture and training setup as Gopher with the exception of the differences listed below.</p>
+            <ul>
+              <li>We train Chinchilla on MassiveText (the same dataset as Gopher) but use a slightly different subset distribution (shown in Table A1) to account for the increased number of training tokens.</li>
+              <li>We use AdamW (Loshchilov and Hutter, 2019) for Chinchilla rather than Adam (Kingma and Ba, 2014) as this improves the language modelling loss and the downstream task performance after finetuning.</li>
+              <li>We train Chinchilla with a slightly modified SentencePiece (Kudo and Richardson, 2018) tokenizer that does not apply NFKC normalisation. The vocabulary is very similar — 94.15% of tokens are the same as those used for training Gopher. We find that this particularly helps with the representation of mathematics and chemistry, for example.</li>
+              <li>Whilst the forward and backward pass are computed in bfloat16, we store a float32 copy of the weights in the distributed optimiser state (Rajbhandari et al., 2020).</li>
+            </ul>
+            <p>All models in this analysis have been trained on TPUv3/TPUv4 (Jouppi et al., 2017) with JAX (Bradbury et al., 2018) and Haiku (Hennigan et al., 2020). Chinchilla architecture: 80 layers, 64 heads, key/value size 128, $d_{model}=8192$, max LR $1\times10^{-4}$, batch size $1.5\text{M}\to 3\text{M}$. Compare to Gopher 280B: 80 layers, 128 heads, key/value 128, $d_{model}=16384$, max LR $4\times10^{-5}$, batch size $3\text{M}\to 6\text{M}$. The feed-forward size is always $4 \times d_{model}$. Note that we double the batch size midway through training for both Chinchilla and Gopher.</p>
+          </div>
+          <div class="zh">
+            <p><strong>模型与训练细节。</strong>Chinchilla 完整训练超参见 Table 4。Chinchilla 与 Gopher 使用相同的模型架构与训练设置,只有以下差异:</p>
+            <ul>
+              <li>Chinchilla 仍在 MassiveText(与 Gopher 同一数据集)上训练,但子集分布略有调整(见 Table A1),以适配增大了的训练 tokens 数。</li>
+              <li>优化器从 Adam(Kingma &amp; Ba, 2014)换成 AdamW(Loshchilov &amp; Hutter, 2019),这能改善 LM loss 与下游微调后的任务表现。</li>
+              <li>Chinchilla 使用略微修改过的 SentencePiece(Kudo &amp; Richardson, 2018)tokenizer,<em>不</em>做 NFKC 归一化。词表与 Gopher 的非常接近——94.15% 的 token 相同。我们发现这一点尤其改善了数学与化学符号的表示。</li>
+              <li>前/反向传播在 bfloat16 下进行,但在分布式优化器状态中保存一份 float32 权重副本(Rajbhandari 等 2020)。</li>
+            </ul>
+            <p>所有模型在 TPUv3/TPUv4(Jouppi 等 2017)上以 JAX(Bradbury 等 2018)+ Haiku(Hennigan 等 2020)训练。Chinchilla 架构:80 层、64 头、key/value 128、$d_{model}=8192$、最大 LR $1\times10^{-4}$、batch size $1.5\text{M}\to 3\text{M}$。Gopher 280B 对照:80 层、128 头、key/value 128、$d_{model}=16384$、最大 LR $4\times10^{-5}$、batch size $3\text{M}\to 6\text{M}$。FFW 大小始终为 $4 \times d_{model}$。Chinchilla 与 Gopher 都在训练中途把 batch size 翻倍。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6b">
+      <summary>
+        <span>§4.2 Results / 评测结果<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Results.</strong> We perform an extensive evaluation of Chinchilla, comparing against various large language models. We evaluate on a large subset of the tasks presented in Rae et al. (2021), shown in Table 5. As the focus of this work is on optimal model scaling, we included a large representative subset, and introduce a few new evaluations to allow for better comparison to other existing large models. The evaluation details for all tasks are the same as described in Rae et al. (2021). Categories: Language Modelling (20 tasks, e.g. WikiText-103, The Pile), Reading Comprehension (3, e.g. RACE-m/h, LAMBADA), Question Answering (3, Natural Questions, TriviaQA, TruthfulQA), Common Sense (5, HellaSwag, Winogrande, PIQA, SIQA, BoolQ), MMLU (57 subjects), BIG-bench (62 tasks).</p>
+          </div>
+          <div class="zh">
+            <p><strong>结果。</strong>我们对 Chinchilla 做了大规模评测,与多个大语言模型对比。评测覆盖 Rae 等(2021)中绝大多数任务(Table 5)。因为本工作聚焦 compute-optimal 扩展,我们选用了一个代表性更广的子集,并引入了若干新评测以便与其它大模型横向比较。各任务的评测细节与 Rae 等(2021)一致。类别:Language Modelling(20 项,如 WikiText-103、The Pile)、阅读理解(3 项,如 RACE-m/h、LAMBADA)、问答(3 项,Natural Questions、TriviaQA、TruthfulQA)、常识(5 项,HellaSwag、Winogrande、PIQA、SIQA、BoolQ)、MMLU(57 学科)、BIG-bench(62 项)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Language modelling.</strong> Chinchilla significantly outperforms Gopher on all evaluation subsets of The Pile (Gao et al., 2020). Compared to Jurassic-1 (178B), Chinchilla is more performant on all but two subsets — dm_mathematics and ubuntu_irc. On Wikitext103 (Merity et al., 2017), Chinchilla achieves a perplexity of 7.16 compared to 7.75 for Gopher. Some caution is needed when comparing Chinchilla with Gopher on these language modelling benchmarks as Chinchilla is trained on 4× more data than Gopher and thus train/test set leakage may artificially enhance the results. We thus place more emphasis on other tasks for which leakage is less of a concern, such as MMLU and BIG-bench along with various closed-book question answering and common sense analyses.</p>
+          </div>
+          <div class="zh">
+            <p><strong>语言建模。</strong>Chinchilla 在 The Pile(Gao 等 2020)<em>所有</em>子集上都显著优于 Gopher;与 Jurassic-1(178B)相比,在除 dm_mathematics 和 ubuntu_irc 之外的全部子集上更强。在 Wikitext103(Merity 等 2017)上 Chinchilla 困惑度 7.16,Gopher 为 7.75。注意,因为 Chinchilla 训练数据比 Gopher 多 4×,可能存在<em>训/测集泄漏</em>而人为抬高 LM 指标;我们因此把更多权重放在 MMLU、BIG-bench、闭卷问答与常识分析等"泄漏顾虑较低"的任务上。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>MMLU.</strong> On the Massive Multitask Language Understanding (MMLU) benchmark (Hendrycks et al., 2020), Chinchilla significantly outperforms Gopher despite being much smaller, with an average 5-shot accuracy of 67.6% (improving upon Gopher by 7.6%). Remarkably, Chinchilla even outperforms the expert forecast for June 2023 of 63.4% accuracy (Steinhardt, 2021). Furthermore, Chinchilla achieves greater than 90% accuracy on 4 different individual tasks — high_school_gov_and_politics, international_law, sociology, and us_foreign_policy. To our knowledge, no other model has achieved greater than 90% accuracy on a subset. Reference numbers (5-shot accuracy): Random 25.0%, Avg human rater 34.5%, GPT-3 43.9%, Gopher 60.0%, Chinchilla 67.6%, Avg human expert 89.8%.</p>
+          </div>
+          <div class="zh">
+            <p><strong>MMLU。</strong>在 MMLU 基准(Hendrycks 等 2020)上,Chinchilla 虽然小得多,却显著超越 Gopher,平均 5-shot 准确率 67.6%(比 Gopher 提升 7.6%)。值得一提的是,Chinchilla 甚至超过了 Steinhardt(2021)中专家对 2023 年 6 月的预测(63.4%)。Chinchilla 还在 4 个单项任务上达到 90% 以上准确率(high_school_gov_and_politics、international_law、sociology、us_foreign_policy);据我们所知,此前没有其它模型在任何 MMLU 子项上超过 90%。参考数(5-shot 准确率):随机 25.0%、人类平均 34.5%、GPT-3 43.9%、Gopher 60.0%、Chinchilla 67.6%、人类专家平均 89.8%。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Reading comprehension &amp; BIG-bench.</strong> On the final word prediction dataset LAMBADA (Paperno et al., 2016), Chinchilla achieves 77.4% accuracy, compared to 74.5% for Gopher and 76.6% for MT-NLG 530B. On RACE-h and RACE-m (Lai et al., 2017), Chinchilla greatly outperforms Gopher, improving accuracy by more than 10% in both cases. On BIG-bench, similar to MMLU, Chinchilla outperforms Gopher on the vast majority of tasks. We find that Chinchilla improves the average performance by 10.7%, reaching an accuracy of 65.1% versus 54.4% for Gopher. Of the 62 tasks we consider, Chinchilla performs worse than Gopher on only four — crash_blossom, dark_humor_detection, mathematical_induction and logical_args.</p>
+          </div>
+          <div class="zh">
+            <p><strong>阅读理解与 BIG-bench。</strong>在末词预测数据集 LAMBADA(Paperno 等 2016)上,Chinchilla 77.4%(Gopher 74.5%,MT-NLG 530B 76.6%)。在 RACE-h 与 RACE-m(Lai 等 2017)上,Chinchilla 显著领先 Gopher,二者准确率均提升 10% 以上。BIG-bench 上,与 MMLU 类似,Chinchilla 在绝大多数任务上击败 Gopher,平均提升 10.7%(65.1% vs Gopher 54.4%);在我们考虑的 62 项中,Chinchilla 仅在 4 项上落后——crash_blossom、dark_humor_detection、mathematical_induction、logical_args。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Common sense.</strong> We evaluate Chinchilla on various common sense benchmarks: PIQA (Bisk et al., 2020), SIQA (Sap et al., 2019), Winogrande (Sakaguchi et al., 2020), HellaSwag (Zellers et al., 2019), and BoolQ (Clark et al., 2019). We find that Chinchilla outperforms both Gopher and GPT-3 on all tasks and outperforms MT-NLG 530B on all but one task. On TruthfulQA (Lin et al., 2021), Chinchilla reaches 43.6%, 58.5%, and 66.7% accuracy with 0-shot, 5-shot, and 10-shot respectively. In comparison, Gopher achieved only 29.5% 0-shot and 43.7% 10-shot accuracy. In stark contrast with the findings of Lin et al. (2021), the large improvements (14.1% in 0-shot accuracy) achieved by Chinchilla suggest that better modelling of the pre-training data alone can lead to substantial improvements on this benchmark.</p>
+            <p><strong>Closed-book QA.</strong> On the Natural Questions dataset (Kwiatkowski et al., 2019), Chinchilla achieves new closed-book SOTA accuracies: 31.5% 5-shot and 35.5% 64-shot, compared to 21% and 28% respectively, for Gopher. On TriviaQA (Joshi et al., 2017) Chinchilla substantially outperforms Gopher on both filtered and unfiltered evaluation sets. On the filtered version, Chinchilla lags behind the open-book SOTA (Izacard and Grave, 2020) by only 7.9%. On the unfiltered set, Chinchilla outperforms GPT-3.</p>
+          </div>
+          <div class="zh">
+            <p><strong>常识。</strong>我们在多个常识 benchmark 上评测:PIQA(Bisk 等 2020)、SIQA(Sap 等 2019)、Winogrande(Sakaguchi 等 2020)、HellaSwag(Zellers 等 2019)、BoolQ(Clark 等 2019)。Chinchilla 在所有任务上都超过 Gopher 与 GPT-3,且在除一项外的全部任务上超过 MT-NLG 530B。在 TruthfulQA(Lin 等 2021)上,Chinchilla 在 0/5/10-shot 下分别达到 43.6%、58.5%、66.7%;Gopher 仅有 29.5%(0-shot)与 43.7%(10-shot)。与 Lin 等(2021)的结论形成鲜明对比的是:Chinchilla 在 0-shot 上 14.1% 的巨大提升说明——<em>仅</em>更好地建模预训练数据,就能在该 benchmark 上带来显著改进。</p>
+            <p><strong>闭卷问答。</strong>在 Natural Questions(Kwiatkowski 等 2019)上,Chinchilla 创下新的<em>闭卷 SOTA</em>:5-shot 31.5%、64-shot 35.5%,而 Gopher 分别仅 21% 与 28%。在 TriviaQA(Joshi 等 2017)上,Chinchilla 在过滤集与未过滤集上都显著领先 Gopher;过滤集上仅比 open-book SOTA(Izacard &amp; Grave, 2020)落后 7.9%;未过滤集上则超过 GPT-3。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Gender bias and toxicity.</strong> Large Language Models carry potential risks such as outputting offensive language, propagating social biases, and leaking private information. We expect Chinchilla to carry risks similar to Gopher because Chinchilla is trained on the same data, albeit with slightly different relative weights, and because it has a similar architecture. On Winogender (Rudinger et al., 2018), Chinchilla correctly resolves pronouns more frequently than Gopher across all groups. Interestingly, the performance increase is considerably smaller for male pronouns (increase of 3.2%) than for female or neutral pronouns (increases of 8.3% and 9.2% respectively). On gotcha examples (where the correct resolution contradicts gender stereotypes), Chinchilla again resolves pronouns more accurately than Gopher (largest improvement: female gotcha +10%). For unprompted toxicity, mean PerspectiveAPI scores are essentially identical (Gopher 0.081 vs Chinchilla 0.087), suggesting that toxicity levels in unconditional text generation are largely independent of the model quality.</p>
+          </div>
+          <div class="zh">
+            <p><strong>性别偏见与毒性。</strong>大语言模型存在输出冒犯性语言、传播社会偏见、泄露隐私等潜在风险。Chinchilla 与 Gopher 数据相同(子集权重略有不同)、架构相似,因此风险也相似。在 Winogender(Rudinger 等 2018)上,Chinchilla 在<em>所有</em>性别组上的代词消解都比 Gopher 更准;但提升幅度对男性代词较小(+3.2%),对女性与中性代词较大(分别 +8.3%、+9.2%)。在"gotcha"样本(正确消解与性别刻板印象<em>相反</em>)上,Chinchilla 也比 Gopher 更准——最大提升出现在女性 gotcha(+10%)。无提示生成的毒性方面,PerspectiveAPI 平均分基本相同(Gopher 0.081 vs Chinchilla 0.087),提示无条件生成的毒性水平基本与模型质量无关。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5 Discussion &amp; Conclusion / 讨论与结论<span class="sec-page">p.14</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The trend so far in large language model training has been to increase the model size, often without increasing the number of training tokens. The largest dense transformer, MT-NLG 530B, is now over 3× larger than GPT-3's 170 billion parameters from just two years ago. However, this model, as well as the majority of existing large models, have all been trained for a comparable number of tokens — around 300 billion. While the desire to train these mega-models has led to substantial engineering innovation, we hypothesize that the race to train larger and larger models is resulting in models that are substantially underperforming compared to what could be achieved with the same compute budget.</p>
+          </div>
+          <div class="zh">
+            <p>到目前为止,大语言模型的训练趋势是不断<em>增大模型规模</em>,而往往不同步增加训练 tokens 数。最大的稠密 Transformer—— MT-NLG 530B——比仅两年前的 GPT-3(170B)大了 3 倍以上。然而,这个模型和大多数现有大模型一样,训练 tokens 数都差不多——约 3000 亿。尽管"训这些超大模型"的需求催生了不少工程创新,我们认为:这场"越大越好"的竞赛<em>反而</em>导致了模型在同样的算力预算下显著低于本应达到的水平。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We propose three predictive approaches towards optimally setting model size and training duration, based on the outcome of over 400 training runs. All three approaches predict that Gopher is substantially over-sized and estimate that for the same compute budget a smaller model trained on more data will perform better. We directly test this hypothesis by training Chinchilla, a 70B parameter model, and show that it outperforms Gopher and even larger models on nearly every measured evaluation task.</p>
+          </div>
+          <div class="zh">
+            <p>我们提出三种预测方法来最优地设定模型规模与训练时长,依据是 400+ 训练 run 的结果。三种方法都预测:Gopher 显著过大;在相同算力预算下,一个更小、训练数据更多的模型会表现更好。我们通过训练 70B 参数的 Chinchilla 直接验证该假设——结果它在几乎所有评测任务上都击败了 Gopher 以及更大的模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Whilst our approach allows us to predict how to scale large models when given additional compute, there are several limitations. Due to the cost of training large models, we only have two comparable training runs at large scale (Chinchilla and Gopher), and we do not have additional tests at intermediate scales. Furthermore, we assume that the efficient computational frontier can be described by a power-law relationship between the compute budget, model size, and number of training tokens. However, we observe some concavity in $\log(N_{opt})$ at high compute budgets (see Appendix E). This suggests that we may still be overestimating the optimal size of large models. Finally, the training runs for our analysis have all been trained on less than an epoch of data; future work may consider the multiple epoch regime. Despite these limitations, the comparison of Chinchilla to Gopher validates our performance predictions, that have thus enabled training a better (and more lightweight) model at the same compute budget.</p>
+          </div>
+          <div class="zh">
+            <p>虽然我们的方法能预测"给定更多算力时应如何扩展大模型",仍有若干局限:① 由于训练大模型代价高,在大规模上我们只有 Chinchilla 与 Gopher 两个可比较的 run,缺少中间规模的额外检验;② 我们假设"高效算力前沿"可用 算力、模型规模、训练 tokens 之间的幂律来描述,但在高算力时我们观察到 $\log(N_{opt})$ 有一定<em>凹性</em>(见 Appendix E),这暗示我们对大模型的最优规模可能仍有<em>高估</em>;③ 用于分析的所有训练 run 都仅训不到一个 epoch,未来工作可考虑多 epoch 情形。尽管有这些局限,Chinchilla 与 Gopher 的对比验证了我们的性能预测——使我们得以在<em>相同</em>算力预算下训出一个更好且更<em>轻量</em>的模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Though there has been significant recent work allowing larger and larger models to be trained, our analysis suggests an increased focus on dataset scaling is needed. Speculatively, we expect that scaling to larger and larger datasets is only beneficial when the data is high-quality. This calls for responsibly collecting larger datasets with a high focus on dataset quality. Larger datasets will require extra care to ensure train-test set overlap is properly accounted for, both in the language modelling loss but also with downstream tasks. Finally, training for trillions of tokens introduces many ethical and privacy concerns. Large datasets scraped from the web will contain toxic language, biases, and private information. With even larger datasets being used, the quantity (if not the frequency) of such information increases, which makes dataset introspection all the more important. Chinchilla does suffer from bias and toxicity but interestingly it seems less affected than Gopher. Better understanding how performance of large language models and toxicity interact is an important future research question.</p>
+          </div>
+          <div class="zh">
+            <p>近来已有大量工作让<em>越来越大</em>的模型成为可能,而我们的分析表明:应转而更关注<em>数据集扩展</em>。我们推测——把数据集做得越来越大,只有在<em>数据质量高</em>时才有益。这就要求负责任地收集更大的数据集,并重视质量。更大的数据集也需要额外注意"训/测集重叠"问题,既包括 LM loss,也包括下游任务。最后,用万亿 tokens 训练会引入许多伦理与隐私顾虑——从网络爬取的大数据集必然含有有害语言、偏见和私人信息;数据量越大,这类内容总量越多(不一定频率更高),因此<em>数据自省</em>更显重要。Chinchilla 确实也存在偏见与毒性,但有趣的是它似乎比 Gopher 受影响<em>更轻</em>。"大语言模型性能与毒性之间如何相互作用"是一个重要的未来研究问题。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>References / 参考文献<span class="sec-page">p.16</span></span>
+      </summary>
+      <div class="sec-content"><p>(参考文献条目较多,此处略——可在 <a href="https://arxiv.org/pdf/2203.15556.pdf" target="_blank">arXiv 原文 PDF</a> 中查看完整 References 与 Appendix A–J(训练数据、IsoFLOP 在 C4/GitHub 上的复现、与 Kaplan et al. 2020 的正面对比、FLOPs 计算细节、Adam vs AdamW 对比、Pile/MMLU/BIG-bench 完整结果、Model Card、所有训练模型的超参清单等)。)</p></div>
+    </details>
+
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

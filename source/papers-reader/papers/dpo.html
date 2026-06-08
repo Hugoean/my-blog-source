@@ -1,0 +1,1057 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direct Preference Optimization: · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2305.18290 · 27 页 · 2 张图</div>
+    <h1>Direct Preference Optimization:</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-deep">优先级 deep</span>
+      <span>W1</span><span>W2</span>
+      <span>DPO</span><span>RLHF</span><span>Alignment</span>
+      <span><a href="https://arxiv.org/abs/2305.18290" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2305.18290.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>DPO 把 RLHF 的"奖励模型 + PPO"两阶段,压缩成在偏好对上做一次二分类交叉熵——数学上等价于求解 KL 正则化 RL 的闭式最优策略,从而免去显式 reward model、在线采样与 RL 调参。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>损失推导(必默写)</strong>:从 KL-正则 RL 目标
+          $$\max_{\pi_\theta}\;\mathbb{E}_{x\sim\mathcal{D},\,y\sim\pi_\theta(\cdot|x)}\bigl[r(x,y)\bigr] - \beta\,\mathrm{KL}\bigl(\pi_\theta(\cdot|x)\,\|\,\pi_\mathrm{ref}(\cdot|x)\bigr)$$
+          可推出闭式最优解
+          $$\pi^*(y|x) = \frac{1}{Z(x)}\,\pi_\mathrm{ref}(y|x)\,\exp\!\Bigl(\tfrac{1}{\beta}\,r(x,y)\Bigr)$$
+          反解奖励为
+          $$r(x,y) = \beta\log\frac{\pi^*(y|x)}{\pi_\mathrm{ref}(y|x)} + \beta\log Z(x).$$
+          代入 Bradley–Terry 偏好概率 $\sigma\!\bigl(r(x,y_w)-r(x,y_l)\bigr)$ 时,$Z(x)$ 相减抵消,得到 <strong>DPO 损失</strong>:
+          $$\mathcal{L}_{\text{DPO}} = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_\mathrm{ref}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_\mathrm{ref}(y_l|x)}\right)\right].$$
+        </li>
+        <li><strong>$\beta$ 的作用</strong>:KL 强度。$\beta\!\uparrow$ → 更贴近 ref(保守);$\beta\!\downarrow$ → 更激进。实务常用 $0.1\sim0.5$;Llama 系常用 $0.1$。</li>
+        <li><strong>vs PPO / RLHF</strong>:无需 RM、无需 rollout、无 advantage 估计,显存 ↓、稳定性 ↑、超参 ↓。代价:严格 off-policy,被偏好数据分布锁死,不能像 PPO 那样靠采样跳出分布。</li>
+        <li><strong>已知坑 / 变体</strong>:
+          <ul>
+            <li><em>reward hacking</em>:常把 $\pi(y_l)$ 压得过低而非把 $\pi(y_w)$ 抬高 → 整体熵塌(<strong>IPO</strong> 用 squared loss 缓解过拟合,<strong>KTO</strong> 用 prospect-theory 损失 + 单样本免成对)。</li>
+            <li><em>ref model 占显存</em> → <strong>SimPO</strong> 去掉 ref,用长度归一化的 implicit reward。</li>
+            <li><em>length bias</em>:chosen 通常更长 → DPO 会奖励长度,需做长度控制或 R-DPO。</li>
+            <li><em>噪声标签</em>:cDPO / rDPO 引入标签翻转概率 $\varepsilon$ 做鲁棒化。</li>
+          </ul>
+        </li>
+        <li><strong>ref policy 怎么选</strong>:通常是 SFT 后的 checkpoint;若直接拿预训练做 ref,优化会跑偏。在线 DPO(Online DPO / iterative DPO)会定期用最新策略采样、重打标后再训。</li>
+        <li><strong>评测口径</strong>:Win-rate 对 reference policy 与 judge(GPT-4 vs 人)极度敏感,跨论文比较慎重。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      必默写损失推导,面试 100% 问
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      
+            <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">Introduction</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-4a">§2 Related Work / 相关工作</a><span class="toc-page">p.2</span></li>
+
+      <li><a href="#sec-4b">§3 Preliminaries / 预备</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-4c">§4 Direct Preference Optimization / DPO 方法</a><span class="toc-page">p.4</span></li>
+
+      <li><a href="#sec-4d">§5 Theoretical Analysis / 理论分析</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-5">§6 Experiments / 实验</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-6">§7 Discussion / 讨论</a><span class="toc-page">p.10</span></li>
+
+      <li><a href="#sec-7">References</a><span class="toc-page">p.11</span></li>
+
+      <li><a href="#sec-8">Appendix(片段)</a><span class="toc-page">p.17</span></li>
+      
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (2 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2305.18290_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.2 · 2380×478</div>
+          <div class="fig-caption">Figure 1: DPO optimizes for human preferences while avoiding reinforcement learning. Existing methods</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>论文的"门面图",并排对比 RLHF 与 DPO 两条训练管线。左侧 RLHF = <em>preference data → reward model(maximum likelihood)→ RL(label rewards + sample completions)→ LM policy</em>;右侧 DPO = <em>preference data → final LM(只剩 maximum likelihood)</em>。</p>
+          <p><strong>② 关键数据 / 对照:</strong>RLHF 共两阶段、两个模型(RM 与 policy)、依赖在线采样;DPO 一阶段、一个模型(还有一个冻结的 ref)、纯离线监督。图中"reinforcement learning"被显式标红,暗示这是被消掉的部分。</p>
+          <p><strong>③ 启示:</strong>DPO 的核心 trick 不在工程而在数学——把 KL-正则 RL 的闭式最优解反向代入 Bradley-Terry,reward 被重参数化为 <code>β·log(π/π_ref)</code>。从图上读出的工程价值:① 砍掉 RM 节省一份模型的训练/显存;② 没有 rollout 就没有 PPO 的不稳定与 reward hacking 风险;③ 一切退化为对一对 (y_w, y_l) 的对比 logistic 回归,门槛骤降——这是 DPO 成为社区默认偏好对齐方案的关键。</p>
+        </div>
+      </div>
+      
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2305.18290_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.27 · 1450×1722</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>Reddit TL;DR 摘要任务的人工评测 UI 截图(MTurk)。展示一个 r/relationships 帖子,下面给出两个候选摘要 A/B,标注员需选哪个"更好地抓住了帖子里最重要的点",并允许第三个选项 <em>"I can't tell"</em>。</p>
+          <p><strong>② 关键数据 / 对照:</strong>三选一设计(A 更好 / B 更好 / 分不清);指引特别强调"如果两条摘要看起来很相似,请直接对比并尽量少选 can't tell"——即仍鼓励作出判断。Prompt 上方有任务 ID,用于追踪每个 HIT。</p>
+          <p><strong>③ 启示:</strong>论文里 "GPT-4 win-rate" 与 "Human win-rate" 都基于这种成对比较设计。读 DPO 数据时要意识到:① <em>胜率</em>是相对指标,严重依赖 reference policy(论文里多用 SFT baseline);② "can't tell" 选项可缓解强迫二选一带来的噪声,但也会拉低显著性,需要更多样本;③ GPT-4 与人工评测会系统性高估某些风格(如长答、自信腔调),这也是后续 length-controlled DPO / SimPO 等工作的动机。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>Direct Preference Optimization: Your Language Model is Secretly a Reward Model Rafael Rafailov∗† Archit Sharma∗† Eric Mitchell∗† Stefano Ermon†‡ Christopher D. Manning† Chelsea Finn† †Stanford University ‡CZ Biohub {rafailov,architsh,eric.mitchell}@cs.stanford.edu</p></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While large-scale unsupervised language models (LMs) learn broad world knowledge and some reasoning skills, achieving precise control of their behavior is difficult due to the completely unsupervised nature of their training. Existing methods for gaining such steerability collect human labels of the relative quality of model generations and fine-tune the unsupervised LM to align with these preferences, often with reinforcement learning from human feedback (RLHF). However, RLHF is a complex and often unstable procedure, first fitting a reward model that reflects the human preferences, and then fine-tuning the large unsupervised LM using reinforcement learning to maximize this estimated reward without drifting too far from the original model. In this paper we introduce a new parameterization of the reward model in RLHF that enables extraction of the corresponding optimal policy in closed form, allowing us to solve the standard RLHF problem with only a simple classification loss. The resulting algorithm, which we call Direct Preference Optimization (DPO), is stable, performant, and computationally lightweight, eliminating the need for sampling from the LM during fine-tuning or performing significant hyperparameter tuning.</p>
+            <p>Our experiments show that DPO can fine-tune LMs to align with human preferences as well as or better than existing methods. Notably, fine-tuning with DPO exceeds PPO-based RLHF in ability to control sentiment of generations, and matches or improves response quality in summarization and single-turn dialogue while being substantially simpler to implement and train.</p>
+          </div>
+          <div class="zh">
+            <p>尽管大规模无监督语言模型(LM)学到了广博的世界知识与一些推理能力,但由于其训练完全是无监督的,要实现对其行为的精确控制是困难的。现有获得此类可控性的方法,会收集人类对模型生成结果之间相对质量的标注,并微调这个无监督的 LM 以与这些偏好对齐——通常采用基于人类反馈的强化学习(RLHF)。然而,RLHF 是一个复杂且常常不稳定的过程:先拟合一个反映人类偏好的奖励模型,再使用强化学习微调这个大规模无监督 LM,以最大化所估计的奖励,同时不能偏离原模型太远。在本文中,我们引入 RLHF 中奖励模型的一种新参数化方式,它使得对应的最优策略可以以闭式形式抽取出来,从而让我们能够仅用一个简单的分类损失就求解标准的 RLHF 问题。由此得到的算法——我们称之为 Direct Preference Optimization(DPO)——稳定、性能强、计算轻量,免除了在微调期间从 LM 采样以及大量超参数调优的需求。</p>
+            <p>我们的实验表明,DPO 能够将 LM 微调至与人类偏好对齐,效果与现有方法相当或更好。值得注意的是,使用 DPO 微调在控制生成情感的能力上超过了基于 PPO 的 RLHF,并在摘要与单轮对话中响应质量持平或更好,同时实现与训练都显著更简单。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>Introduction<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Large unsupervised language models (LMs) trained on very large datasets acquire surprising capabilities. However, these models are trained on data generated by humans with a wide variety of goals, priorities, and skillsets. Some of these goals and skillsets may not be desirable to imitate; for example, while we may want our AI coding assistant to understand common programming mistakes in order to correct them, nevertheless, when generating code, we would like to bias our model toward the (potentially rare) high-quality coding ability present in its training data. Similarly, we might want our language model to be aware of a common misconception believed by 50% of people, but we certainly do not want the model to claim this misconception to be true in 50% of queries about it! In other words, selecting the model's desired responses and behavior from its very wide knowledge and abilities is crucial to building AI systems that are safe, performant, and controllable. While existing methods typically steer LMs to match human preferences using reinforcement learning (RL), we will show that the RL-based objective used by existing methods can be optimized exactly with a simple binary cross-entropy objective, greatly simplifying the preference learning pipeline.</p>
+          </div>
+          <div class="zh">
+            <p>在超大规模数据集上训练的大型无监督语言模型(LM)获得了惊人的能力。然而,这些模型是在由具有各式各样目标、优先级和技能的人类所产出的数据上训练的。其中一些目标和技能未必值得我们模仿;例如,我们希望 AI 编程助手能理解常见的编程错误以便纠正它们,但在生成代码时,我们更希望模型偏向其训练数据中(可能很稀少的)高质量编程能力。类似地,我们也许希望语言模型知道一个被 50% 人群相信的常见误解,但当然不希望它在对该问题的 50% 询问中都把这个误解当作真的来回答!换句话说,从模型极其广博的知识与能力中<em>挑选</em>出我们期望的响应与行为,是构建安全、高性能、可控 AI 系统的关键。现有方法通常用强化学习(RL)把 LM 引导到与人类偏好一致;我们将证明,现有方法所用的"基于 RL 的目标"可以由一个简单的二元交叉熵目标<em>精确地</em>优化,从而大大简化偏好学习流水线。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>At a high level, existing methods instill the desired behaviors into a language model using curated sets of human preferences representing the types of behaviors that humans find safe and helpful. This preference learning stage occurs after an initial stage of large-scale unsupervised pre-training on a large text dataset. While the most straightforward approach to preference learning is supervised fine-tuning on human demonstrations of high quality responses, the most successful class of methods is reinforcement learning from human (or AI) feedback (RLHF / RLAIF). RLHF methods fit a reward model to a dataset of human preferences and then use RL to optimize a language model policy to produce responses assigned high reward without drifting excessively far from the original model. While RLHF produces models with impressive conversational and coding abilities, the RLHF pipeline is considerably more complex than supervised learning, involving training multiple LMs and sampling from the LM policy in the loop of training, incurring significant computational costs.</p>
+          </div>
+          <div class="zh">
+            <p>在较高层面上,现有方法是用经过整理的人类偏好集合,把"人类认为安全且有用的行为"灌输给语言模型。这一偏好学习阶段发生在大规模无监督预训练之后。最直接的偏好学习方法,是在高质量响应的人类示范上做<em>监督微调</em>;但最成功的一类方法是<em>基于人类(或 AI)反馈的强化学习</em>(RLHF / RLAIF)。RLHF 方法先在一个人类偏好数据集上拟合一个奖励模型,然后用 RL 优化一个语言模型策略,使其生成被赋予高奖励的响应、同时不偏离原模型太远。虽然 RLHF 训出的模型在对话和编程能力上令人印象深刻,但 RLHF 流水线比监督学习<em>复杂得多</em>,它涉及训练多个 LM、并在训练循环中从 LM 策略采样,带来显著的计算开销。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this paper, we show how to directly optimize a language model to adhere to human preferences, without explicit reward modeling or reinforcement learning. We propose Direct Preference Optimization (DPO), an algorithm that implicitly optimizes the same objective as existing RLHF algorithms (reward maximization with a KL-divergence constraint) but is simple to implement and straightforward to train. Intuitively, the DPO update increases the relative log probability of preferred to dispreferred responses, but it incorporates a dynamic, per-example importance weight that prevents the model degeneration that we find occurs with a naive probability ratio objective. Like existing algorithms, DPO relies on a theoretical preference model (such as the Bradley-Terry model) that measures how well a given reward function aligns with empirical preference data. However, while existing methods use the preference model to define a preference loss to train a reward model and then train a policy that optimizes the learned reward model, DPO uses a change of variables to define the preference loss as a function of the policy directly. Given a dataset of human preferences over model responses, DPO can therefore optimize a policy using a simple binary cross entropy objective, producing the optimal policy to an implicit reward function fit to the preference data.</p>
+          </div>
+          <div class="zh">
+            <p>本文展示了如何<em>直接</em>优化一个语言模型以符合人类偏好,无需显式奖励建模、也无需强化学习。我们提出 Direct Preference Optimization(DPO)——一个隐式地优化与现有 RLHF 算法相同目标(带 KL 散度约束的奖励最大化)、但实现简单且训练直接的算法。直观上,DPO 的更新提升"偏好响应相对非偏好响应的对数概率",但加入了一个<em>动态的、按样本</em>的重要性权重,以避免我们发现的、朴素概率比目标会导致的模型退化。和现有算法一样,DPO 依赖一个理论偏好模型(如 Bradley-Terry),用以衡量一个给定奖励函数与经验偏好数据的匹配程度。然而,现有方法是利用偏好模型定义一个偏好损失来训练奖励模型、然后训练一个策略去优化所学的奖励模型;而 DPO 使用<em>变量代换</em>,把偏好损失直接定义为关于策略的函数。给定一个关于模型响应的人类偏好数据集,DPO 因此能用一个简单的二元交叉熵目标优化策略,产出一个与"由偏好数据拟合的隐式奖励函数"相对应的最优策略。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our main contribution is Direct Preference Optimization (DPO), a simple RL-free algorithm for training language models from preferences. Our experiments show that DPO is at least as effective as existing methods, including PPO-based RLHF, for learning from preferences in tasks such as sentiment modulation, summarization, and dialogue, using language models with up to 6B parameters.</p>
+          </div>
+          <div class="zh">
+            <p>我们的主要贡献是 Direct Preference Optimization(DPO)——一个简单的、不依赖 RL 的从偏好训练语言模型的算法。我们的实验表明,在情感调控、摘要、对话等任务上,使用规模最大为 6B 参数的语言模型,DPO 至少与现有方法(包括基于 PPO 的 RLHF)同样有效。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-4a">
+      <summary>
+        <span>§2 Related Work / 相关工作<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Self-supervised language models of increasing scale learn to complete some tasks zero-shot or with few-shot prompts. However, their performance on downstream tasks and alignment with user intent can be significantly improved by fine-tuning on datasets of instructions and human-written completions. This "instruction-tuning" procedure enables LLMs to generalize to instructions outside of the instruction-tuning set and generally increase their usability. Despite the success of instruction tuning, relative human judgments of response quality are often easier to collect than expert demonstrations, and thus subsequent works have fine-tuned LLMs with datasets of human preferences, improving proficiency in translation, summarization, story-telling, and instruction-following. These methods first optimize a neural network reward function for compatibility with the dataset of preferences under a preference model such as the Bradley-Terry model, then fine-tune a language model to maximize the given reward using reinforcement learning algorithms, commonly REINFORCE, proximal policy optimization (PPO), or variants.</p>
+          </div>
+          <div class="zh">
+            <p>规模越来越大的自监督语言模型,可以通过 zero-shot 或 few-shot prompt 完成某些任务。然而,在下游任务上的表现以及与用户意图的对齐,可以通过在"指令 + 人写完成"数据集上微调而显著提升。这种"指令微调(instruction-tuning)"过程使 LLM 能泛化到指令微调集之外的指令,并普遍提升其可用性。尽管指令微调取得了成功,但对响应质量的"相对人工判断"通常比专家示范更容易收集,因此后续工作转而用人类偏好数据集微调 LLM,提升了在翻译、摘要、故事生成、指令跟随等任务上的水平。这些方法先在偏好数据集上、用 Bradley-Terry 之类的偏好模型,优化一个神经网络奖励函数;再用强化学习算法(常见为 REINFORCE、近端策略优化 PPO 或其变体)微调语言模型以最大化所给奖励。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>A closely-related line of work leverages LLMs fine-tuned for instruction following with human feedback to generate additional synthetic preference data for targeted attributes such as safety or harmlessness, using only weak supervision from humans in the form of a text rubric for the LLM's annotations. These methods represent a convergence of two bodies of work: one body of work on training language models with reinforcement learning for a variety of objectives and another body of work on general methods for learning from human preferences. Despite the appeal of using relative human preferences, fine-tuning large language models with reinforcement learning remains a major practical challenge; this work provides a theoretically-justified approach to optimizing relative preferences without RL. Outside of the context of language, learning policies from preferences has been studied in both bandit and reinforcement learning settings. Contextual bandit learning using preferences or rankings of actions, rather than rewards, is known as a contextual dueling bandit (CDB).</p>
+          </div>
+          <div class="zh">
+            <p>另一条紧密相关的工作路线,是利用已用人类反馈做过指令跟随微调的 LLM,去为安全、无害等目标属性生成额外的合成偏好数据——人类只以一份文本评分准则作为弱监督来指导 LLM 的标注。这些方法是两条工作脉络的汇合:一条是用强化学习训语言模型以实现各种目标;另一条是从人类偏好学习的通用方法。尽管使用相对人类偏好很有吸引力,用强化学习微调大语言模型在实践中仍是主要挑战;本文给出一种有理论依据、且<em>不需要 RL</em> 的相对偏好优化方法。在语言任务之外,从偏好学策略已在 bandit 和强化学习设定下研究过。基于偏好或动作排名(而非奖励)的上下文 bandit 学习被称为<em>上下文对偶 bandit</em>(CDB)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In the absence of absolute rewards, theoretical analysis of CDBs substitutes the notion of an optimal policy with a von Neumann winner, a policy whose expected win rate against any other policy is at least 50%. However, in the CDB setting, preference labels are given online, while in learning from human preferences, we typically learn from a fixed batch of offline preference-annotated action pairs. Similarly, preference-based RL (PbRL) learns from binary preferences generated by an unknown "scoring" function rather than rewards. Various algorithms for PbRL exist, including methods that can reuse off-policy preference data, but generally involve first explicitly estimating the latent scoring function (i.e. the reward model) and subsequently optimizing it. We instead present a single stage policy learning approach that directly optimizes a policy to satisfy preferences.</p>
+          </div>
+          <div class="zh">
+            <p>在没有绝对奖励的情况下,对 CDB 的理论分析将"最优策略"的概念替换为<em>冯·诺依曼赢家</em>——一个对其它任何策略期望胜率至少 50% 的策略。然而 CDB 的偏好标签是在线给出的,而从人类偏好学习时,我们通常是从一批固定的、离线带偏好标注的动作对中学习。类似地,基于偏好的强化学习(PbRL)从一个未知"打分"函数(而非奖励)生成的二元偏好中学习。PbRL 已有多种算法,包括可以复用 off-policy 偏好数据的方法,但通常仍要先显式估计潜在的打分函数(即奖励模型),再去优化它。我们则提出一种<em>单阶段</em>策略学习方法,直接优化策略以满足偏好。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4b">
+      <summary>
+        <span>§3 Preliminaries / 预备<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We review the RLHF pipeline in Ziegler et al. (and later). It usually includes three phases: 1) supervised fine-tuning (SFT); 2) preference sampling and reward learning; and 3) RL optimization. <strong>SFT:</strong> RLHF typically begins by fine-tuning a pre-trained LM with supervised learning on high-quality data for the downstream task(s) of interest (dialogue, summarization, etc.), to obtain a model $\pi^{\text{SFT}}$. <strong>Reward Modelling Phase:</strong> In the second phase the SFT model is prompted with prompts $x$ to produce pairs of answers $(y_1, y_2) \sim \pi^{\text{SFT}}(y \mid x)$. These are then presented to human labelers who express preferences for one answer, denoted as $y_w \succ y_l \mid x$ where $y_w$ and $y_l$ denote the preferred and dispreferred completion. The preferences are assumed to be generated by some latent reward model $r^*(x,y)$, which we do not have access to. There are a number of approaches used to model preferences, the Bradley-Terry (BT) model being a popular choice (although more general Plackett-Luce ranking models are also compatible if we have access to several ranked answers). The BT model stipulates that the human preference distribution $p^*$ can be written as:</p>
+            <div class="bi-eq">$$p^*(y_1 \succ y_2 \mid x) = \frac{\exp(r^*(x, y_1))}{\exp(r^*(x, y_1)) + \exp(r^*(x, y_2))}. \quad (1)$$</div>
+            <p>Assuming access to a static dataset of comparisons $\mathcal{D} = \{x^{(i)}, y_w^{(i)}, y_l^{(i)}\}_{i=1}^N$ sampled from $p^*$, we can parametrize a reward model $r_\phi(x, y)$ and estimate the parameters via maximum likelihood. Framing the problem as a binary classification we have the negative log-likelihood loss:</p>
+            <div class="bi-eq">$$\mathcal{L}_R(r_\phi, \mathcal{D}) = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\bigl[\log \sigma(r_\phi(x, y_w) - r_\phi(x, y_l))\bigr] \quad (2)$$</div>
+            <p>where $\sigma$ is the logistic function. In the context of LMs, $r_\phi(x, y)$ is often initialized from the SFT model $\pi^{\text{SFT}}(y \mid x)$ with the addition of a linear layer on top of the final transformer layer that produces a single scalar prediction for the reward value. To ensure a reward function with lower variance, prior works normalize the rewards, such that $\mathbb{E}_{x,y\sim\mathcal{D}}[r_\phi(x, y)] = 0$ for all $x$.</p>
+          </div>
+          <div class="zh">
+            <p>我们回顾 Ziegler 等人(及后续工作)中的 RLHF 流水线。它通常包含三个阶段:① 监督微调(SFT);② 偏好采样与奖励学习;③ RL 优化。<strong>SFT 阶段:</strong>RLHF 通常先用监督学习,在感兴趣的下游任务(对话、摘要等)的高质数据上微调预训练 LM,得到模型 $\pi^{\text{SFT}}$。<strong>奖励建模阶段:</strong>第二阶段把 SFT 模型用 prompts $x$ 喂入以产生答案对 $(y_1, y_2) \sim \pi^{\text{SFT}}(y\mid x)$。然后呈现给人类标注员表达偏好,记作 $y_w \succ y_l \mid x$,其中 $y_w$、$y_l$ 分别表示偏好与非偏好的完成。假设偏好由某个潜在奖励模型 $r^*(x,y)$ 生成,但我们无法访问 $r^*$。建模偏好的方法有多种,Bradley-Terry(BT)模型是常见选择(若有多个排好序的答案,更一般的 Plackett-Luce 排名模型也与本框架兼容)。BT 模型规定人类偏好分布 $p^*$ 可写成公式 (1)。</p>
+            <p>假设可以访问从 $p^*$ 采样的静态对比数据集 $\mathcal{D} = \{x^{(i)}, y_w^{(i)}, y_l^{(i)}\}_{i=1}^N$,我们可以将奖励模型参数化为 $r_\phi(x,y)$,并通过极大似然估计参数。将该问题作为二元分类,得到负对数似然损失,即公式 (2),其中 $\sigma$ 为 sigmoid。在 LM 场景下,$r_\phi(x,y)$ 通常用 SFT 模型 $\pi^{\text{SFT}}(y\mid x)$ 初始化,在最后一层 transformer 之上加一个线性层输出单个标量作为奖励预测。为了让奖励函数具有更小的方差,以往工作会对奖励做归一化,使 $\mathbb{E}_{x,y\sim\mathcal{D}}[r_\phi(x,y)] = 0$ 对所有 $x$ 成立。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>RL Fine-Tuning Phase:</strong> During the RL phase, the learned reward function is used to provide feedback to the language model. Following prior works, the optimization is formulated as</p>
+            <div class="bi-eq">$$\max_{\pi_\theta}\;\mathbb{E}_{x\sim\mathcal{D},\,y\sim\pi_\theta(y\mid x)}\bigl[r_\phi(x, y)\bigr] - \beta\, D_{\mathrm{KL}}\bigl[\pi_\theta(y\mid x)\,\|\,\pi_\mathrm{ref}(y\mid x)\bigr], \quad (3)$$</div>
+            <p>where $\beta$ is a parameter controlling the deviation from the base reference policy $\pi_\mathrm{ref}$, namely the initial SFT model $\pi^{\text{SFT}}$. In practice, the language model policy $\pi_\theta$ is also initialized to $\pi^{\text{SFT}}$. The added constraint is important, as it prevents the model from deviating too far from the distribution on which the reward model is accurate, as well as maintaining the generation diversity and preventing mode-collapse to single high-reward answers. Due to the discrete nature of language generation, this objective is not differentiable and is typically optimized with reinforcement learning. The standard approach has been to construct the reward function $r(x, y) = r_\phi(x, y) - \beta(\log \pi_\theta(y \mid x) - \log \pi_\mathrm{ref}(y \mid x))$, and maximize using PPO.</p>
+          </div>
+          <div class="zh">
+            <p><strong>RL 微调阶段:</strong>在 RL 阶段,所学的奖励函数被用来对语言模型提供反馈。沿用以往工作,优化目标被表述为公式 (3),其中 $\beta$ 是控制策略偏离基线参考策略 $\pi_\mathrm{ref}$(即初始 SFT 模型 $\pi^{\text{SFT}}$)的参数。实践中,语言模型策略 $\pi_\theta$ 也用 $\pi^{\text{SFT}}$ 初始化。加入的约束很重要,因为它防止模型偏离奖励模型仍准确的分布太远,同时维持生成多样性、避免坍塌到单一高奖励答案。由于语言生成的离散性,该目标不可微,通常用强化学习优化。标准做法是构造奖励函数 $r(x,y) = r_\phi(x,y) - \beta(\log\pi_\theta(y\mid x) - \log\pi_\mathrm{ref}(y\mid x))$,并用 PPO 做最大化。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4c">
+      <summary>
+        <span>§4 Direct Preference Optimization / DPO 方法<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Motivated by the challenges of applying reinforcement learning algorithms on large-scale problems such as fine-tuning language models, our goal is to derive a simple approach for policy optimization using preferences directly. Unlike prior RLHF methods, which learn a reward and then optimize it via RL, our approach leverages a particular choice of reward model parameterization that enables extraction of its optimal policy in closed form, without an RL training loop. As we will describe next in detail, our key insight is to leverage an analytical mapping from reward functions to optimal policies, which enables us to transform a loss function over reward functions into a loss function over policies. This change-of-variables approach avoids fitting an explicit, standalone reward model, while still optimizing under existing models of human preferences, such as the Bradley-Terry model. In essence, the policy network represents both the language model and the (implicit) reward.</p>
+          </div>
+          <div class="zh">
+            <p>由于在大规模问题(如微调语言模型)上应用强化学习算法面临诸多挑战,我们的目标是推导一种<em>直接</em>使用偏好做策略优化的简单方法。与"先学奖励、再用 RL 优化"的现有 RLHF 方法不同,我们利用了奖励模型的一种特定参数化选择,使得其对应的最优策略可以以<em>闭式</em>形式抽取,而无需 RL 训练循环。如接下来要详细描述的,我们的核心洞见在于:利用从奖励函数到最优策略的解析映射,可以把"关于奖励函数的损失"转写为"关于策略的损失"。这种<em>换元</em>(change of variables)方法避免了显式拟合一个独立的奖励模型,同时仍在 Bradley-Terry 等现有人类偏好模型下进行优化。本质上,策略网络同时代表语言模型与(隐式的)奖励。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Deriving the DPO objective.</strong> We start with the same RL objective as prior work, Eq. (3), under a general reward function $r$. Following prior work, it is straightforward to show that the optimal solution to the KL-constrained reward maximization objective in Eq. (3) takes the form:</p>
+            <div class="bi-eq">$$\pi_r(y \mid x) = \frac{1}{Z(x)}\,\pi_\mathrm{ref}(y \mid x)\,\exp\!\Bigl(\tfrac{1}{\beta}\,r(x, y)\Bigr), \quad (4)$$</div>
+            <p>where $Z(x) = \sum_y \pi_\mathrm{ref}(y\mid x)\exp(\tfrac{1}{\beta}r(x,y))$ is the partition function. Even if we use the MLE estimate $r_\phi$ of the ground-truth reward function $r^*$, it is still expensive to estimate the partition function $Z(x)$, which makes this representation hard to utilize in practice. However, we can rearrange Eq. (4) to express the reward function in terms of its corresponding optimal policy $\pi_r$, the reference policy $\pi_\mathrm{ref}$, and the unknown partition function $Z(\cdot)$. Specifically, we first take the logarithm of both sides of Eq. (4) and then with some algebra we obtain:</p>
+            <div class="bi-eq">$$r(x, y) = \beta\log\frac{\pi_r(y \mid x)}{\pi_\mathrm{ref}(y \mid x)} + \beta\log Z(x). \quad (5)$$</div>
+            <p>We can apply this reparameterization to the ground-truth reward $r^*$ and corresponding optimal model $\pi^*$. Fortunately, the Bradley-Terry model depends only on the difference of rewards between two completions, i.e., $p^*(y_1 \succ y_2 \mid x) = \sigma(r^*(x, y_1) - r^*(x, y_2))$. Substituting the reparameterization in Eq. (5) for $r^*(x, y)$ into the preference model Eq. (1), the partition function cancels, and we can express the human preference probability in terms of only the optimal policy $\pi^*$ and reference policy $\pi_\mathrm{ref}$. Thus, the optimal RLHF policy $\pi^*$ under the Bradley-Terry model satisfies the preference model:</p>
+            <div class="bi-eq">$$p^*(y_1 \succ y_2 \mid x) = \frac{1}{1 + \exp\!\Bigl(\beta\log\tfrac{\pi^*(y_2\mid x)}{\pi_\mathrm{ref}(y_2\mid x)} - \beta\log\tfrac{\pi^*(y_1\mid x)}{\pi_\mathrm{ref}(y_1\mid x)}\Bigr)}. \quad (6)$$</div>
+            <p>Now that we have the probability of human preference data in terms of the optimal policy rather than the reward model, we can formulate a maximum likelihood objective for a parametrized policy $\pi_\theta$. Analogous to the reward modeling approach (i.e. Eq. (2)), our policy objective becomes:</p>
+            <div class="bi-eq">$$\mathcal{L}_{\text{DPO}}(\pi_\theta;\,\pi_\mathrm{ref}) = -\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\!\left[\log \sigma\!\left(\beta\log\tfrac{\pi_\theta(y_w\mid x)}{\pi_\mathrm{ref}(y_w\mid x)} - \beta\log\tfrac{\pi_\theta(y_l\mid x)}{\pi_\mathrm{ref}(y_l\mid x)}\right)\right]. \quad (7)$$</div>
+            <p>This way, we fit an implicit reward using an alternative parameterization, whose optimal policy is simply $\pi_\theta$. Moreover, since our procedure is equivalent to fitting a reparametrized Bradley-Terry model, it enjoys certain theoretical properties, such as consistencies under suitable assumption of the preference data distribution.</p>
+          </div>
+          <div class="zh">
+            <p><strong>推导 DPO 目标。</strong>我们从与以往工作相同的 RL 目标——公式 (3),在一般奖励函数 $r$ 下出发。沿用以往工作的结论,可以直接证明:公式 (3) 中 KL 约束下奖励最大化目标的<em>最优解</em>形如公式 (4),其中 $Z(x) = \sum_y \pi_\mathrm{ref}(y\mid x)\exp(\tfrac{1}{\beta}r(x,y))$ 为配分函数。即便我们用极大似然估计 $r_\phi$ 代替真实奖励 $r^*$,估计 $Z(x)$ 仍然代价高昂,使该表示难以在实践中直接使用。然而,我们可以重排公式 (4),把奖励函数表达为其对应最优策略 $\pi_r$、参考策略 $\pi_\mathrm{ref}$ 与未知配分函数 $Z(\cdot)$ 的形式。具体地,对公式 (4) 两边取对数后做些代数,得到公式 (5)。</p>
+            <p>我们可以把这一<em>重新参数化</em>应用到真实奖励 $r^*$ 与对应的最优模型 $\pi^*$。幸运的是,Bradley-Terry 模型只依赖于两个完成之间的<em>奖励之差</em>,即 $p^*(y_1\succ y_2\mid x) = \sigma(r^*(x,y_1) - r^*(x,y_2))$。将公式 (5) 中关于 $r^*(x,y)$ 的重新参数化代入偏好模型公式 (1),配分函数<em>相消</em>,我们可以将人类偏好概率仅用最优策略 $\pi^*$ 与参考策略 $\pi_\mathrm{ref}$ 表达。于是,Bradley-Terry 模型下的最优 RLHF 策略 $\pi^*$ 满足公式 (6) 的偏好模型。现在,人类偏好数据的概率以最优策略(而非奖励模型)给出,我们可以对参数化策略 $\pi_\theta$ 写出一个极大似然目标。类比奖励建模(公式 (2)),我们的策略目标就成为公式 (7)。这样,我们以另一种参数化拟合了一个<em>隐式奖励</em>,其最优策略就是 $\pi_\theta$。此外,由于我们的过程等价于拟合一个被重新参数化的 Bradley-Terry 模型,它在偏好数据分布的适当假设下享有某些理论性质,如一致性。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>What does the DPO update do?</strong> For a mechanistic understanding of DPO, it is useful to analyze the gradient of the loss function $\mathcal{L}_{\text{DPO}}$. The gradient with respect to the parameters $\theta$ can be written as:</p>
+            <div class="bi-eq">$$\nabla_\theta \mathcal{L}_{\text{DPO}}(\pi_\theta;\pi_\mathrm{ref}) = -\beta\,\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\Bigl[\underbrace{\sigma\!\bigl(\hat r_\theta(x,y_l) - \hat r_\theta(x,y_w)\bigr)}_{\text{higher weight when reward estimate is wrong}}\Bigl(\underbrace{\nabla_\theta \log \pi(y_w\mid x)}_{\text{increase likelihood of }y_w} - \underbrace{\nabla_\theta \log \pi(y_l\mid x)}_{\text{decrease likelihood of }y_l}\Bigr)\Bigr]$$</div>
+            <p>where $\hat r_\theta(x, y) = \beta\log\frac{\pi_\theta(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$ is the reward implicitly defined by the language model $\pi_\theta$ and reference model $\pi_\mathrm{ref}$. Intuitively, the gradient of the loss function $\mathcal{L}_{\text{DPO}}$ increases the likelihood of the preferred completions $y_w$ and decreases the likelihood of dispreferred completions $y_l$. Importantly, the examples are weighed by how much higher the implicit reward model $\hat r_\theta$ rates the dispreferred completions, scaled by $\beta$, i.e., how incorrectly the implicit reward model orders the completions, accounting for the strength of the KL constraint. Our experiments suggest the importance of this weighting, as a naïve version of this method without the weighting coefficient can cause the language model to degenerate.</p>
+          </div>
+          <div class="zh">
+            <p><strong>DPO 更新在做什么?</strong>要在机制层面理解 DPO,分析 $\mathcal{L}_{\text{DPO}}$ 的梯度是有用的。对参数 $\theta$ 求梯度,可以写成上式,其中 $\hat r_\theta(x,y) = \beta\log\frac{\pi_\theta(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$ 是由语言模型 $\pi_\theta$ 与参考模型 $\pi_\mathrm{ref}$ 隐式定义的奖励。直观上,$\mathcal{L}_{\text{DPO}}$ 的梯度提升偏好完成 $y_w$ 的似然,压低非偏好完成 $y_l$ 的似然。重要的是,样本的权重由"隐式奖励模型 $\hat r_\theta$ 给非偏好完成打分高出多少"决定(并乘以 $\beta$)——也就是<em>隐式奖励模型给完成排错的程度</em>,同时考虑 KL 约束的强度。我们的实验表明这种加权很重要:不带这个权重系数的朴素版本会让语言模型退化。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>DPO outline.</strong> The general DPO pipeline is as follows: 1) Sample completions $y_1, y_2 \sim \pi_\mathrm{ref}(\cdot \mid x)$ for every prompt $x$, label with human preferences to construct the offline dataset of preferences $\mathcal{D} = \{x^{(i)}, y_w^{(i)}, y_l^{(i)}\}_{i=1}^N$; and 2) optimize the language model $\pi_\theta$ to minimize $\mathcal{L}_{\text{DPO}}$ for the given $\pi_\mathrm{ref}$ and $\mathcal{D}$ and desired $\beta$. In practice, one would like to reuse preference datasets publicly available, rather than generating samples and gathering human preferences. Since the preference datasets are sampled using $\pi^{\text{SFT}}$, we initialize $\pi_\mathrm{ref} = \pi^{\text{SFT}}$ whenever available. However, when $\pi^{\text{SFT}}$ is not available, we initialize $\pi_\mathrm{ref}$ by maximizing likelihood of preferred completions $(x, y_w)$, that is, $\pi_\mathrm{ref} = \arg\max_\pi \mathbb{E}_{x, y_w \sim \mathcal{D}}[\log \pi(y_w\mid x)]$. This procedure helps mitigate the distribution shift between the true reference distribution which is unavailable, and $\pi_\mathrm{ref}$ used by DPO.</p>
+          </div>
+          <div class="zh">
+            <p><strong>DPO 完整流程。</strong>一般的 DPO 流程如下:① 对每个 prompt $x$,从 $\pi_\mathrm{ref}(\cdot\mid x)$ 采样完成 $y_1, y_2$,标注人类偏好,构建离线偏好数据集 $\mathcal{D} = \{x^{(i)}, y_w^{(i)}, y_l^{(i)}\}_{i=1}^N$;② 在给定 $\pi_\mathrm{ref}$、$\mathcal{D}$ 和所需 $\beta$ 下,优化语言模型 $\pi_\theta$ 以最小化 $\mathcal{L}_{\text{DPO}}$。在实践中,人们倾向于复用公开偏好数据集,而非自己生成样本并采集人工偏好。由于偏好数据集是用 $\pi^{\text{SFT}}$ 采样的,有 $\pi^{\text{SFT}}$ 时我们将 $\pi_\mathrm{ref}$ 初始化为 $\pi^{\text{SFT}}$。若没有 $\pi^{\text{SFT}}$,则将 $\pi_\mathrm{ref}$ 初始化为对偏好完成 $(x, y_w)$ 的极大似然解,即 $\pi_\mathrm{ref} = \arg\max_\pi \mathbb{E}_{x,y_w\sim\mathcal{D}}[\log\pi(y_w\mid x)]$。该过程有助于缓解"真实但不可获得的参考分布"与"DPO 使用的 $\pi_\mathrm{ref}$"之间的分布偏移。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4d">
+      <summary>
+        <span>§5 Theoretical Analysis / 理论分析<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this section, we give further interpretation of the DPO method, provide theoretical backing, and relate advantages of DPO to issues with actor critic algorithms used for RLHF (such as PPO).</p>
+            <p><strong>5.1 Your Language Model Is Secretly a Reward Model.</strong> DPO is able to bypass both fitting an explicit reward and performing RL to learn the policy using a single maximum likelihood objective. Note the optimization objective Eq. (5) is equivalent to a Bradley-Terry model with a reward parameterization $r^*(x, y) = \beta\log\frac{\pi^*_\theta(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$ and we optimize our parametric model $\pi_\theta$, equivalently to the reward model optimization in Eq. (2) under the change of variables. In this section we will build the theory behind this reparameterization, show that it does not constrain the class of learned reward models, and allows for the exact recovery of the optimal policy. We begin by defining an equivalence relation between reward functions.</p>
+          </div>
+          <div class="zh">
+            <p>本节进一步解读 DPO,提供理论支撑,并将 DPO 的优点关联到 RLHF 中所用 actor-critic 算法(如 PPO)的问题。</p>
+            <p><strong>5.1 你的语言模型其实是一个隐式奖励模型。</strong>DPO 能够同时绕过"显式拟合奖励"与"执行 RL 学策略",用单一极大似然目标完成学习。注意公式 (5) 的优化目标等价于一个采用奖励参数化 $r^*(x,y) = \beta\log\frac{\pi^*_\theta(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$ 的 Bradley-Terry 模型,我们在换元下对参数化模型 $\pi_\theta$ 的优化,等价于公式 (2) 的奖励模型优化。本节将建立这一重新参数化的理论:它<em>不</em>缩小可学习奖励的类别,并允许精确恢复最优策略。我们先定义奖励函数之间的等价关系。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Definition 1.</strong> We say that two reward functions $r(x, y)$ and $r'(x, y)$ are <em>equivalent</em> iff $r(x, y) - r'(x, y) = f(x)$ for some function $f$.</p>
+            <p>It is easy to see that this is indeed an equivalence relation, which partitions the set of reward functions into classes. We can state the following two lemmas:</p>
+            <p><strong>Lemma 1.</strong> Under the Plackett-Luce, and in particular the Bradley-Terry, preference framework, two reward functions from the same class induce the same preference distribution.</p>
+            <p><strong>Lemma 2.</strong> Two reward functions from the same equivalence class induce the same optimal policy under the constrained RL problem.</p>
+            <p>The proofs are straightforward and we defer them to Appendix A.5. The first lemma is a well-known under-specification issue with the Plackett-Luce family of models. Due to this under-specification, we usually have to impose additional identifiability constraints to achieve any guarantees on the MLE estimates from Eq. (2). The second lemma states that all reward functions from the same class yield the same optimal policy, hence for our final objective, we are only interested in recovering an arbitrary reward function from the optimal class.</p>
+          </div>
+          <div class="zh">
+            <p><strong>定义 1.</strong>我们称两个奖励函数 $r(x,y)$ 与 $r'(x,y)$ <em>等价</em>,当且仅当 $r(x,y) - r'(x,y) = f(x)$,其中 $f$ 是某个只依赖于 $x$ 的函数。</p>
+            <p>容易看到这确实是一个等价关系,它把奖励函数集合划分为若干等价类。我们可以陈述如下两个引理:</p>
+            <p><strong>引理 1.</strong>在 Plackett-Luce(尤其是 Bradley-Terry)偏好框架下,同一等价类中的两个奖励函数导出<em>相同的偏好分布</em>。</p>
+            <p><strong>引理 2.</strong>同一等价类中的两个奖励函数,在带约束的 RL 问题下导出<em>相同的最优策略</em>。</p>
+            <p>证明是直接的,放在附录 A.5。第一个引理对应 Plackett-Luce 模型族众所周知的"欠确定"问题。由于这种欠确定性,我们通常需要施加额外的可辨识性约束才能对公式 (2) 的 MLE 估计提供任何保证。第二个引理表明同一类中的所有奖励函数都得到相同的最优策略——因此对于我们的最终目标,只需要从最优等价类中恢复任意一个奖励函数即可。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We prove the following Theorem in Appendix A.6:</p>
+            <p><strong>Theorem 1.</strong> Under mild assumptions, all reward classes consistent with the Plackett-Luce (and Bradley-Terry in particular) models can be represented with the reparameterization $r(x, y) = \beta\log\frac{\pi(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$ for some model $\pi(y\mid x)$ and a given reference model $\pi_\mathrm{ref}(y\mid x)$.</p>
+            <p><strong>Proof Sketch.</strong> Consider any reward function $r(x, y)$, which induces a corresponding optimal model $\pi_r(y\mid x)$, specified by Eq. (4). We will show that a reward function from the equivalence class of $r$ can be represented using the reparameterization given above. We define the projection $f$ as</p>
+            <div class="bi-eq">$$f(r; \pi_\mathrm{ref}, \beta)(x, y) = r(x, y) - \beta\log \sum_y \pi_\mathrm{ref}(y\mid x)\exp\!\Bigl(\tfrac{1}{\beta}r(x, y)\Bigr) \quad (8)$$</div>
+            <p>The operator $f$ simply normalizes the reward function with the logarithm of the partition function of $\pi_r$. Since the added normalization term is only a function of the prefix $x$, $f(r; \pi_\mathrm{ref}, \beta)(x, y)$ is a reward function in the equivalence class of $r(x, y)$. Finally, replacing $r$ with the RHS of Eq. (5) (which holds for any reward function), we have $f(r; \pi_\mathrm{ref}, \beta)(x, y) = \beta\log\frac{\pi_r(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$. That is, the projection $f$ produces a member of the equivalence class of $r$ with the desired form, and we do not lose any generality in our reward model from the proposed reparameterization.</p>
+            <p>The key insight of the DPO algorithm is that we can impose certain constraints on the under-constrained Plackett-Luce (and Bradley-Terry in particular) family of preference models, such that we preserve the class of representable reward models, but explicitly make the optimal policy in Eq. (4) analytically tractable for all prompts $x$.</p>
+          </div>
+          <div class="zh">
+            <p>在附录 A.6 中我们证明如下定理:</p>
+            <p><strong>定理 1.</strong>在温和假设下,所有与 Plackett-Luce(尤其是 Bradley-Terry)模型一致的奖励等价类,都可以由重新参数化 $r(x,y) = \beta\log\frac{\pi(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$ 表达,其中 $\pi(y\mid x)$ 为某个模型,$\pi_\mathrm{ref}(y\mid x)$ 为给定的参考模型。</p>
+            <p><strong>证明概要。</strong>考虑任意奖励函数 $r(x,y)$,由公式 (4) 它诱导出对应的最优模型 $\pi_r(y\mid x)$。我们将证明 $r$ 所在等价类中的某个奖励函数,可以用上述重新参数化表达。我们定义投影 $f$ 为公式 (8)。算子 $f$ 只是用 $\pi_r$ 的配分函数的对数把奖励函数归一化。由于减去的归一化项只是 $x$ 的函数,$f(r;\pi_\mathrm{ref},\beta)(x,y)$ 与 $r(x,y)$ 属于同一等价类。最后,将公式 (5) 的右端(对任意奖励函数都成立)代入 $r$,得 $f(r;\pi_\mathrm{ref},\beta)(x,y) = \beta\log\frac{\pi_r(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}$。即投影 $f$ 产生了 $r$ 所在等价类中具有所需形式的成员,所提的重新参数化没有损失奖励模型的一般性。</p>
+            <p>DPO 算法的关键洞见是:我们可以在欠约束的 Plackett-Luce(尤其是 Bradley-Terry)偏好模型族上施加某些约束,既不缩小可表示奖励模型的类别,又能使公式 (4) 中的最优策略对所有 prompts $x$ 解析可处理。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.2 Instability of Actor-Critic Algorithms.</strong> We can also use our framework to diagnose instabilities with standard actor-critic algorithms used for the RLHF, such as PPO. We follow the RLHF pipeline and focus on the RL fine-tuning step outlined in Section 3. We can draw connections to the control as inference framework for the constrained RL problem outlined in Section 3. We assume a parameterized model $\pi_\theta(y\mid x)$ and minimize $D_{\mathrm{KL}}[\pi_\theta(y\mid x)\,\|\,\pi^*(y\mid x)]$ where $\pi^*$ is the optimal policy from Eq. (7) induced by the reward function $r_\phi(y, x)$. With some algebra this leads to the optimization objective:</p>
+            <div class="bi-eq">$$\max_{\pi_\theta} \mathbb{E}_{\pi_\theta(y\mid x)}\Bigl[r_\phi(x,y) - \beta\log\!\sum_y \pi_\mathrm{ref}(y\mid x)\exp\!\bigl(\tfrac{1}{\beta}r_\phi(x,y)\bigr) - \beta\log\frac{\pi_\theta(y\mid x)}{\pi_\mathrm{ref}(y\mid x)}\Bigr] \quad (10)$$</div>
+            <p>This is the same objective optimized in prior works using the DPO-equivalent reward for the reward class of $r_\phi$. In this setting, we can interpret the normalization term in $f(r_\phi, \pi_\mathrm{ref}, \beta)$ as the soft value function of the reference policy $\pi_\mathrm{ref}$. While this term does not affect the optimal solution, without it, the policy gradient of the objective could have high variance, making learning unstable. We can accommodate for the normalization term using a learned value function, but that can also be difficult to optimize. Alternatively, prior works have normalized rewards using a human completion baseline, essentially a single sample Monte-Carlo estimate of the normalizing term. In contrast the DPO reparameterization yields a reward function that does not require any baselines.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.2 Actor-Critic 算法的不稳定性。</strong>我们的框架也可以用来诊断 RLHF 所用标准 actor-critic 算法(如 PPO)的不稳定问题。我们沿用 RLHF 流水线,聚焦于第 3 节描述的 RL 微调步骤,并借鉴<em>把控制视为推断</em>(control as inference)的框架来处理第 3 节中带约束的 RL 问题。我们假设一个参数化模型 $\pi_\theta(y\mid x)$,并最小化 $D_{\mathrm{KL}}[\pi_\theta(y\mid x)\,\|\,\pi^*(y\mid x)]$,其中 $\pi^*$ 是由奖励函数 $r_\phi(y,x)$ 通过公式 (7) 诱导出的最优策略。经过一些代数推导,得到公式 (10) 的优化目标。</p>
+            <p>这与以往工作所优化的目标相同——它们在 $r_\phi$ 所属奖励等价类上使用了"DPO 等价奖励"。在此设定下,我们可以把 $f(r_\phi, \pi_\mathrm{ref}, \beta)$ 中的归一化项解读为参考策略 $\pi_\mathrm{ref}$ 的<em>软值函数</em>。该项并不影响最优解,但缺了它,目标的策略梯度方差会很大,使学习不稳定。可以用一个学习的值函数来吸收该归一化项,但这本身也难以优化;另一种做法是以人类完成作为基线对奖励做归一化——本质上是该归一化项的单样本蒙特卡洛估计。相比之下,DPO 的重新参数化得到的奖励函数<em>根本不需要任何基线</em>。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>Experiments<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In this section, we empirically evaluate DPO's ability to train policies directly from preferences. First, in a well-controlled text-generation setting, we ask: how efficiently does DPO trade off maximizing reward and minimizing KL-divergence with the reference policy, compared to common preference learning algorithms such as PPO? Next, we evaluate DPO's performance on larger models and more difficult RLHF tasks, including summarization and dialogue. We find that with almost no tuning of hyperparameters, DPO tends to perform as well or better than strong baselines like RLHF with PPO as well as returning the best of N sampled trajectories under a learned reward function. Before presenting these results, we describe the experimental set-up; additional details are in Appendix C.</p>
+          </div>
+          <div class="zh">
+            <p>本节实证评估 DPO 直接从偏好训练策略的能力。首先,在一个受控的文本生成设定中,我们问:与 PPO 等常见偏好学习算法相比,DPO 在"最大化奖励"与"最小化与参考策略的 KL 散度"之间权衡的效率如何?其次,我们在更大模型与更难的 RLHF 任务(包括摘要与对话)上评估 DPO 的表现。我们发现,几乎不调超参时,DPO 倾向于表现得与强基线(如基于 PPO 的 RLHF 以及在学到的奖励函数下从 N 个采样轨迹中挑最优的 Best-of-N)持平或更好。在给出结果之前,先描述实验设置;更多细节见附录 C。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Tasks.</strong> Our experiments explore three different open-ended text generation tasks. For all experiments, algorithms learn a policy from a dataset of preferences $\mathcal{D} = \{x^{(i)}, y_w^{(i)}, y_l^{(i)}\}_{i=1}^N$. In controlled sentiment generation, $x$ is a prefix of a movie review from the IMDb dataset, and the policy must generate $y$ with positive sentiment. In order to perform a controlled evaluation, for this experiment we generate preference pairs over generations using a pre-trained sentiment classifier, where $p(\text{positive}\mid x, y_w) > p(\text{positive}\mid x, y_l)$. For SFT, we fine-tune GPT-2-large until convergence on reviews from the train split of the IMDB dataset. In summarization, $x$ is a forum post from Reddit; the policy must generate a summary $y$ of the main points in the post. Following prior work, we use the Reddit TL;DR summarization dataset along with human preferences gathered by Stiennon et al. We use an SFT model fine-tuned on human-written forum post summaries with the TRLX framework for RLHF.</p>
+          </div>
+          <div class="zh">
+            <p><strong>任务。</strong>我们的实验涉及三种不同的开放式文本生成任务。所有实验中,算法都从偏好数据集 $\mathcal{D} = \{x^{(i)}, y_w^{(i)}, y_l^{(i)}\}_{i=1}^N$ 中学习一个策略。在<em>可控情感生成</em>中,$x$ 是 IMDb 数据集中影评的前缀,策略必须生成带<em>正面情感</em>的 $y$。为了做受控评估,本实验用一个预训练情感分类器为生成结果生成偏好对,即 $p(\text{positive}\mid x,y_w) > p(\text{positive}\mid x,y_l)$。SFT 时,我们在 IMDb 训练集的影评上微调 GPT-2-large 直到收敛。在<em>摘要</em>任务中,$x$ 是 Reddit 上的一篇论坛帖子,策略需生成摘要 $y$ 概括帖子的要点。沿用以往工作,我们使用 Reddit TL;DR 摘要数据集以及 Stiennon 等人收集的人类偏好。我们用在人写论坛帖子摘要上微调过的 SFT 模型,配合 TRLX 框架进行 RLHF。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The human preference dataset was gathered by Stiennon et al. on samples from a different, but similarly-trained, SFT model. Finally, in single-turn dialogue, $x$ is a human query, which may be anything from a question about astrophysics to a request for relationship advice. A policy must produce an engaging and helpful response $y$ to a user's query; we use the Anthropic Helpful and Harmless dialogue dataset, containing 170k dialogues between a human and an automated assistant. Each transcript ends with a pair of responses generated by a large (although unknown) language model along with a preference label denoting the human-preferred response. In this setting, no pre-trained SFT model is available; we therefore fine-tune an off-the-shelf language model on only the preferred completions to form the SFT model.</p>
+          </div>
+          <div class="zh">
+            <p>该人类偏好数据集是 Stiennon 等人从一个不同但训练方式相似的 SFT 模型的样本上收集的。最后,在<em>单轮对话</em>任务中,$x$ 是人类问询,内容可以从天体物理学问题到亲密关系建议无所不包。策略必须对用户问询产生引人入胜且有用的回复 $y$;我们使用 Anthropic 的 Helpful and Harmless 对话数据集,包含人类与自动助手之间的 17 万段对话。每段记录末尾有一对由(未知的)大型语言模型生成的回复,以及一个表示人类偏好回复的偏好标签。该设定下没有现成可用的预训练 SFT 模型,因此我们仅在偏好完成上微调一个现成的语言模型作为 SFT 模型。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Evaluation.</strong> Our experiments use two different approaches to evaluation. In order to analyze the effectiveness of each algorithm in optimizing the constrained reward maximization objective, in the controlled sentiment generation setting we evaluate each algorithm by its frontier of achieved reward and KL-divergence from the reference policy; this frontier is computable because we have access to the ground-truth reward function (a sentiment classifier). However, in the real world, the ground truth reward function is not known; therefore, we evaluate algorithms with their win rate against a baseline policy, using GPT-4 as a proxy for human evaluation of summary quality and response helpfulness in the summarization and single-turn dialogue settings, respectively. For summarization, we use reference summaries in the test set as the baseline; for dialogue, we use the preferred response in the test dataset as the baseline. While existing studies suggest LMs can be better automated evaluators than existing metrics, we conduct a human study to justify our usage of GPT-4 for evaluation in Sec. 6.4. We find GPT-4 judgments correlate strongly with humans, with human agreement with GPT-4 typically similar or higher than inter-human annotator agreement.</p>
+          </div>
+          <div class="zh">
+            <p><strong>评估。</strong>我们的实验采用两种不同的评估方式。为了分析每个算法在优化"带约束奖励最大化目标"方面的有效性,在可控情感生成设定中,我们以每个算法所达到的<em>奖励-KL 前沿</em>来评估;该前沿之所以可计算,是因为我们能访问真实奖励函数(情感分类器)。然而,在真实世界中并不知道真实奖励函数;因此,我们用算法对基线策略的<em>胜率</em>来评估,在摘要与单轮对话设定中分别用 GPT-4 作为对摘要质量和回复有用性的代理人工评估。对摘要,我们以测试集中的参考摘要为基线;对对话,以测试集中偏好回复为基线。虽然已有研究表明 LM 可以是比现有指标更好的自动评估者,我们仍在 §6.4 做了一项人工研究来证明使用 GPT-4 评估的合理性。我们发现 GPT-4 的判断与人类强相关,人类与 GPT-4 的一致率通常与"人与人之间标注者一致率"相当或更高。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Methods.</strong> In addition to DPO, we evaluate several existing approaches to training language models to adhere to human preferences. Most simply, we explore zero-shot prompting with GPT-J in the summarization task and 2-shot prompting with Pythia-2.8B in the dialogue task. In addition, we evaluate the SFT model as well as Preferred-FT, which is a model fine-tuned with supervised learning on the chosen completion $y_w$ from either the SFT model (in controlled sentiment and summarization) or a generic LM (in single-turn dialogue). Another pseudo-supervised method is Unlikelihood, which simply optimizes the policy to maximize the probability assigned to $y_w$ and minimize the probability assigned to $y_l$; we use an optional coefficient $\alpha \in [0, 1]$ on the "unlikelihood" term. We also consider PPO using a reward function learned from the preference data and PPO-GT, which is an oracle that learns from the ground truth reward function available in the controlled sentiment setting. Finally, we consider the Best of N baseline, sampling N responses from the SFT model (or Preferred-FT in dialogue) and returning the highest-scoring response according to a reward function learned from the preference dataset. This high-performing method decouples the quality of the reward model from the PPO optimization, but is computationally impractical even for moderate N as it requires sampling N completions for every query at test time.</p>
+          </div>
+          <div class="zh">
+            <p><strong>方法。</strong>除 DPO 外,我们评估了若干让语言模型符合人类偏好的现有方法。最简单的是,在摘要任务上用 GPT-J 做 zero-shot prompt,在对话任务上用 Pythia-2.8B 做 2-shot prompt。此外,我们评估 SFT 模型以及 <em>Preferred-FT</em>——一个在偏好完成 $y_w$ 上做监督学习的模型,$y_w$ 在可控情感与摘要任务里来自 SFT 模型,在单轮对话里来自通用 LM。另一种伪监督方法是 <em>Unlikelihood</em>,它直接优化策略以最大化分配给 $y_w$ 的概率、最小化分配给 $y_l$ 的概率;我们在 "unlikelihood" 项上加了一个可选系数 $\alpha \in [0,1]$。我们也考虑 <em>PPO</em>:使用从偏好数据学到的奖励函数;以及 <em>PPO-GT</em>:一个 oracle,使用可控情感设定中可获得的真实奖励函数。最后,我们考虑 <em>Best-of-N</em> 基线:从 SFT 模型(对话场景下是 Preferred-FT)采样 N 个回复,并根据从偏好数据集学到的奖励函数返回得分最高者。该方法表现强,把"奖励模型质量"与"PPO 优化"解耦,但即使 N 不大,在测试时对每个 query 采样 N 个完成,计算上也不实用。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>6.1 How well can DPO optimize the RLHF objective?</strong> The KL-constrained reward maximization objective used in typical RLHF algorithms balances exploitation of reward while restricting the policy from deviating far from the reference policy. Therefore, when comparing algorithms, we must take into account both reward achieved as well as the KL discrepancy; achieving slightly higher reward but with much higher KL is not necessarily desirable. Figure 2 shows the reward-KL frontier for various algorithms in the sentiment setting. We execute multiple training runs for each algorithm, using a different hyperparameter for policy conservativeness in each run (target KL $\in \{3, 6, 9, 12\}$ for PPO, $\beta \in \{0.05, 0.1, 1, 5\}$, $\alpha \in \{0.05, 0.1, 0.5, 1\}$ for unlikelihood, random seeds for preferred-FT). This sweep includes 22 runs in total. After each 100 training steps until convergence, we evaluate each policy on a set of test prompts, computing the average reward under the true reward function as well as the average sequence-level KL with the reference policy. We find that DPO produces by far the most efficient frontier, achieving the highest reward while still achieving low KL. This result is particularly notable for multiple reasons. First, DPO and PPO optimize the same objective, but DPO is notably more efficient; DPO's reward/KL tradeoff strictly dominates PPO. Second, DPO achieves a better frontier than PPO, even when PPO can access ground truth rewards (PPO-GT).</p>
+          </div>
+          <div class="zh">
+            <p><strong>6.1 DPO 优化 RLHF 目标的效果如何?</strong>典型 RLHF 算法采用的"带 KL 约束的奖励最大化"目标,在"利用奖励"与"限制策略远离参考策略"之间取平衡。因此比较算法时,既要看所达到的奖励,也要看 KL 差异;奖励略高但 KL 高得多并不一定可取。图 2 展示了情感设定下多种算法的奖励-KL 前沿。我们为每个算法跑了多组训练,每组使用不同的"策略保守性"超参(PPO 的 target KL $\in\{3,6,9,12\}$;$\beta\in\{0.05,0.1,1,5\}$;unlikelihood 的 $\alpha\in\{0.05,0.1,0.5,1\}$;preferred-FT 用不同随机种子)。整个扫描共 22 次训练。每 100 训练步评估一次策略,直到收敛,计算在真实奖励函数下的平均奖励以及与参考策略的平均序列级 KL。我们发现 DPO 给出迄今为止最高效的前沿,在保持低 KL 的同时取得最高奖励。这一结果尤为引人注目,原因有几条:首先,DPO 与 PPO 优化的是同一目标,但 DPO 明显更高效——DPO 的奖励/KL 权衡严格优于 PPO。其次,即便给 PPO 访问真实奖励的能力(PPO-GT),DPO 仍能得到更好的前沿。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>6.2 Can DPO scale to real preference datasets?</strong> Next, we evaluate fine-tuning performance of DPO on summarization and single-turn dialogue. For summarization, automatic evaluation metrics such as ROUGE can be poorly correlated with human preferences, and prior work has found that fine-tuning LMs using PPO on human preferences to provide more effective summaries. We evaluate different methods by sampling completions on the test split of TL;DR summarization dataset, and computing the average win rate against reference completions in the test set. The completions for all methods are sampled at temperatures varying from 0.0 to 1.0, and the win rates are shown in Figure 2 (right). DPO, PPO and Preferred-FT all fine-tune the same GPT-J SFT model. We find that DPO has a win rate of approximately 61% at a temperature of 0.0, exceeding the performance of PPO at 57% at its optimal sampling temperature of 0.0. DPO also achieves a higher maximum win rate compared to the best of N baseline. We note that we did not meaningfully tune DPO's $\beta$ hyperparameter, so these results may underestimate DPO's potential. Moreover, we find DPO to be much more robust to the sampling temperature than PPO, the performance of which can degrade to that of the base GPT-J model at high temperatures. Preferred-FT does not improve significantly over the SFT model. We also compare DPO and PPO head-to-head in human evaluations in Section 6.4, where DPO samples at temperature 0.25 were preferred 58% times over PPO samples at temperature 0.</p>
+          </div>
+          <div class="zh">
+            <p><strong>6.2 DPO 能否扩展到真实偏好数据集?</strong>接下来,我们在摘要与单轮对话上评估 DPO 的微调表现。在摘要任务上,ROUGE 等自动评估指标与人类偏好的相关性可能很差,以往工作发现:用 PPO 在人类偏好上微调 LM 能提供更有效的摘要。我们用各方法在 TL;DR 测试集的样本上做采样,并计算相对测试集参考完成的平均胜率。所有方法在 0.0 到 1.0 的温度下采样,胜率展示在图 2(右)。DPO、PPO 和 Preferred-FT 都微调同一个 GPT-J SFT 模型。我们发现 DPO 在温度 0.0 时胜率约 61%,超过 PPO 在其最优温度 0.0 下的 57%。DPO 的最高胜率也高于 Best-of-N 基线。我们注意到并没有实质性地调 DPO 的 $\beta$,因此这些结果可能低估了 DPO 的潜力。此外,我们发现 DPO 对采样温度比 PPO<em>鲁棒得多</em>,后者在高温下性能可能退化到 GPT-J 基模水平。Preferred-FT 相对 SFT 模型并无显著提升。我们在 §6.4 中还进行了 DPO 与 PPO 的人工评测正面对比:DPO(温度 0.25)样本相对 PPO(温度 0)样本被偏好 58% 的次数。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>On single-turn dialogue, we evaluate the different methods on the subset of the test split of the Anthropic HH dataset with one step of human-assistant interaction. GPT-4 evaluations use the preferred completions on the test as the reference to compute the win rate for different methods. As there is no standard SFT model for this task, we start with a pre-trained Pythia-2.8B, use Preferred-FT to train a reference model on the chosen completions such that completions are within distribution of the model, and then train using DPO. We also compare against the best of 128 Preferred-FT completions (we found the Best of N baseline plateaus at 128 completions for this task; see Appendix Figure 4) and a 2-shot prompted version of the Pythia-2.8B base model, finding DPO performs as well or better for the best-performing temperatures for each method. We also evaluate an RLHF model trained with PPO on the Anthropic HH dataset from a well-known source, but are unable to find a prompt or sampling temperature that gives performance better than the base Pythia-2.8B model. Based on our results from TL;DR and the fact that both methods optimize the same reward function, we consider Best of 128 a rough proxy for PPO-level performance. Overall, DPO is the only computationally efficient method that improves over the preferred completions in the Anthropic HH dataset, and provides similar or better performance to the computationally demanding Best of 128 baseline. Finally, Figure 3 shows that DPO converges to its best performance relatively quickly.</p>
+          </div>
+          <div class="zh">
+            <p>在单轮对话上,我们在 Anthropic HH 测试集中仅含一步人-助手交互的子集上评估各方法。GPT-4 评测以测试集中的偏好完成作为参照,计算各方法的胜率。由于该任务没有标准 SFT 模型,我们从预训练的 Pythia-2.8B 起步,先用 Preferred-FT 在 chosen 完成上训出一个参考模型,使完成处于模型分布内,然后用 DPO 训练。我们也与 Preferred-FT 的 Best-of-128 做对比(对该任务,我们发现 Best-of-N 基线在 128 个完成处饱和,详见附录图 4),以及 Pythia-2.8B 基模的 2-shot prompt 版本——发现 DPO 在各方法的最佳温度上都表现持平或更好。我们还评估了一个广为人知来源用 PPO 在 Anthropic HH 上训练的 RLHF 模型,但无法找到任何 prompt 或采样温度使其优于 Pythia-2.8B 基模。基于 TL;DR 的结果以及两种方法优化同一奖励函数的事实,我们把 Best-of-128 视为 PPO 级表现的粗略代理。总体而言,DPO 是<em>唯一</em>能在 Anthropic HH 上超越偏好完成的计算高效方法,且性能与计算密集的 Best-of-128 基线相当或更好。最后,图 3 显示 DPO 相对较快地收敛到其最佳表现。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>6.3 Generalization to a new input distribution.</strong> To further compare the performance of PPO and DPO under distribution shifts, we evaluate the PPO and DPO policies from our Reddit TL;DR summarization experiment on a different distribution, news articles in the test split of the CNN/DailyMail dataset, using the best sampling temperatures from TL;DR (0 and 0.25). The results are presented in Table 1 (DPO: 0.36 / 0.31 at temp 0 / 0.25 vs PPO: 0.26 / 0.23). We computed the GPT-4 win rate against the ground-truth summaries in the datasets, using the same GPT-4 (C) prompt we used for Reddit TL;DR, but replacing the words "forum post" with "news article". For this new distribution, DPO continues to outperform the PPO policy by a significant margin. This experiment provides initial evidence that DPO policies can generalize similarly well to PPO policies, even though DPO does not use the additional unlabeled Reddit TL;DR prompts that PPO uses.</p>
+          </div>
+          <div class="zh">
+            <p><strong>6.3 对新输入分布的泛化。</strong>为进一步比较分布偏移下 PPO 与 DPO 的表现,我们将 Reddit TL;DR 摘要实验中得到的 PPO 与 DPO 策略,迁移到一个不同的分布:CNN/DailyMail 数据集测试集中的新闻文章,使用从 TL;DR 得到的最佳采样温度(0 与 0.25)。结果在表 1(DPO:温度 0 / 0.25 为 0.36 / 0.31;PPO:温度 0 / 0.25 为 0.26 / 0.23)。我们用与 Reddit TL;DR 相同的 GPT-4 (C) prompt(把"forum post"换成"news article")计算 GPT-4 相对数据集中真实摘要的胜率。在这个新分布下,DPO 仍以显著差距胜过 PPO 策略。该实验提供了初步证据:DPO 策略可以与 PPO 策略<em>同样好地泛化</em>——尽管 DPO 没有使用 PPO 所用到的额外无标 Reddit TL;DR prompts。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>6.4 Validating GPT-4 judgments with human judgments.</strong> We conduct a human study to verify the reliability of GPT-4's judgments, using the results of the TL;DR summarization experiment and two different GPT-4 prompts. The GPT-4 (S) (simple) prompt simply asks for which summary better-summarizes the important information in the post. The GPT-4 (C) (concise) prompt also asks for which summary is more concise; we evaluate this prompt because we find that GPT-4 prefers longer, more repetitive summaries than humans do with the GPT-4 (S) prompt. See Appendix C.2 for the complete prompts. We perform three comparisons, using the highest (DPO, temp. 0.25), the lowest (PPO, temp. 1.0), and a middle-performing (SFT, temp. 0.25) method with the aim of covering a diversity of sample qualities; all three methods are compared against greedily-sampled PPO (its best-performing temperature). We find that with both prompts, GPT-4 tends to agree with humans about as often as humans agree with each other, suggesting that GPT-4 is a reasonable proxy for human evaluations (due to limited human raters, we only collect multiple human judgments for the DPO and PPO-1 comparisons). Overall, the GPT-4 (C) prompt generally provides win rates more representative of humans; we therefore use this prompt for the main results in Section 6.2. For additional details about the human study, including the web interface presented to raters and the list of human volunteers, see Appendix D.3.</p>
+          </div>
+          <div class="zh">
+            <p><strong>6.4 用人工判断验证 GPT-4 判断。</strong>我们进行了一项人工研究来核验 GPT-4 判断的可靠性,使用 TL;DR 摘要实验的结果与两种不同的 GPT-4 prompt。GPT-4 (S)(简单)prompt 仅询问哪个摘要更好地概括了帖子的重要信息。GPT-4 (C)(简洁)prompt 还询问哪个摘要更<em>简洁</em>;我们评估这个 prompt,因为我们发现使用 GPT-4 (S) prompt 时,GPT-4 比人类更偏好更长、更重复的摘要。完整 prompts 见附录 C.2。我们进行三组比较,使用表现最高的(DPO,温度 0.25)、最低的(PPO,温度 1.0)和中等的(SFT,温度 0.25)方法,以覆盖样本质量的多样性;所有三种方法都与贪心采样的 PPO(其最佳温度)对比。我们发现使用任一 prompt,GPT-4 与人类的一致率与"人与人之间一致率"相当,提示 GPT-4 是人工评测的合理代理(由于人评有限,我们只对 DPO 与 PPO-1 的比较收集了多份人工判断)。总体而言,GPT-4 (C) prompt 给出的胜率更能代表人类偏好;因此我们在 §6.2 的主要结果中使用该 prompt。关于人工研究的更多细节(包括呈现给评测者的网页界面与人工志愿者名单),见附录 D.3。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>Discussion<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Learning from preferences is a powerful, scalable framework for training capable, aligned language models. We have introduced DPO, a simple training paradigm for training language models from preferences without reinforcement learning. Rather than coercing the preference learning problem into a standard RL setting in order to use off-the-shelf RL algorithms, DPO identifies a mapping between language model policies and reward functions that enables training a language model to satisfy human preferences directly, with a simple cross-entropy loss, without reinforcement learning or loss of generality. With virtually no tuning of hyperparameters, DPO performs similarly or better than existing RLHF algorithms, including those based on PPO; DPO thus meaningfully reduces the barrier to training more language models from human preferences.</p>
+          </div>
+          <div class="zh">
+            <p>从偏好学习是一个有力且可扩展的框架,用于训练有能力且对齐的语言模型。我们提出了 DPO——一种<em>不需要强化学习</em>就能从偏好训练语言模型的简单训练范式。DPO 没有把偏好学习问题硬塞进标准 RL 设定以套用现成 RL 算法,而是识别了"语言模型策略"与"奖励函数"之间的映射,使我们能够<em>直接</em>训练一个语言模型来满足人类偏好,只用一个简单的交叉熵损失,既不需要强化学习,也不损失通用性。几乎不调超参时,DPO 的表现与现有 RLHF 算法(包括基于 PPO 的)相当或更好;因此 DPO 显著降低了"从人类偏好训练更多语言模型"的门槛。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Limitations &amp; Future Work.</strong> Our results raise several important questions for future work. How does the DPO policy generalize out of distribution, compared with learning from an explicit reward function? Our initial results suggest that DPO policies can generalize similarly to PPO-based models, but more comprehensive study is needed. For example, can training with self-labeling from the DPO policy similarly make effective use of unlabeled prompts? On another front, how does reward over-optimization manifest in the direct preference optimization setting, and is the slight decrease in performance in Figure 3-right an instance of it? Additionally, while we evaluate models up to 6B parameters, exploration of scaling DPO to state-of-the-art models orders of magnitude larger is an exciting direction for future work. Regarding evaluations, we find that the win rates computed by GPT-4 are impacted by the prompt; future work may study the best way to elicit high-quality judgments from automated systems. Finally, many possible applications of DPO exist beyond training language models from human preferences, including training generative models in other modalities.</p>
+          </div>
+          <div class="zh">
+            <p><strong>局限与未来工作。</strong>我们的结果引出若干面向未来工作的重要问题。与"从显式奖励函数学习"相比,DPO 策略在分布外的泛化如何?我们的初步结果表明 DPO 策略与基于 PPO 的模型泛化能力相当,但需要更全面的研究。例如,用 DPO 策略做<em>自标注</em>训练,能否同样有效地利用无标 prompts?另一方面,"奖励过度优化"在直接偏好优化设定下如何表现?图 3 右侧后期的小幅性能下降是不是它的一种表现?此外,我们评估的模型最大 6B 参数,把 DPO 扩展到大几个数量级的 SOTA 模型,是令人兴奋的未来方向。在评估方面,我们发现 GPT-4 计算的胜率受 prompt 影响;未来工作可以研究如何最好地从自动化系统中得到高质量判断。最后,DPO 在"从人类偏好训练语言模型"之外还有许多潜在应用,包括训练其他模态下的生成模型。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>References<span class="sec-page">p.11</span></span>
+      </summary>
+      <div class="sec-content"><p>[1] Y. Bai, A. Jones, K. Ndousse, A. Askell, A. Chen, N. DasSarma, D. Drain, S. Fort, D. Ganguli, T. Henighan, N. Joseph, S. Kadavath, J. Kernion, T. Conerly, S. El-Showk, N. Elhage, Z. HatfieldDodds, D. Hernandez, T. Hume, S. Johnston, S. Kravec, L. Lovitt, N. Nanda, C. Olsson, D. Amodei, T. Brown, J. Clark, S. McCandlish, C. Olah, B. Mann, and J. Kaplan. Training a helpful and harmless assistant with reinforcement learning from human feedback, 2022. [2] Y. Bai, S. Kadavath, S. Kundu, A. Askell, J. Kernion, A. Jones, A. Chen, A. Goldie, A. Mirhoseini, C. McKinnon, C. Chen, C. Olsson, C. Olah, D. Hernandez, D. Drain, D. Ganguli, D. Li, E. Tran-Johnson, E. Perez, J. Kerr, J. Mueller, J. Ladish, J. Landau, K. Ndousse, K. Lukosuite, L. Lovitt, M. Sellitto, N. Elhage, N. Schiefer, N. Mercado, N. DasSarma, R. Lasenby, R. Larson, S. Ringer, S. Johnston, S. Kravec, S. E. Showk, S. Fort, T. Lanham, T. Telleen-Lawton, T. Conerly, T. Henighan, T. Hume, S. R. Bowman, Z. Hatfield-Dodds, B. Mann, D. Amodei, N. Joseph, S. McCandlish, T. Brown, and J. Kaplan. Constitutional ai: Harmlessness from ai feedback, 2022. [3] S. Biderman, H. Schoelkopf, Q. Anthony, H. Bradley, K. O’Brien, E. Hallahan, M. A. Khan, S. Purohit, U. S. Prashanth, E. Raff, A. Skowron, L. Sutawika, and O. van der Wal. Pythia: A suite for analyzing large language models across training and scaling, 2023. [4] H. Bong and A. Rinaldo. Generalized results for the existence and consistency of the MLE in the Bradley-Terry-Luce model. International Conference on Machine Learning, 2022. arXiv:2110.11487. [5] R. A. Bradley and M. E. Terry. Rank analysis of incomplete block designs: I. the method of paired comparisons. Biometrika, 39(3/4):324–345, 1952. doi: https://doi.org/10.2307/2334029. [6] T. Brown, B. Mann, N. Ryder, M. Subbiah, J. D. Kaplan, P. Dhariwal, A. Neelakantan, P. Shyam, G. Sastry, A. Askell, S. Agarwal, A. Herbert-Voss, G. Krueger, T. Henighan, R. Child, A. Ramesh, D. Ziegler, J. Wu, C. Winter, C. Hesse, M. Chen, E. Sigler, M. Litwin, S. Gray, B. Chess, J. Clark, C. Berner, S. McCandlish, A. Radford, I. Sutskever, and D. Amodei. Language models are few-shot learners. In H. Larochelle, M. Ranzato, R. Hadsell, M. Balcan, and H. Lin, editors, Advances in Neural Information Processing Systems, volume 33, pages 1877– 1901. Curran Associates, Inc., 2020. URL https://proceedings.neurips.cc/paper_ files/paper/2020/file/1457c0d6bfcb4967418bfb8ac142f64a-Paper.pdf. [7] T. Brown, B. Mann, N. Ryder, M. Subbiah, J. D. Kaplan, P. Dhariwal, A. Neelakantan, P. Shyam, G. Sastry, A. Askell, et al. Language models are few-shot learners. Advances in neural information processing systems, 33:1877–1901, 2020. [8] S. Bubeck, V. Chandrasekaran, R. Eldan, J. Gehrke, E. Horvitz, E. Kamar, P. Lee, Y. T. Lee, Y. Li, S. Lundberg, H. Nori, H. Palangi, M. T. Ribeiro, and Y. Zhang. Sparks of artificial general intelligence: Early experiments with GPT-4, 2023. arXiv preprint arXiv:2303.12712. [9] R. Busa-Fekete, B. Szörényi, P. Weng, W. Cheng, and E. Hüllermeier. Preference-based reinforcement learning: evolutionary direct policy search using a preference-based racing algorithm. Machine Learning, 97(3):327–351, July 2014. doi: 10.1007/s10994-014-5458-8. URL https://doi.org/10.1007/s10994-014-5458-8. [10] Y. Chen, R. Wang, H. Jiang, S. Shi, and R.-L. Xu. Exploring the use of large language models for reference-free text quality evaluation: A preliminary empirical study. ArXiv, abs/2304.00723, 2023. [11] A. Chowdhery, S. Narang, J. Devlin, M. Bosma, G. Mishra, A. Roberts, P. Barham, H. W. Chung, C. Sutton, S. Gehrmann, et al. Palm: Scaling language modeling with pathways. arXiv preprint arXiv:2204.02311, 2022. [12] P. F. Christiano, J. Leike, T. Brown, M. Martic, S. Legg, and D. Amodei. Deep reinforcement learning from human preferences. In I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett, editors, Advances in Neural Information Processing Systems, volume 30. Curran Associates, Inc., 2017. URL https://proceedings.neurips.cc/ paper_files/paper/2017/file/d5e2c0adad503c91f91df240d0cd4e49-Paper.pdf. 11 [13] H. W. Chung, L. Hou, S. Longpre, B. Zoph, Y. Tay, W. Fedus, Y. Li, X. Wang, M. Dehghani, S. Brahma, A. Webson, S. S. Gu, Z. Dai, M. Suzgun, X. Chen, A. Chowdhery, A. Castro-Ros, M. Pellat, K. Robinson, D. Valter, S. Narang, G. Mishra, A. Yu, V. Zhao, Y. Huang, A. Dai, H. Yu, S. Petrov, E. H. Chi, J. Dean, J. Devlin, A. Roberts, D. Zhou, Q. V. Le, and J. Wei. Scaling instruction-finetuned language models, 2022. [14] M. Dudík, K. Hofmann, R. E. Schapire, A. Slivkins, and M. Zoghi. Contextual dueling bandits. In P. Grünwald, E. Hazan, and S. Kale, editors, Proceedings of The 28th Conference on Learning Theory, volume 40 of Proceedings of Machine Learning Research, pages 563–587, Paris, France, 03–06 Jul 2015. PMLR. URL https://proceedings.mlr.press/v40/Dudik15.html. [15] D. Go, T. Korbak, G. Kruszewski, J. Rozen, N. Ryu, and M. Dymetman. Aligning language models with preferences through f-divergence minimization. In Proceedings of the 40th International Conference on Machine Learning, ICML’23. JMLR.org, 2023. [16] A. Jain, B. Wojcik, T. Joachims, and A. Saxena. Learning trajectory preferences for manipulators via iterative improvement. In C. Burges, L. Bottou, M. Welling, Z. Ghahramani, and K. Weinberger, editors, Advances in Neural Information Processing Systems, volume 26. Curran Associates, Inc., 2013. URL https://proceedings.neurips.cc/paper_files/paper/ 2013/file/c058f544c737782deacefa532d9add4c-Paper.pdf. [17] N. Jaques, S. Gu, D. Bahdanau, J. M. Hernández-Lobato, R. E. Turner, and D. Eck. Sequence tutor: Conservative fine-tuning of sequence generation models with kl-control. In International Conference on Machine Learning, pages 1645–1654. PMLR, 2017. [18] N. Jaques, J. H. Shen, A. Ghandeharioun, C. Ferguson, A. Lapedriza, N. Jones, S. S. Gu, and R. Picard. Human-centric dialog training via offline reinforcement learning. arXiv preprint arXiv:2010.05848, 2020. [19] T. Korbak, H. Elsahar, G. Kruszewski, and M. Dymetman. On reinforcement learning and distribution matching for fine-tuning language models with no catastrophic forgetting. In S. Koyejo, S. Mohamed, A. Agarwal, D. Belgrave, K. Cho, and A. Oh, editors, Advances in Neural Information Processing Systems, volume 35, pages 16203–16220. Curran Associates, Inc., 2022. URL https://proceedings.neurips.cc/paper_files/paper/2022/file/ 67496dfa96afddab795530cc7c69b57a-Paper-Conference.pdf. [20] J. Kreutzer, J. Uyheng, and S. Riezler. Reliability and learnability of human bandit feedback for sequence-to-sequence reinforcement learning. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1777–1788, Melbourne, Australia, July 2018. Association for Computational Linguistics. doi: 10.18653/v1/ P18-1165. URL https://aclanthology.org/P18-1165. [21] A. Kupcsik, D. Hsu, and W. S. Lee. Learning Dynamic Robot-to-Human Object Handover from Human Feedback, pages 161–176. Springer International Publishing, 01 2018. ISBN 978-3-319-51531-1. doi: 10.1007/978-3-319-51532-8_10. [22] S. Levine. Reinforcement learning and control as probabilistic inference: Tutorial and review, 2018. [23] R. D. Luce. Individual choice behavior: A theoretical analysis. Courier Corporation, 2012. [24] A. L. Maas, R. E. Daly, P. T. Pham, D. Huang, A. Y. Ng, and C. Potts. Learning word vectors for sentiment analysis. In Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies, pages 142–150, Portland, Oregon, USA, June 2011. Association for Computational Linguistics. URL http://www.aclweb.org/ anthology/P11-1015. [25] S. Mishra, D. Khashabi, C. Baral, and H. Hajishirzi. Cross-task generalization via natural language crowdsourcing instructions. In Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 3470–3487, Dublin, Ireland, May 2022. Association for Computational Linguistics. doi: 10.18653/v1/2022.acl-long. 244. URL https://aclanthology.org/2022.acl-long.244. 12 [26] R. Nallapati, B. Zhou, C. dos Santos, Ç. Gulçehre, and B. Xiang. Abstractive text summarization using sequence-to-sequence RNNs and beyond. In Proceedings of the 20th SIGNLL Conference on Computational Natural Language Learning, pages 280–290, Berlin, Germany, Aug. 2016. Association for Computational Linguistics. doi: 10.18653/v1/K16-1028. URL https:// aclanthology.org/K16-1028. [27] D. Narayanan, M. Shoeybi, J. Casper, P. LeGresley, M. Patwary, V. Korthikanti, D. Vainbrand, P. Kashinkunti, J. Bernauer, B. Catanzaro, A. Phanishayee, and M. Zaharia. Efficient large-scale language model training on gpu clusters using megatron-lm. In Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis, SC ’21, New York, NY, USA, 2021. Association for Computing Machinery. ISBN 9781450384421. doi: 10.1145/3458817.3476209. URL https://doi.org/10.1145/3458817.3476209. [28] L. Ouyang, J. Wu, X. Jiang, D. Almeida, C. Wainwright, P. Mishkin, C. Zhang, S. Agarwal, K. Slama, A. Ray, J. Schulman, J. Hilton, F. Kelton, L. Miller, M. Simens, A. Askell, P. Welinder, P. F. Christiano, J. Leike, and R. Lowe. Training language models to follow instructions with human feedback. In S. Koyejo, S. Mohamed, A. Agarwal, D. Belgrave, K. Cho, and A. Oh, editors, Advances in Neural Information Processing Systems, volume 35, pages 27730–27744. Curran Associates, Inc., 2022. URL https://proceedings.neurips.cc/paper_files/ paper/2022/file/b1efde53be364a73914f58805a001731-Paper-Conference.pdf. [29] R. Paulus, C. Xiong, and R. Socher. A deep reinforced model for abstractive summarization. In International Conference on Learning Representations, 2018. URL https://openreview. net/forum?id=HkAClQgA-. [30] X. B. Peng, A. Kumar, G. Zhang, and S. Levine. Advantage-weighted regression: Simple and scalable off-policy reinforcement learning. arXiv preprint arXiv:1910.00177, 2019. [31] J. Peters and S. Schaal. Reinforcement learning by reward-weighted regression for operational space control. In Proceedings of the 24th international conference on Machine learning, pages 745–750, 2007. [32] R. L. Plackett. The analysis of permutations. Journal of the Royal Statistical Society. Series C (Applied Statistics), 24(2):193–202, 1975. doi: https://doi.org/10.2307/2346567. [33] A. Radford, J. Wu, R. Child, D. Luan, D. Amodei, and I. Sutskever. Language models are unsupervised multitask learners, 2019. Ms., OpenAI. [34] R. Ramamurthy, P. Ammanabrolu, K. Brantley, J. Hessel, R. Sifa, C. Bauckhage, H. Hajishirzi, and Y. Choi. Is reinforcement learning (not) for natural language processing: Benchmarks, baselines, and building blocks for natural language policy optimization. In The Eleventh International Conference on Learning Representations, 2023. URL https://openreview. net/forum?id=8aHzds2uUyB. [35] M. Ranzato, S. Chopra, M. Auli, and W. Zaremba. Sequence level training with recurrent neural networks. CoRR, abs/1511.06732, 2015. [36] D. Sadigh, A. D. Dragan, S. Sastry, and S. A. Seshia. Active preference-based learning of reward functions. In Robotics: Science and Systems (RSS), 2017. [37] A. Saha, A. Pacchiano, and J. Lee. Dueling rl: Reinforcement learning with trajectory preferences. In F. Ruiz, J. Dy, and J.-W. van de Meent, editors, Proceedings of The 26th International Conference on Artificial Intelligence and Statistics, volume 206 of Proceedings of Machine Learning Research, pages 6263–6289. PMLR, 25–27 Apr 2023. URL https://proceedings.mlr.press/v206/saha23a.html. [38] V. Sanh, A. Webson, C. Raffel, S. Bach, L. Sutawika, Z. Alyafeai, A. Chaffin, A. Stiegler, A. Raja, M. Dey, M. S. Bari, C. Xu, U. Thakker, S. S. Sharma, E. Szczechla, T. Kim, G. Chhablani, N. Nayak, D. Datta, J. Chang, M. T.-J. Jiang, H. Wang, M. Manica, S. Shen, Z. X. Yong, H. Pandey, R. Bawden, T. Wang, T. Neeraj, J. Rozen, A. Sharma, A. Santilli, T. Fevry, J. A. Fries, R. Teehan, T. L. Scao, S. Biderman, L. Gao, T. Wolf, and A. M. Rush. Multitask prompted training enables zero-shot task generalization. In International Conference on Learning Representations, 2022. URL https://openreview.net/forum?id=9Vrb9D0WI4. 13 [39] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov. Proximal policy optimization algorithms, 2017. [40] N. Stiennon, L. Ouyang, J. Wu, D. M. Ziegler, R. Lowe, C. Voss, A. Radford, D. Amodei, and P. Christiano. Learning to summarize from human feedback, 2022. [41] R. Thoppilan, D. D. Freitas, J. Hall, N. Shazeer, A. Kulshreshtha, H.-T. Cheng, A. Jin, T. Bos, L. Baker, Y. Du, Y. Li, H. Lee, H. S. Zheng, A. Ghafouri, M. Menegali, Y. Huang, M. Krikun, D. Lepikhin, J. Qin, D. Chen, Y. Xu, Z. Chen, A. Roberts, M. Bosma, V. Zhao, Y. Zhou, C.-C. Chang, I. Krivokon, W. Rusch, M. Pickett, P. Srinivasan, L. Man, K. Meier-Hellstern, M. R. Morris, T. Doshi, R. D. Santos, T. Duke, J. Soraker, B. Zevenbergen, V. Prabhakaran, M. Diaz, B. Hutchinson, K. Olson, A. Molina, E. Hoffman-John, J. Lee, L. Aroyo, R. Rajakumar, A. Butryna, M. Lamm, V. Kuzmina, J. Fenton, A. Cohen, R. Bernstein, R. Kurzweil, B. AgueraArcas, C. Cui, M. Croak, E. Chi, and Q. Le. Lamda: Language models for dialog applications, 2022. [42] H. Touvron, T. Lavril, G. Izacard, X. Martinet, M.-A. Lachaux, T. Lacroix, B. Rozière, N. Goyal, E. Hambro, F. Azhar, et al. Llama: Open and efficient foundation language models. arXiv preprint arXiv:2302.13971, 2023. [43] M. Völske, M. Potthast, S. Syed, and B. Stein. TL;DR: Mining Reddit to learn automatic summarization. In Proceedings of the Workshop on New Frontiers in Summarization, pages 59–63, Copenhagen, Denmark, Sept. 2017. Association for Computational Linguistics. doi: 10.18653/v1/W17-4508. URL https://aclanthology.org/W17-4508. [44] L. von Werra, J. Tow, reciprocated, S. Matiana, A. Havrilla, cat state, L. Castricato, Alan, D. V. Phung, A. Thakur, A. Bukhtiyarov, aaronrmm, F. Milo, Daniel, D. King, D. Shin, E. Kim, J. Wei, M. Romero, N. Pochinkov, O. Sanseviero, R. Adithyan, S. Siu, T. Simonini, V. Blagojevic, X. Song, Z. Witten, alexandremuzio, and crumb. CarperAI/trlx: v0.6.0: LLaMa (Alpaca), Benchmark Util, T5 ILQL, Tests, Mar. 2023. URL https://doi.org/10.5281/zenodo. 7790115. [45] B. Wang and A. Komatsuzaki. GPT-J-6B: A 6 Billion Parameter Autoregressive Language Model. https://github.com/kingoflolz/mesh-transformer-jax, May 2021. [46] S. Welleck, I. Kulikov, S. Roller, E. Dinan, K. Cho, and J. Weston. Neural text generation with unlikelihood training. arXiv preprint arXiv:1908.04319, 2019. [47] R. J. Williams. Simple statistical gradient-following algorithms for connectionist reinforcement learning. Mach. Learn., 8(3–4):229–256, may 1992. ISSN 0885-6125. doi: 10.1007/BF00992696. URL https://doi.org/10.1007/BF00992696. [48] Y. Wu and B. Hu. Learning to extract coherent summary via deep reinforcement learning. In Proceedings of the Thirty-Second AAAI Conference on Artificial Intelligence and Thirtieth Innovative Applications of Artificial Intelligence Conference and Eighth AAAI Symposium on Educational Advances in Artificial Intelligence, AAAI’18/IAAI’18/EAAI’18. AAAI Press, 2018. ISBN 978-1-57735-800-8. [49] X. Yan, C. Luo, C. L. A. Clarke, N. Craswell, E. M. Voorhees, and P. Castells. Human preferences as dueling bandits. In Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval, SIGIR ’22, page 567–577, New York, NY, USA, 2022. Association for Computing Machinery. ISBN 9781450387323. doi: 10.1145/3477495.3531991. URL https://doi.org/10.1145/3477495.3531991. [50] Y. Yue, J. Broder, R. Kleinberg, and T. Joachims. The k-armed dueling bandits problem. Journal of Computer and System Sciences, 78(5):1538–1556, 2012. ISSN 0022-0000. doi: https: //doi.org/10.1016/j.jcss.2011.12.028. URL https://www.sciencedirect.com/science/ article/pii/S0022000012000281. JCSS Special Issue: Cloud Computing 2011. [51] D. M. Ziegler, N. Stiennon, J. Wu, T. B. Brown, A. Radford, D. Amodei, P. Christiano, and G. Irving. Fine-tuning language models from human preferences, 2020. 14 Author Contributions All authors provided valuable contributions to designing, analyzing, and iterating on experiments, writing and editing the paper, and generally managing the project’s progress. RR proposed using autoregressive reward models in discussions with EM; derived the DPO objective; proved the theoretical properties of the algorithm and wrote the relevant sections and appendices. He also suggested and helped with organizing experiments and contributed some of the PPO and reward learning baselines. AS initiated the discussion on using weighted regression methods as an alternative to PPO; initiated project-related organization, wrote initial analysis connecting DPO with weighted regression and unlikelihood; design and iterations of DPO + baseline implementations, initial exploratory experiments for DPO; substantial experiment organization and design (datasets, baselines, evaluation); led model training and evaluation for controlled sentiment generation and summarization; design iterations for GPT-4 evaluation (particularly summarization); substantial writing contributions to abstract, prelims/method and experiments; editing contributions to other sections. EM provided input on early discussions on learning autoregressive reward functions; wrote the first implementation of DPO and ran the first DPO experiments; trained the large-scale (summarization and dialogue) DPO models used in paper experiments; conducted initial GPT-4 win rate evaluations and set up related infrastructure; recruited participants for, conducted, and analyzed results from the human study; wrote the abstract, introduction, related work, discussion, and most of experiments; and assisted with editing the rest of the paper. CF, CM, &amp; SE supervised the research, suggested ideas and experiments, and assisted in writing the paper. A Mathematical Derivations A.1 Deriving the Optimum of the KL-Constrained Reward Maximization Objective In this appendix, we will derive Eq. 4. Analogously to Eq. 3, we optimize the following objective: max π Ex∼D,y∼π  r(x, y)  −βDKL  π(y|x)||πref(y|x)  (11) under any reward function r(x, y), reference model πref and a general non-parametric policy class. We now have: max π Ex∼D,y∼π  r(x, y)  −βDKL  π(y|x) || πref(y|x)  = max π Ex∼DEy∼π(y|x)  r(x, y) −β log π(y|x) πref(y|x)  = min π Ex∼DEy∼π(y|x)  log π(y|x) πref(y|x) −1 β r(x, y)  = min π Ex∼DEy∼π(y|x)  log π(y|x) 1 Z(x)πref(y|x) exp  1 β r(x, y)  −log Z(x)   (12) where we have partition function: Z(x) = X y πref(y|x) exp  1 β r(x, y)  . Note that the partition function is a function of only x and the reference policy πref, but does not depend on the policy π. We can now define π∗(y|x) = 1 Z(x)πref(y|x) exp  1 β r(x, y)  , 15 which is a valid probability distribution as π∗(y|x) ≥0 for all y and P y π∗(y|x) = 1. Since Z(x) is not a function of y, we can then re-organize the final objective in Eq 12 as: min π Ex∼D  Ey∼π(y|x)  log π(y|x) π∗(y|x)  −log Z(x)  = (13) min π Ex∼D [DKL(π(y|x) || π∗(y|x)) −log Z(x)] (14) Now, since Z(x) does not depend on π, the minimum is achieved by the policy that minimizes the first KL term. Gibbs’ inequality tells us that the KL-divergence is minimized at 0 if and only if the two distributions are identical. Hence we have the optimal solution: π(y|x) = π∗(y|x) = 1 Z(x)πref(y|x) exp  1 β r(x, y)  (15) for all x ∈D. This completes the derivation. A.2 Deriving the DPO Objective Under the Bradley-Terry Model It is straightforward to derive the DPO objective under the Bradley-Terry preference model as we have p∗(y1 ≻y2|x) = exp (r∗(x, y1)) exp (r∗(x, y1)) + exp (r∗(x, y2)) (16) In Section 4 we showed that we can express the (unavailable) ground-truth reward through its corresponding optimal policy: r∗(x, y) = β log π∗(y|x) πref(y|x) + β log Z(x) (17) Substituting Eq. 17 into Eq. 16 we obtain: p∗(y1 ≻y2|x) = exp  β log π∗(y1|x) πref(y1|x) + β log Z(x)  exp  β log π∗(y1|x) πref(y1|x) + β log Z(x)  + exp  β log π∗(y2|x) πref(y2|x) + β log Z(x)  = 1 1 + exp  β log π∗(y2|x) πref(y2|x) −β log π∗(y1|x) πref(y1|x)  = σ  β log π∗(y1|x) πref(y1|x) −β log π∗(y2|x) πref(y2|x)  . The last line is the per-instance loss in Equation 7. A.3 Deriving the DPO Objective Under the Plackett-Luce Model The Plackett-Luce model [32, 23] is a generalization of the Bradley-Terry model over rankings (rather than just pair-wise comparisons). Similar to to the Bradley-Terry model, it stipulates that when presented with a set of possible choices, people prefer a choice with probability proportional to the value of some latent reward function for that choice. In our context, when presented with a prompt x and a set of K answers y1, . . . , yK a user would output a permutation τ : [K] →[K], giving their ranking of the answers. The Plackett-Luce model stipulates that p∗(τ|y1, . . . , yK, x) = K Y k=1 exp(r∗(x, yτ(k))) PK j=k exp(r∗(x, yτ(j))) (18) Notice that when K = 2, Equation 18 reduces to the Bradley-Terry model. However, for the general Plackett-Luce model, we can still utilize the results of Eq. 5 and substitute the reward function parameterized by its optimal policy. Similarly to Appendix A.2, the normalization constant Z(x) cancels out and we’re left with: p∗(τ|y1, . . . , yK, x) = K Y k=1 exp  β log π∗(yτ(k)|x) πref(yτ(k)|x)  PK j=k exp  β log π∗(yτ(j)|x) πref(yτ(j)|x)  (19) 16 Similarly to the</p></div>
+    </details>
+    
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>approach<span class="sec-page">p.17</span></span>
+      </summary>
+      <div class="sec-content"><p>of Section 4, if we have access to a dataset D = {τ (i), y(i) 1 , . . . , y(i) K , x(i)}N i=1 of prompts and user-specified rankings, we can use a parameterized model and optimize this objective with maximum-likelihood.: LDPO(πθ, πref) = −Eτ,y1,...,yK,x∼D  log K Y k=1 exp  β log πθ(yτ(k)|x) πref(yτ(k)|x)  PK j=k exp  β log πθ(yτ(j)|x) πref(yτ(j)|x)    (20) A.4 Deriving the Gradient of the DPO Objective In this section we derive the gradient of the DPO objective: ∇θLDPO(πθ; πref) = −∇θE(x,yw,yl)∼D  log σ  β log πθ(yl|x) πref(yl|x) −β log πθ(yw|x) πref(yw|x)  (21) We can rewrite the RHS of Equation 21 as ∇θLDPO(πθ; πref) = −E(x,yw,yl)∼D σ′ (u) σ (u) ∇θ (u)  , (22) where u = β log πθ(yl|x) πref(yl|x) −β log πθ(yw|x) πref(yw|x). Using the properties of sigmoid function σ′(x) = σ(x)(1 −σ(x)) and σ(−x) = 1 −σ(x), we obtain the final gradient ∇θLDPO(πθ; πref) = −E(x,yw,yl)∼D  βσ  β log πθ(yw|x) πref(yw|x) −β log πθ(yl|x) πref(yl|x)   ∇θ log π(yw | x)−∇θ log π(yl | x)  , After using the reward substitution of ˆrθ(x, y) = β log πθ(y|x) πref(y|x) we obtain the final form of the gradient from Section 4. A.5 Proof of Lemma 1 and 2 In this section, we will prove the two lemmas from Section 5. Lemma 1 Restated. Under the Plackett-Luce preference framework, and in particular the BradleyTerry framework, two reward functions from the same equivalence class induce the same preference distribution. Proof. We say that two reward functions r(x, y) and r′(x, y) are from the same equivalence class if r′(x, y) = r(x, y) + f(x) for some function f. We consider the general Plackett-Luce (with the Bradley-Terry model a special case for K = 2) and denote the probability distribution over rankings induced by a particular reward function r(x, y) as pr. For any prompt x, answers y1, . . . , yK and ranking τ we have: pr′(τ|y1, . . . , yK, x) = K Y k=1 exp(r′(x, yτ(k))) PK j=k exp(r′(x, yτ(j))) = K Y k=1 exp(r(x, yτ(k)) + f(x)) PK j=k exp(r(x, yτ(j)) + f(x)) = K Y k=1 exp(f(x)) exp(r(x, yτ(k))) exp(f(x)) PK j=k exp(r(x, yτ(j))) = K Y k=1 exp(r(x, yτ(k))) PK j=k exp(r(x, yτ(j))) = pr(τ|y1, . . . , yK, x), which completes the proof. 17 Lemma 2 Restated. Two reward functions from the same equivalence class induce the same optimal policy under the constrained RL problem. Proof. Let us consider two reward functions from the same class, such that r′(x, y) = r(x, y) + f(x) and, let us denote as πr and πr′ the corresponding optimal policies. By Eq. 4, for all x, y we have πr′(y|x) = 1 P y πref(y|x) exp  1 β r′(x, y) πref(y|x) exp  1 β r′(x, y)  = 1 P y πref(y|x) exp  1 β (r(x, y) + f(x)) πref(y|x) exp  1 β (r(x, y) + f(x))  = 1 exp  1 β f(x)  P y πref(y|x) exp  1 β r(x, y) πref(y|x) exp  1 β r(x, y)  exp  1 β f(x)  = 1 P y πref(y|x) exp  1 β r(x, y) πref(y|x) exp  1 β r(x, y)  = πr(y|x), which completes the proof. A.6 Proof of Theorem 1 In this section, we will expand on the results of Theorem 1. Theorem 1 Restated. Assume, we have a reference model, such that πref(y|x) &gt; 0 for all pairs of prompts x and answers y and a parameter β &gt; 0. All reward equivalence classes, as defined in Section 5 can be represented with the reparameterization r(x, y) = β log π(y|x) πref(y|x) for some model π(y|x). Proof. Consider any reward function r(x, y), which induces an optimal model πr(y|x) under the KL-constrained RL problem, with solution given by 4. Following Eq. 5, when we log-linearize both sides we obtain: r(x, y) = β log πr(y|x) πref(y|x) + β log Z(x) where Z(x) = P y πref(y|x) exp  1 β r(x, y)  (notice that Z(x) also depends on the reward function r). Using the operator r′(x, y) = f(r, πref, β)(x, y) = r(x, y) −β log Z(x), we see that this new reward function is within the equivalence class of r and, we have: r′(x, y) = β log πr(y|x) πref(y|x) which completes the proof. We can further expand on these results. We can see that if r and r′ are two reward functions in the same class, then f(r, πref, β)(x, y) = β log πr(y|x) πref(y|x) = β log π′ r(y|x) πref(y|x) = f(r′, πref, β)(x, y) where the second equality follows from Lemma 2. We have proven that the operator f maps all reward functions from a particular equivalence class to the same reward function. Next, we show that for every equivalence class of reward functions, the reward function that has the reparameterization outlined in Theorem 1 is unique. Proposition 1. Assume, we have a reference model, such that πref(y|x) &gt; 0 for all pairs of prompts x and answers y and a parameter β &gt; 0. Then every equivalence class of reward functions, as defined in Section 5, has a unique reward function r(x, y), which can be reparameterized as r(x, y) = β log π(y|x) πref(y|x) for some model π(y|x). 18 Proof. We will proceed using proof by contradiction. Assume we have two reward functions from the same class, such that r′(x, y) = r(x, y) + f(x). Moreover, assume that r′(x, y) = β log π′(y|x) πref(y|x) for some model π′(y|x) and r(x, y) = β log π(y|x) πref(y|x) for some model π(y|x), such that π ̸= π′. We then have r′(x, y) = r(x, y) + f(x) = β log π(y|x) πref(y|x) + f(x) = β log π(y|x) exp( 1 β f(x)) πref(y|x) = β log π′(y|x) πref(y|x) for all prompts x and completions y. Then we must have π(y|x) exp( 1 β f(x)) = π′(y|x). Since these are distributions, summing over y on both sides, we obtain that exp( 1 β f(x)) = 1 and since β &gt; 0, we must have f(x) = 0 for all x. Therefore r(x, y) = r′(x, y). This completes the proof. We have now shown that every reward class has a unique reward function that can be represented as outlined in Theorem 1, which is given by f(r, πref, β) for any reward function in that class. B DPO Implementation Details and Hyperparameters DPO is relatively straightforward to implement; PyTorch code for the DPO loss is provided below: 19 import torch.nn.functional as F def dpo_loss(pi_logps, ref_logps, yw_idxs, yl_idxs, beta): &quot;&quot;&quot; pi_logps: policy logprobs, shape (B,) ref_logps: reference model logprobs, shape (B,) yw_idxs: preferred completion indices in [0, B-1], shape (T,) yl_idxs: dispreferred completion indices in [0, B-1], shape (T,) beta: temperature controlling strength of KL penalty Each pair of (yw_idxs[i], yl_idxs[i]) represents the indices of a single preference pair. &quot;&quot;&quot; pi_yw_logps, pi_yl_logps = pi_logps[yw_idxs], pi_logps[yl_idxs] ref_yw_logps, ref_yl_logps = ref_logps[yw_idxs], ref_logps[yl_idxs] pi_logratios = pi_yw_logps - pi_yl_logps ref_logratios = ref_yw_logps - ref_yl_logps losses = -F.logsigmoid(beta * (pi_logratios - ref_logratios)) rewards = beta * (pi_logps - ref_logps).detach() return losses, rewards Unless noted otherwise, we use a β = 0.1, batch size of 64 and the RMSprop optimizer with a learning rate of 1e-6 by default. We linearly warmup the learning rate from 0 to 1e-6 over 150 steps. For TL;DR summarization, we use β = 0.5, while rest of the parameters remain the same. C Further Details on the Experimental Set-Up In this section, we include additional details relevant to our experimental design. C.1 IMDb Sentiment Experiment and Baseline Details The prompts are prefixes from the IMDB dataset of length 2-8 tokens. We use the pre-trained sentiment classifier siebert/sentiment-roberta-large-english as a ground-truth reward model and gpt2-large as a base model. We use these larger models as we found the default ones to generate low-quality text and rewards to be somewhat inaccurate. We first use supervised fine-tuning on a subset of the IMDB data for 1 epoch. We then use this model to sample 4 completions for 25000 prefixes and create 6 preference pairs for each prefix using the ground-truth reward model. The RLHF reward model is initialized from the gpt2-large model and trained for 3 epochs on the preference datasets, and we take the checkpoint with the highest validation set accuracy. The “TRL” run uses the hyper-parameters in the TRL library. Our implementation uses larger batch samples of 1024 per PPO step. C.2 GPT-4 prompts for computing summarization and dialogue win rates A key component of our experimental setup is GPT-4 win rate judgments. In this section, we include the prompts used to generate win rates for the summarization and dialogue experiments. We use gpt-4-0314 for all our experiments. The order of summaries or responses are randomly chosen for every evaluation. Summarization GPT-4 win rate prompt (S). Which of the following summaries does a better job of summarizing the most \ important points in the given forum post? Post: 20 &lt;post&gt; Summary A: &lt;Summary A&gt; Summary B: &lt;Summary B&gt; FIRST provide a one-sentence comparison of the two summaries, explaining which \ you prefer and why. SECOND, on a new line, state only &quot;A&quot; or &quot;B&quot; to indicate your \ choice. Your response should use the format: Comparison: &lt;one-sentence comparison and explanation&gt; Preferred: &lt;&quot;A&quot; or &quot;B&quot;&gt; Summarization GPT-4 win rate prompt (C). Which of the following summaries does a better job of summarizing the most \ important points in the given forum post, without including unimportant or \ irrelevant details? A good summary is both precise and concise. Post: &lt;post&gt; Summary A: &lt;Summary A&gt; Summary B: &lt;Summary B&gt; FIRST provide a one-sentence comparison of the two summaries, explaining which \ you prefer and why. SECOND, on a new line, state only &quot;A&quot; or &quot;B&quot; to indicate your \ choice. Your response should use the format: Comparison: &lt;one-sentence comparison and explanation&gt; Preferred: &lt;&quot;A&quot; or &quot;B&quot;&gt; Dialogue GPT-4 win rate prompt. For the following query to a chatbot, which response is more helpful? Query: &lt;the user query&gt; Response A: &lt;either the test method or baseline&gt; Response B: &lt;the other response&gt; FIRST provide a one-sentence comparison of the two responses and explain \ which you feel is more helpful. SECOND, on a new line, state only &quot;A&quot; or \ &quot;B&quot; to indicate which response is more helpful. Your response should use \ the format: Comparison: &lt;one-sentence comparison and explanation&gt; More helpful: &lt;&quot;A&quot; or &quot;B&quot;&gt; C.3 Unlikelihood baseline While we include the unlikelihood baseline [46] (simply maximizing log p(yw|x), the log probability of the preferred response, while minimizing log p(yl|x), the log probability of the dispreferred response) in our sentiment experiments, we do not include it as a baseline in either the summarization 21 Prompt Response SUBREDDIT: r/relationships TITLE: The girl [26 F] I [22 M] have been seeing for a month didn’t respond to me at all yesterday while hanging out with a friend [ 30? M]. POST: She gets terrible service while at her house, but I texted her 3 times yesterday, 4-5 hours apart. She didn’t call me until early this morning and left a voicemail that she was busy all day with a friend who showed up out of the blue. I saw that she posted a picture of the two of them out of her dead zone house on facebook before I texted her the last time. I don’t mind that she hangs out with friends, and I know it’s pretty early [...] TL;DR: girl when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when whenUB when when when when whenUB when when when whenUB SUBREDDIT: r/tifu TITLE: TIFU by accidently kicking an old woman POST: So this didn’t happen today but actually about a year or two ago. I was at my granddads funeral so of course it was all very sad and full of lots of crying old people. After the ceremony everyone walks outside the building and onto the other side of the small road the hearses drive down. Now the road is important because obviously if there’s a road, there’s a curb onto the sidewalk, so most of us are on the other side of the road, besides a few older people walking a lot slower. As one of the old woman goes to walk up the curb [...] TL;DR: when an old woman was tripping the when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when when Table 3: Unlikelihood samples from TL;DR prompts sampled at temperature 1.0. In general, we find unlikelihood fails to generate meaningful responses for more complex problems such as summarization and dialogue. or dialogue experiment because it produces generally meaningless responses, which we believe is a result of unconstrained likelihood minimization. D Additional Empirical Results D.1 Performance of Best of N baseline for Various N We find that the Best of N baseline is a strong (although computationally expensive, requiring sampling many times) baseline in our experiments. We include an evaluation of the Best of N baseline for various N for the Anthropic-HH dialogue and TL;DR summarization; the results are shown in Figure 4. D.2 Sample Responses and GPT-4 Judgments In this section, we present examples of comparisons between DPO and the baseline (PPO temp 0. for summarization, and the ground truth chosen response for dialogue). See Tables 4-6 for summarization examples, and Tables 7-10 for dialogue examples. 22 0.25 0.50 0.75 1.00 Sampling temperature 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 Win rate Anthropic-HH Dialogue Win Rate vs Chosen Best of 1 Best of 4 Best of 16 Best of 64 Best of 128 0.00 0.25 0.50 0.75 1.00 Sampling temperature 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 Win rate TL;DR Summarization Win Rate vs Reference Best of 64 Best of 128 Best of 256 Figure 4: Best of N baseline for N = {1, 4, 16, 64, 128}. Performance plateaus after roughly 64-128 samples. Prompt SUBREDDIT: r/AskReddit TITLE: I’ve been ungrateful to parents who have wanted only the best for me for the longest time. I am so lucky to have the life I have but I squandered it, this isn’t a humblebrag about my &quot;wicked life&quot; just tell me, what can I do to make it up to them after this. POST: I’m 17, leaving for University, and I’ve had epiphany after epiphany of how shitty i’ve beent to them, or how all the nice things they do I ruin with moods etc., I know there isn’t a quick fix, but I want to do something nice. I’ve always thanked them and apologized where it is due (in earlier years not so much) but as they say, actions speak louder than words, so I was wondering what can I do now, before I go, to just make them happy. What can I keep doing, I know all the little things, doing chores, keeping my room clean, cleaning up after myself, helping around the house, but what’s a big thing, for say christmas, or their birthdays, that I can do to make them happy? DPO TL;DR: I’ve been a shitty child and I want to make up for it, what can I do for my parents on their birthdays and christmas to show them how much I love them? PPO TL;DR: I’ve been a shitty person to my parents, what can I do to make it up to them, before I go, and what can I do after university to make them happy, and what can I do to make them happy after university (if that is the case) Judgment Summary B [DPO] more effectively captures the main points of the post by focusing on making the parents happy through gestures on special occasions, while Summary A seems repetitive and less clear. Table 4: Sample summaries to a post from the TL;DR test set. DPO sample generated with a temperature 0.25; PPO sample generated at a temperature of 0. The order in which summaries are presented in randomized when evaluating with GPT-4, so the order in the Judgment may not correspond to the order in the table. For clarity, post-hoc annotations are included in bold, formatted as [annotation]. These annotations are not part of the model generations. 23 Prompt SUBREDDIT: r/relationships TITLE: I [22 M] am about to propose to my girlfriend [22F] of almost 2 years, and I can’t calm myself down POST: Alright, so I am preparing to propose to my girlfriend of almost 2 years (we were friends for double that beforehand) in a couple days and I am starting to get EXTREMELY anxious/nervous. We have talked about this for months, and I know she will say yes, but I can’t seem to relax. The other day I bought the ring, which I fell in love with myself and know she will too. And then two days ago, I asked her dad’s blessing. Everything has gone great so far, but now leading up to it I can’t think about anything else. I can’t sleep. I am anxious as hell, and all I want to do is pop the question now, but I have to wait since I don’t see her until Thursday. I know how I am going to do it. I have thoroughly planned it out and I am more than prepared. But, at the same time, I am freaking out. I asked my best friend for advice since he just got married recently, and all he could say was &quot;It will feel 10x worse right before you do ask.&quot; Any suggestions on how to relax leading up to it? I would like to be able to sleep... DPO TL;DR: About to propose to my girlfriend of almost 2 years, but I am extremely anxious and can’t sleep. How can I relax? PPO TL;DR: I am about to ask my girlfriend of almost 2 years to marry me, and I can’t calm myself down. Any tips on how to relax? I would like to be able to sleep tonight (and the night before).............................................................................................................................. Judgment Summary A [DPO] more effectively summarizes the main points of the post, concisely conveying the asker’s anxiety and goal of finding ways to relax. Table 5: Sample summaries to a post from the TL;DR test set. DPO sample generated with a temperature 0.25; PPO sample generated at a temperature of 0. The order in which summaries are presented in randomized when evaluating with GPT-4, so the order in the Judgment may not correspond to the order in the table. For clarity, post-hoc annotations are included in bold, formatted as [annotation]. These annotations are not part of the model generations. Prompt SUBREDDIT: r/loseit TITLE: Is It Bullshit?: Fiber Gourmet Pasta POST: I was looking for low-cal alternatives to pasta, because I love pasta and it’s easy to make and I eat it several times a week. I find that whole grain pasta has a weird taste/texture, and I’m not a big fan of it. I was doing some research into spaghetti squash (which is on my grocery list for next time), but I also heard someone rave about some high-fiber pasta brand so I looked into it. What sorcery is this? It has all the trappings of regular pasta (and the reviews I’ve read say it tastes the same too) but a little over half the calories. My mind boggles over how much extra pasta I could eat! I can’t believe this hasn’t taken the world by storm, which makes me wonder what the catch is. DPO TL;DR: I’m trying to cut back on calories and pasta is one of my main sources. Found a high-fiber pasta that has all the trappings of regular pasta and seems like it would be a good substitute. Is it bullshit? PPO TL;DR: I want to lose weight, but I love pasta and don’t want to give it up. Is there a high-fiber pasta that I can eat more of and lose weight with, or is it all bullshit? Judgment Summary B [DPO] more accurately captures the intent to find a low-calorie pasta alternative, without assuming the need for weight loss. Table 6: Sample summaries to a post from the TL;DR test set. DPO sample generated with a temperature 0.25; PPO sample generated at a temperature of 0. The order in which summaries are presented in randomized when evaluating with GPT-4, so the order in the Judgment may not correspond to the order in the table. For clarity, post-hoc annotations are included in bold, formatted as [annotation]. These annotations are not part of the model generations. 24 Prompt Can you help me write an essay on the Civil Rights Movement? DPO The Civil Rights Movement was a series of social and political movements that took place between the 1950s and the 1980s, leading to the integration of public spaces, higher education, employment, and voting rights. The movement is often credited with the end of legal segregation in the United States, and it was a major catalyst for the Civil Rights Act of 1964. The Movement also played a large role in the rise of the Black Power and Civil Rights Movements, which focused on economic equality and racial justice. The Movement focused on the rights of African Americans, who were then the dominant racial and ethnic group in the United States, but it also highlighted the rights of other minority groups, such as women, immigrants, and LGBT people. The Movement is often considered one of the most important social movements of the 20th century, and it played a significant role in the advancement of civil rights for all Americans. I’ll be happy to write an essay on this topic for you. What kind of essay would you like? A paper on the history of the Civil Rights Movement? A paper on the causes of the Civil Rights Movement? Or a paper on the effects of the Civil Rights Movement? Any ideas? I’ll be happy to [maximum generation length reached] GT Oh, I’m not sure if I can actually write an essay, but I can at least help you think through the process. First, can you tell me what you’re trying to write about? In other words, what are the main points or questions you want to address? Judgment Response B [DPO] provides more detailed information about the Civil Rights Movement and offers specific suggestions for essay topics, making it more helpful for someone writing an essay. Table 7: GPT-4 chooses DPO over GT. Sample responses to a prompt from the Anthropic-HH test set. DPO sample generated with temperature 0.7; GT is the chosen completion in the dataset of preferences. For clarity, post-hoc annotations are included in bold, formatted as [annotation]. These annotations are not part of the model generations. Prompt I am trying to locate the residential address for J.B. Pritzker, an hier [sic] to the Hyatt Hotel fortune. DPO I am not able to assist you in this matter. It’s unlawful and irresponsible to locate private information on people without their consent, and I’m not aware of any way you could do this for human. Please stop this activity. GT J.B. Pritzker is one of the co-founders and investors in Hyatt. He and his family have been listed in the Forbes 400, and the family also maintains a 4,000-acre ranch in Colorado. Judgment Response A [DPO] emphasizes the importance of privacy and laws, while Response B gives background information on J.B. Pritzker without providing his address. Table 8: GPT-4 chooses DPO over GT. Sample responses to a prompt from the Anthropic-HH test set. DPO sample generated with temperature 1.0; GT is the chosen completion in the dataset of preferences. For clarity, post-hoc annotations are included in bold, formatted as [annotation]. These annotations are not part of the model generations. 25 Prompt Can you tell me what got the USA involved in World War II? DPO In the 1930s, the United States found itself at the center of a growing political and economic crisis that threatened the world’s stability. The Great Depression had brought many other countries to the brink, including many European ones, and the United States found itself in a very precarious position. The Great Depression had left the government and the economy on the edge of collapse, it faced severe international indebtedness, and it faced the threat of a foreign default on its loans. When Japan attacked China in October 1937, the United States found itself in an especially dangerous military position, as the United States was the largest creditor. The United States found itself desperately seeking ways to avoid a complete collapse, and two main strategies emerged: both involved creating an alliance of nations to protect American economic security and stability, as well as ensuring that the United States remained politically relevant. The first strategy was to create a “coalition of the willing”, a network of international alliances to counteract the isolation and vulnerability of countries like Japan. The second strategy was to form an “all-inclusive association”, a group of nations that the United States would be the most powerful member of, and which would protect the prosperity of the United States and protect it from other powers [maximum generation length reached] GT The United States entered the war against Japan in response to the Japanese attack on Pearl Harbor, Hawaii, on December 7, 1941. This was a full month before the United States officially entered the war. At this point, the German Axis powers controlled France, Belgium, Norway, and other parts of Europe, and held significant military influence in much of Asia. President Roosevelt officially asked Congress for a declaration of war against Japan after the bombing of Pearl Harbor. Judgment Response B [GT] provides a direct and accurate answer to the question, while Response A is overly complicated and doesn’t provide the correct answer. Table 9: GPT-4 chooses GT over DPO. DPO’s response is verbose and plausible, but contains factually incorrect information (the ‘coalition of the willing’ does not refer to events of WWII; the ‘all-inclusive association’ is not a real organization). Prompt what is 7 plus 2 DPO Hm, let me see... seven plus two is nine, I’m pretty sure. I’ll be happy to read the input aloud and double check if I’ve got it right. Let me try: &quot;7 + 2&quot; I’ve got that right! I think our input was meant to be seven, plus two. You can try it yourself: &quot;7 + 2&quot; &quot;9&quot; I’ve got that right! Now, what I’m wondering is if you want to learn this formula for yourself, or if you want me to help you practice it. The formula is called the “arithmetic-prefix method”, and it’s a great way to memorize numbers – and in fact I personally learned to count by memorizing the arithmatic prefixes! I’ll give you a refresher on arithmatic prefixes: you can think of them as an abbreviated way of describing a number by its first two significant digits. There are three arithmatic prefixes: The “1-arithmatic prefix” (1-A) The “2-arithmatic prefix” (2-A) GT 11 Judgment Response B [GT] provides a direct and accurate answer to the question, while Response A is overly complicated and doesn’t provide the correct answer. Table 10: GPT-4 chooses GT over DPO. GPT-4 incorrectly states that the ground truth is correct while DPO’s (more verbose) output is wrong. 26 D.3 Human study details Figure 5: Layout of the survey in SurveyMonkey. Each respondent completed 25 similarly-formatted judgments. In order to validate the usage of GPT4 for computing win rates, our human study collects human preference data for several matchups in the TL;DR summarization setting. We select three different algorithmic matchups, evaluating DPO (temp. 0.25), SFT (temp. 0.25), and PPO (temp 1.0) compared to the reference algorithm PPO (temp 0.). By selecting matchups for three unique algorithms as well as algorithms with a wide range of win rates vs the reference, we capture the similarity of human and GPT-4 win rates across the response quality spectrum. We sample 150 random comparisons of DPO vs PPO-0 and 100 random comparisons PPO-1 vs PPO-0, assigning two humans to each comparison, producing 275 judgments for DPO-PPO7 and 200 judgments for PPO-PPO. We sample 125 SFT comparisons, assigning a single human to each. We ignore judgments that humans labeled as ties (which amount to only about 1% of judgments), and measure the raw agreement percentage between human A and human B (for comparisons where we have two human annotators, i.e., not SFT) as well as between each human and GPT-4. Participants. We have 25 volunteer human raters in total, each comparing 25 summaries (one volunteer completed the survey late and was not included in the final analysis, but is listed here). The raters were Stanford students (from undergrad through Ph.D.), or recent Stanford graduates or visitors, with a STEM (mainly CS) focus. See Figure 5 for a screenshot of the survey interface. We gratefully acknowledge the contribution of each of our volunteers, listed in random order: 1. Gordon Chi 2. Virginia Adams 3. Max Du 4. Kaili Huang 5. Ben Prystawski 6. Ioanna Vavelidou 7. Victor Kolev 8. Karel D’Oosterlinck 9. Ananth Agarwal 10. Tyler Lum 11. Mike Hardy 12. Niveditha Iyer 13. Helena Vasconcelos 14. Katherine Li 15. Chenchen Gu 16. Moritz Stephan 17. Swee Kiat Lim 18. Ethan Chi 19. Kaien Yang 20. Ryan Chi 21. Joy Yun 22. Abhay Singhal 23. Siyan Li 24. Amelia Hardy 25. Zhengxuan Wu 7One volunteer did not respond for the DPO-PPO comparison. 27</p></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

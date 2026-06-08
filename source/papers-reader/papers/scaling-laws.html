@@ -1,0 +1,1076 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scaling Laws for Neural Language Models · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2001.08361 · 30 页 · 0 张图</div>
+    <h1>Scaling Laws for Neural Language Models</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-skim">优先级 skim</span>
+      <span>W5</span>
+      <span>Theory</span>
+      <span><a href="https://arxiv.org/abs/2001.08361" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2001.08361.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>Kaplan 等(2020)用 7 个数量级跨度的实验证明,Transformer 语言模型的交叉熵 loss 与<em>非嵌入参数 N、数据集 D、训练计算 C</em> 三者各自呈干净的 <em>power law</em>(其它任两项不构成瓶颈时);并据此推导出固定 compute 预算下的最优分配——把绝大多数预算砸到模型规模,数据量只需缓慢增长,具体为 $N\propto C^{0.73}$、$B\propto C^{0.24}$、$S\propto C^{0.03}$,这构成了 GPT-3 的设计依据。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>三条核心 power law(必背)</strong>:loss 关于 $N/D/C_{\min}$ 各自的标度,
+          $$L(N) = (N_c/N)^{\alpha_N},\quad \alpha_N\approx 0.076,\;N_c\approx 8.8\times 10^{13}$$
+          $$L(D) = (D_c/D)^{\alpha_D},\quad \alpha_D\approx 0.095,\;D_c\approx 5.4\times 10^{13}$$
+          $$L(C_{\min}) = (C_c^{\min}/C_{\min})^{\alpha_C^{\min}},\quad \alpha_C^{\min}\approx 0.050$$
+          每一条都是双对数轴上接近直线的 power law,指数(斜率)就是面试要默写的数字。
+        </li>
+        <li><strong>联合 parametric form(N、D 同时变)</strong>:
+          $$L(N,D) = \left[\left(\frac{N_c}{N}\right)^{\alpha_N/\alpha_D} + \frac{D_c}{D}\right]^{\alpha_D}$$
+          它满足 $D\to\infty$ 退化为 $L(N)$、$N\to\infty$ 退化为 $L(D)$;过拟合程度只由 $N^{\alpha_N/\alpha_D}/D \approx N^{0.74}/D$ 决定——模型放大 8x,数据只要放大 5x 就够。
+        </li>
+        <li><strong>compute-optimal 分配</strong>:固定 $C$ 时,$N\propto C^{0.73}$、$B\propto C^{0.24}$、$S\propto C^{0.03}$。结论:几乎所有预算砸大模型,只增大 batch、几乎不增加 serial steps——"训练不必到收敛",超大模型在远未收敛处停下反而最 compute-efficient。</li>
+        <li><strong>critical batch size $B_\mathrm{crit}$</strong>:Kaplan 主张 $B_\mathrm{crit}(L) = B_*/L^{1/\alpha_B}$,$B_*\approx 2\times 10^8$ tokens、$\alpha_B\approx 0.21$——它只随 loss 走,不直接依赖模型大小;在 $B\ll B_\mathrm{crit}$ 时定义 $C_{\min}$,所有干净的 power law 都按 $C_{\min}$ 而非 raw $C$ 来写。</li>
+        <li><strong>与 Chinchilla(Hoffmann 2022)的差异</strong>:Kaplan 给出 $N\propto C^{0.73}$、$D\propto C^{0.27}$(模型为主、数据偏少);Chinchilla 重新跑实验后得到接近 $N\propto C^{0.5}$、$D\propto C^{0.5}$,即 $D/N\approx 20$ tokens/param,数据应与模型同步放大。Chinchilla 把 Kaplan 的偏差归因于:① 学习率/warmup 没随规模调好;② IsoFLOP 切片方式不同;③ embedding/非 embedding 参数算法。这是 2022 年后业界主流回到"数据更重要"的转折点。</li>
+        <li><strong>sample efficiency</strong>:大模型用更少 optimization steps、更少 data 达到同 loss(Fig 2/Fig 4);这与第 3 条共同支撑"训练大模型,早停" 的范式。</li>
+        <li><strong>过拟合上界</strong>:$D\gtrsim 5\times 10^3\cdot N^{0.74}$ 即可避免在 22B token WebText2 上出现明显过拟合——是 dataset sizing 的工程经验式。</li>
+        <li><strong>矛盾点 / 失效尺度</strong>:把 $L(C_{\min})$ 与 $L(D)$ 外推到 $C^*\sim 10^4$ PF-days、$N^*\sim 10^{12}$、$D^*\sim 10^{12}$、$L^*\sim 1.7$ nats/token 时两条曲线相交——Kaplan 猜想这是 power law 失效、Transformer 在自然语言上的"信息上限"。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      经典背景,面试可能问
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      <li><a href="#sec-1">Preamble &amp; Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-2">§1 Introduction &amp; Summary / 引言与核心结论</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-3">§2-3 Empirical Observations / 经验观察(架构无关性 + 基础 power law)</a><span class="toc-page">p.6</span></li>
+      <li><a href="#sec-4">§4-5 Power Laws / N·D·S 联合标度律</a><span class="toc-page">p.10</span></li>
+      <li><a href="#sec-5">§6 Optimal Compute Allocation / 最优计算分配</a><span class="toc-page">p.14</span></li>
+      <li><a href="#sec-6">§7-8 Related Work &amp; Discussion / 相关工作与讨论</a><span class="toc-page">p.18</span></li>
+      <li><a href="#sec-7">Appendix A: Summary of Power Laws / 标度律总表</a><span class="toc-page">p.20</span></li>
+      <li><a href="#sec-8">References(略)</a><span class="toc-page">p.28</span></li>
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+
+  <div class="figures-section">
+    <h2 class="section-title">🧮 核心结论速览 (3 组 · 原文未导出 PNG,仅留概念卡)</h2>
+    <div class="figure-grid">
+
+      <div class="figure-card" id="fig_1">
+        <div class="figure-meta">
+          <div><span class="fig-id">概念卡 1</span> · p.3 · 基础 power law</div>
+          <div class="fig-caption">Figure 1: Loss 在 dataset size、parameter count、compute 三个轴上各自呈干净的 power law,横跨 6+ 个数量级。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>三联子图,横轴分别是 compute(PF-days)、dataset tokens、non-embedding parameters,纵轴一律是 test loss;三条曲线在 log-log 坐标下都接近直线——这就是"<em>power law</em>"的可视化形态。</p>
+          <p><strong>② 关键数据 / 读出指数:</strong>论文从这三条直线分别拟出 <code>α_N≈0.076</code>、<code>α_D≈0.095</code>、<code>α_C≈0.057</code>(adjusted 后 <code>α_C^min≈0.050</code>);"参数翻倍 loss 只下降 $2^{-0.076}\approx 0.95$ 倍"就是从这张图读出来的——这也是为什么后人会把 scaling laws 叫"对数式收益"。</p>
+          <p><strong>③ 启示:</strong>① 只要 N/D/C 中任意两项不构成 bottleneck,第三项的 power law 就成立——这给了"按指数 scaling 投资基础设施"以经验依据;② 三个指数互相约束(后文 $\alpha_C^{\min}=1/(1/\alpha_S+1/\alpha_B+1/\alpha_N)\approx 0.054$),所以并不能任意分配 compute;③ 这张图是 GPT-3 立项的"理论一图"——后人 Chinchilla 推翻的也正是 α_N 与 α_D 的相对大小。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_2">
+        <div class="figure-meta">
+          <div><span class="fig-id">概念卡 2</span> · p.5 · 联合标度律 L(N,D)</div>
+          <div class="fig-caption">Figure 4 / 9: 大模型在小数据上提前饱和,过拟合程度由 $N^{0.74}/D$ 单变量刻画。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>左:固定一组 dataset 大小(21M→22B tokens),把 loss 画成 N 的函数。小数据时曲线在某个 N 之后水平、不再下降——典型的"参数比数据多就过拟合"。右:把所有曲线沿 $\delta L$ 轴重叠后,横轴换成 $N^{\alpha_N/\alpha_D}/D \approx N^{0.74}/D$,所有点落到同一条曲线上。</p>
+          <p><strong>② 关键数据:</strong>过拟合阈值:$D \gtrsim 5\times 10^3\cdot N^{0.74}$;指数比 $\alpha_N/\alpha_D\approx 0.076/0.103\approx 0.74$ 是直接读出的;联合 form $L(N,D) = [(N_c/N)^{0.74}+D_c/D]^{0.095}$ 拟出 $N_c\approx 6.4\times 10^{13}$、$D_c\approx 1.8\times 10^{13}$(Table 2)。</p>
+          <p><strong>③ 启示:</strong>① $0.74$ 这个指数就是"放大 8x 模型需要放大 5x 数据"的来源——比 Chinchilla 的"1:1"显著偏小,这正是 Kaplan 后被修正的核心;② 单变量 $N^{0.74}/D$ 把"过拟合"压缩成 universal scaling,提示我们 capacity-data 比值才是真正决定泛化的量;③ 工程上:不要用很小的 dataset 训很大的模型,否则只是在烧 compute。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_3">
+        <div class="figure-meta">
+          <div><span class="fig-id">概念卡 3</span> · p.16 · compute-optimal N(C)</div>
+          <div class="fig-caption">Figure 14: 最优模型规模 $N(C_{\min})\propto C_{\min}^{0.73}$,而最优 step 数 $S_{\min}\propto C_{\min}^{0.03}$ 几乎不增。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_3">
+          <p><strong>① 图说明:</strong>左:横轴 compute(PF-days),纵轴最优 non-embedding 参数量;红色 fit $N=(1.3\times 10^9)\cdot C_{\min}^{0.73}$,几乎一条直线斜率 0.73。右:横轴 compute,纵轴最优 serial steps $S_{\min}$;fit 出 $S_{\min}=(5.4\times 10^3)\cdot C_{\min}^{0.03}$——斜率近乎零。</p>
+          <p><strong>② 关键数据 / 读出指数:</strong>$N\propto C^{0.73}$(直接的)、$B\propto C^{0.24}$(由 $B\propto L^{-4.8}$ 与 $L\propto C^{-0.05}$ 链式得到)、$S\propto C^{0.03}$;理论值 $\alpha_C^{\min}/\alpha_N \approx 0.71$,与实测 0.73 在百分之几内吻合。</p>
+          <p><strong>③ 启示:</strong>① <em>compute-optimal</em> 的工程含义是:增加 10x compute,模型放大 5x、batch 放大 1.7x、serial steps 几乎不变——这就是 GPT-3(175B/300B tokens)选规模的依据;② "训练不需要到收敛"——大模型早停反而最经济(因为收益已被 power law 算清);③ 后来 Chinchilla 用 IsoFLOP 方法重做,得 $N\propto C^{0.5}$、$D\propto C^{0.5}$——这意味着 Kaplan 严重低估了数据的边际收益,LLaMA / GPT-4 之后业界普遍采用 Chinchilla 比例(约 20 tokens/param)。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 章节正文 -->
+  
+    <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(双语逐段)</h2>
+
+    <details class="sec" id="sec-1" open>
+      <summary>
+        <span>Preamble &amp; Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">Authors / 作者</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>Scaling Laws for Neural Language Models. Jared Kaplan (Johns Hopkins University, OpenAI); Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, Dario Amodei (OpenAI). arXiv:2001.08361v1, 23 Jan 2020.</p>
+          </div>
+          <div class="zh">
+            <p>《神经语言模型的标度律》。Jared Kaplan(约翰霍普金斯大学、OpenAI);Sam McCandlish、Tom Henighan、Tom B. Brown、Benjamin Chess、Rewon Child、Scott Gray、Alec Radford、Jeffrey Wu、Dario Amodei(OpenAI)。arXiv:2001.08361v1,2020 年 1 月 23 日。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">Abstract / 摘要</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>We study empirical scaling laws for language model performance on the cross-entropy loss. The loss scales as a power-law with model size, dataset size, and the amount of compute used for training, with some trends spanning more than seven orders of magnitude. Other architectural details such as network width or depth have minimal effects within a wide range. Simple equations govern the dependence of overfitting on model/dataset size and the dependence of training speed on model size. These relationships allow us to determine the optimal allocation of a fixed compute budget. Larger models are significantly more sample-efficient, such that optimally compute-efficient training involves training very large models on a relatively modest amount of data and stopping significantly before convergence.</p>
+          </div>
+          <div class="zh">
+            <p>我们研究语言模型在<em>交叉熵 loss</em> 上的经验标度律。loss 关于模型规模、数据集规模与训练所用计算量,分别按 <em>power law</em> 标度,其中部分趋势横跨七个以上数量级。其它架构细节(如网络宽度、深度)在较宽范围内影响微弱。一些简单方程刻画了"过拟合对模型/数据规模的依赖"以及"训练速度对模型规模的依赖"。这些关系让我们能够确定一个固定 compute 预算下的最优分配。大模型的样本效率<em>显著更高</em>——因此最 compute-efficient 的训练做法是:在<em>相对适中</em>的数据量上训练<em>非常大</em>的模型,并在远未收敛时停止。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>§1 Introduction &amp; Summary / 引言与核心结论<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">1.1 Setting / 研究对象</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>Language provides a natural domain for the study of artificial intelligence, and deep learning has recently seen rapid progress in language modeling. One might expect language modeling performance to depend on model architecture, the size of neural models, the computing power used to train them, and the data available for this training process. In this work we empirically investigate the dependence of language modeling loss on all of these factors, focusing on the Transformer architecture. The high ceiling and low floor for performance on language tasks allows us to study trends over more than seven orders of magnitude in scale. Throughout we will observe precise power-law scalings for performance as a function of training time, context length, dataset size, model size, and compute budget.</p>
+          </div>
+          <div class="zh">
+            <p>语言为人工智能研究提供了一个天然的领域,且深度学习近期在语言建模上取得了快速进展。一个人会预期,语言建模的性能依赖于模型架构、神经模型的规模、训练所用的计算力,以及训练过程可用的数据。本文我们<em>经验性地</em>研究语言建模 loss 对所有这些因素的依赖,聚焦于 Transformer 架构。语言任务表现的天花板高、地板低,使我们得以在七个以上数量级的规模上研究趋势。全文我们将看到:作为训练时间、上下文长度、数据集规模、模型规模与计算预算的函数,性能呈现精确的 power-law 标度。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">1.2 Key findings / 关键发现</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Performance depends strongly on scale, weakly on model shape.</strong> Model performance depends most strongly on scale, which consists of three factors: the number of model parameters $N$ (excluding embeddings), the size of the dataset $D$, and the amount of compute $C$ used for training. Within reasonable limits, performance depends very weakly on other architectural hyperparameters such as depth vs. width.</p>
+            <p><strong>Smooth power laws.</strong> Performance has a power-law relationship with each of the three scale factors $N$, $D$, $C$ when not bottlenecked by the other two, with trends spanning more than six orders of magnitude. We observe no signs of deviation from these trends on the upper end, though performance must flatten out eventually before reaching zero loss.</p>
+            <p><strong>Universality of overfitting.</strong> Performance improves predictably as long as we scale up $N$ and $D$ in tandem, but enters a regime of diminishing returns if either $N$ or $D$ is held fixed while the other increases. The performance penalty depends predictably on the ratio $N^{0.74}/D$, meaning that every time we increase the model size 8x, we only need to increase the data by roughly 5x to avoid a penalty.</p>
+          </div>
+          <div class="zh">
+            <p><strong>性能强烈依赖于 scale,微弱依赖于模型形状。</strong>模型性能<em>最强烈地</em>依赖于 scale,而 scale 由三个因子构成:模型参数量 $N$(不含 embeddings)、数据集规模 $D$、训练所用计算量 $C$。在合理范围内,性能对其它架构超参(如深度 vs 宽度)<em>非常弱</em>地依赖。</p>
+            <p><strong>光滑的 power law。</strong>当其它两项不构成瓶颈时,性能与 $N$、$D$、$C$ 三者各自呈 power-law 关系,趋势横跨六个以上数量级。在上端我们看不到偏离这些趋势的迹象,尽管在到达 loss 为零之前性能终将变平。</p>
+            <p><strong>过拟合的普适性。</strong>只要把 $N$ 与 $D$ <em>同步</em>放大,性能就可预测地提升;但如果保持 $N$ 或 $D$ 之一不变而单独放大另一者,就进入边际收益递减的区间。性能损失可预测地依赖于比值 $N^{0.74}/D$——也就是说,每次把模型规模放大 8 倍,只需把数据量放大约 5 倍即可避免损失。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Sample efficiency.</strong> Large models are more sample-efficient than small models, reaching the same level of performance with fewer optimization steps and using fewer data points.</p>
+            <p><strong>Convergence is inefficient.</strong> When working within a fixed compute budget $C$ but without any other restrictions on the model size $N$ or available data $D$, we attain optimal performance by training very large models and stopping significantly short of convergence. Maximally compute-efficient training would therefore be far more sample-efficient than one might expect based on training small models to convergence, with data requirements growing very slowly as $D\sim C^{0.27}$ with training compute.</p>
+            <p><strong>Optimal batch size.</strong> The ideal batch size for training these models is roughly a power of the loss only, and continues to be determinable by measuring the gradient noise scale; it is roughly 1–2 million tokens at convergence for the largest models we can train.</p>
+          </div>
+          <div class="zh">
+            <p><strong>样本效率。</strong>大模型比小模型<em>更具样本效率</em>——用更少的优化步数、更少的数据点就能达到同样的性能水平。</p>
+            <p><strong>训练到收敛是低效的。</strong>当我们工作在固定的 compute 预算 $C$ 之下、又对模型规模 $N$ 与可用数据 $D$ 没有其它限制时,最优做法是训练<em>非常大</em>的模型,并在<em>远未收敛</em>时停下。因此,最 compute-efficient 的训练比"训小模型到收敛"所预期的样本效率<em>高得多</em>;数据需求随训练 compute 极其缓慢地增长,$D\sim C^{0.27}$。</p>
+            <p><strong>最优 batch size。</strong>训练这些模型的理想 batch size 大致只是 loss 的一个幂,可继续通过测量<em>梯度噪声尺度</em>来确定;对于我们能训的最大模型,收敛时大约是每批 1–2 百万 tokens。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">1.3 Summary of scaling laws / 标度律一览</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>The test loss of a Transformer trained to autoregressively model language can be predicted using a power-law when performance is limited by only either the number of non-embedding parameters $N$, the dataset size $D$, or the optimally allocated compute budget $C_{\min}$:</p>
+            <div class="bi-eq">$$L(N) = (N_c/N)^{\alpha_N};\quad \alpha_N\sim 0.076,\;\; N_c\sim 8.8\times 10^{13}\text{ (non-embedding params)}\tag{1.1}$$</div>
+            <div class="bi-eq">$$L(D) = (D_c/D)^{\alpha_D};\quad \alpha_D\sim 0.095,\;\; D_c\sim 5.4\times 10^{13}\text{ (tokens)}\tag{1.2}$$</div>
+            <div class="bi-eq">$$L(C_{\min}) = (C_c^{\min}/C_{\min})^{\alpha_C^{\min}};\quad \alpha_C^{\min}\sim 0.050,\;\; C_c^{\min}\sim 3.1\times 10^{8}\text{ (PF-days)}\tag{1.3}$$</div>
+            <p>The critical batch size, which determines the speed/efficiency tradeoff for data parallelism, also roughly obeys a power law in $L$:</p>
+            <div class="bi-eq">$$B_{\mathrm{crit}}(L) = B_*\,/\,L^{1/\alpha_B},\;\; B_*\approx 2\times 10^{8}\text{ tokens},\;\; \alpha_B\approx 0.21\tag{1.4}$$</div>
+          </div>
+          <div class="zh">
+            <p>一个被训练做自回归语言建模的 Transformer,其测试 loss 可以用 power law 来预测——只要性能仅受非嵌入参数数 $N$、数据集规模 $D$、或最优分配的 compute 预算 $C_{\min}$ 之一限制即可:见公式 (1.1)、(1.2)、(1.3)。其中 $\alpha_N$、$\alpha_D$、$\alpha_C^{\min}$ 给出在放大 $N$、$D$、$C_{\min}$ 时所期望的性能提升程度——例如,参数翻倍后 loss 缩小为原来的 $2^{-\alpha_N}\approx 0.95$ 倍。$N_c$、$D_c$、$C_c^{\min}$ 的具体数值依赖于词表大小与分词方式,不具有根本意义。临界 batch size——决定数据并行的"速度/效率权衡"——也大致服从 loss 的一个 power law,即公式 (1.4)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Equations (1.1) and (1.2) together suggest that as we increase the model size, we should increase the dataset size sublinearly according to $D\propto N^{\alpha_N/\alpha_D}\approx N^{0.74}$. In fact, we find that there is a single equation combining (1.1) and (1.2) that governs the simultaneous dependence on $N$ and $D$ and governs the degree of overfitting:</p>
+            <div class="bi-eq">$$L(N,D) = \left[\left(\frac{N_c}{N}\right)^{\alpha_N/\alpha_D} + \frac{D_c}{D}\right]^{\alpha_D}\tag{1.5}$$</div>
+            <p>When training a given model for a finite number of parameter update steps $S$ in the infinite data limit, after an initial transient period, the learning curves can be accurately fit by</p>
+            <div class="bi-eq">$$L(N,S) = \left(\frac{N_c}{N}\right)^{\alpha_N} + \left(\frac{S_c}{S_{\min}(S)}\right)^{\alpha_S}\tag{1.6}$$</div>
+            <p>where $S_c\approx 2.1\times 10^{3}$ and $\alpha_S\approx 0.76$. When training within a fixed compute budget $C$, but with no other constraints, Equation (1.6) leads to the prediction that the optimal model size $N$, batch size $B$, number of steps $S$ should grow as $N\propto C^{\alpha_C^{\min}/\alpha_N}$, $B\propto C^{\alpha_C^{\min}/\alpha_B}$, $S\propto C^{\alpha_C^{\min}/\alpha_S}$, which closely matches the empirically optimal results $N\propto C_{\min}^{0.73}$, $B\propto C_{\min}^{0.24}$, $S\propto C_{\min}^{0.03}$.</p>
+          </div>
+          <div class="zh">
+            <p>公式 (1.1) 与 (1.2) 联立提示:当我们放大模型规模时,数据集规模应当<em>次线性</em>放大,即 $D\propto N^{\alpha_N/\alpha_D}\approx N^{0.74}$。事实上,我们发现存在一条统一方程,把 (1.1) 与 (1.2) 合在一起,刻画 $N$ 与 $D$ 的<em>联合</em>依赖以及过拟合程度:见公式 (1.5)。当在<em>无限数据极限</em>下、训练某一给定模型走有限的参数更新步数 $S$ 时,初始 transient 之后,learning curve 可被公式 (1.6) 精确拟合,其中 $S_c\approx 2.1\times 10^{3}$、$\alpha_S\approx 0.76$。在固定 compute 预算 $C$、其它无约束的训练下,(1.6) 推出最优 $N$、$B$、$S$ 应分别按 $N\propto C^{\alpha_C^{\min}/\alpha_N}$、$B\propto C^{\alpha_C^{\min}/\alpha_B}$、$S\propto C^{\alpha_C^{\min}/\alpha_S}$ 增长——与实测的 $N\propto C_{\min}^{0.73}$、$B\propto C_{\min}^{0.24}$、$S\propto C_{\min}^{0.03}$ 非常吻合。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>As the computational budget $C$ increases, it should be spent primarily on larger models, without dramatic increases in training time or dataset size. This also implies that as models grow larger, they become increasingly sample-efficient. In practice, researchers typically train smaller models for longer than would be maximally compute-efficient because of hardware constraints. Optimal performance depends on total compute as a power law (see Equation (1.3)).</p>
+          </div>
+          <div class="zh">
+            <p>随着 compute 预算 $C$ 增加,绝大部分应花在<em>更大的模型</em>上,而无需大幅增加训练时间或数据集规模。这同时意味着:模型越大,样本效率越高。实践中,研究者通常出于硬件限制,会把小模型训得比"最 compute-efficient 的做法"更久。最优性能与总 compute 服从 power law(见公式 (1.3))。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">1.4 Notation / 记号</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>We use the following notation: <strong>$L$</strong> — the cross-entropy loss in nats, averaged over tokens in a context. <strong>$N$</strong> — the number of model parameters, excluding all vocabulary and positional embeddings. <strong>$C\approx 6NBS$</strong> — an estimate of total non-embedding training compute, where $B$ is the batch size and $S$ the number of training steps. We quote values in PF-days ($1\text{ PF-day} = 10^{15}\cdot 24\cdot 3600 = 8.64\times 10^{19}$ FLOPs). <strong>$D$</strong> — dataset size in tokens. <strong>$B_{\mathrm{crit}}$</strong> — critical batch size; training at $B_{\mathrm{crit}}$ provides a roughly optimal time/compute compromise. <strong>$C_{\min}$</strong> — an estimate of the minimum non-embedding compute to reach a given loss; this is the compute one would use at $B\ll B_{\mathrm{crit}}$. <strong>$S_{\min}$</strong> — estimate of minimal steps to reach a given loss, used at $B\gg B_{\mathrm{crit}}$. <strong>$\alpha_X$</strong> — power-law exponents for $L(X)\propto 1/X^{\alpha_X}$, $X\in\{N,D,C,S,B,C_{\min}\}$.</p>
+          </div>
+          <div class="zh">
+            <p>我们使用以下记号:<strong>$L$</strong>——交叉熵 loss(以 nats 为单位),通常在上下文中的 token 上取平均。<strong>$N$</strong>——模型参数数,不含词表与位置嵌入。<strong>$C\approx 6NBS$</strong>——总非嵌入训练 compute 的估计,$B$ 为 batch size、$S$ 为训练步数;数值以 PF-days 报告($1\text{ PF-day} = 10^{15}\cdot 24\cdot 3600 = 8.64\times 10^{19}$ FLOPs)。<strong>$D$</strong>——数据集 token 数。<strong>$B_{\mathrm{crit}}$</strong>——临界 batch size,在它附近训练给出大致最优的"时间/compute 折中"。<strong>$C_{\min}$</strong>——达到给定 loss 所需的最小非嵌入 compute 估计,对应 $B\ll B_{\mathrm{crit}}$ 时的用量。<strong>$S_{\min}$</strong>——达到给定 loss 所需的最小步数估计,对应 $B\gg B_{\mathrm{crit}}$ 时的用量。<strong>$\alpha_X$</strong>——power-law 指数,$L(X)\propto 1/X^{\alpha_X}$,$X$ 可取 $N,D,C,S,B,C_{\min}$ 之一。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§2-3 Empirical Observations / 经验观察(架构无关性 + 基础 power law)<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">2 Background and Methods / 背景与方法</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>We train language models on WebText2, an extended version of the WebText dataset, tokenized using byte-pair encoding with a vocabulary size $n_{\mathrm{vocab}}=50257$. We optimize the autoregressive log-likelihood (cross-entropy loss) averaged over a 1024-token context, which is also our principal performance metric. We primarily train decoder-only Transformer models, though we also train LSTM models and Universal Transformers for comparison.</p>
+            <p>We use $N$ to denote the model size, defined as the number of non-embedding parameters $N\approx 12 n_{\mathrm{layer}} d_{\mathrm{model}}^2$, excluding biases and sub-leading terms. We include the embedding matrix's $n_{\mathrm{vocab}}d_{\mathrm{model}}$ parameters and the $n_{\mathrm{ctx}}d_{\mathrm{model}}$ positional-embedding parameters in the model, but not in $N$; we will see that this produces significantly cleaner scaling laws. Accounting for the forward and backward passes, we then define the estimated non-embedding compute as $C\approx 6N$ FLOPs per training token.</p>
+          </div>
+          <div class="zh">
+            <p>我们在 <em>WebText2</em> 上训语言模型,它是 WebText 的扩展版本,采用 byte-pair encoding 分词,词表大小 $n_{\mathrm{vocab}}=50257$。我们优化在 1024 个 token 上下文上取平均的自回归对数似然(交叉熵 loss),它也是我们的主要性能指标。我们主要训练 decoder-only Transformer,但也训了 LSTM 与 Universal Transformer 作对照。</p>
+            <p>我们用 $N$ 表示模型规模,定义为<em>非嵌入</em>参数数 $N\approx 12 n_{\mathrm{layer}} d_{\mathrm{model}}^2$(忽略 bias 与次要项)。嵌入矩阵的 $n_{\mathrm{vocab}}d_{\mathrm{model}}$ 参数与位置嵌入的 $n_{\mathrm{ctx}}d_{\mathrm{model}}$ 参数<em>不计</em>入 $N$;后文将看到这样做能得到显著更干净的 scaling law。考虑前向 + 反向后,我们把每个训练 token 的非嵌入 compute 估计为 $C\approx 6N$ FLOPs。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Unless otherwise noted, we train models with Adam for a fixed $2.5\times 10^{5}$ steps with a batch size of 512 sequences of 1024 tokens. Our largest models (more than 1B parameters) were trained with Adafactor due to memory constraints. We use a 3000-step linear warmup followed by a cosine decay to zero. Our experiments vary model size (from 768 to 1.5 billion non-embedding parameters), dataset size (from 22 million to 23 billion tokens), shape (depth, width, attention heads, feed-forward dimension), context length (mostly 1024), and batch size.</p>
+          </div>
+          <div class="zh">
+            <p>除非另有说明,我们用 Adam 训练模型 $2.5\times 10^{5}$ 步,batch size 为 512 条长度 1024 的序列。由于显存限制,最大模型(>1B 参数)用 Adafactor 训练。学习率使用 3000 步线性 warmup 后接 cosine 衰减到零。实验扫描了:模型规模(768 到 1.5B 非嵌入参数)、数据集规模(22M 到 23B tokens)、形状(深度/宽度/注意力头数/前馈维度)、上下文长度(多数为 1024)、batch size。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">3.1 Approximate shape independence / 形状近似无关</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>Transformer performance depends very weakly on the shape parameters $n_{\mathrm{layer}}$, $n_{\mathrm{heads}}$, and $d_{\mathrm{ff}}$ when we hold the total non-embedding parameter count $N$ fixed. To establish these results we trained models with fixed size while varying a single hyperparameter. Aspect ratio in particular can vary by a factor of 40 while only slightly impacting performance; an $(n_{\mathrm{layer}}, d_{\mathrm{model}}) = (6, 4288)$ model reaches a loss within 3% of the $(48, 1600)$ model used in GPT-2. Independence of $n_{\mathrm{layer}}$ would follow if deeper Transformers effectively behave as ensembles of shallower models, as has been suggested for ResNets.</p>
+          </div>
+          <div class="zh">
+            <p>当我们固定非嵌入参数总数 $N$ 时,Transformer 性能对形状超参 $n_{\mathrm{layer}}$、$n_{\mathrm{heads}}$、$d_{\mathrm{ff}}$ <em>非常弱</em>地依赖。我们固定 $N$ 同时只变一个超参做实验来证实这一点。特别地,深宽比可以变 40 倍而性能仅受微小影响——一个 $(n_{\mathrm{layer}}, d_{\mathrm{model}}) = (6, 4288)$ 的模型 loss 比 GPT-2 使用的 $(48, 1600)$ 模型仅高 3%。如果深层 Transformer 实际上像浅层模型的 ensemble(已有人在 ResNet 上做过类似论证),那么 $n_{\mathrm{layer}}$ 无关性就是自然的。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">3.2 L(N): performance vs non-embedding parameters / L(N)</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>We display the performance of a wide variety of models, ranging from small models with shape $(2,128)$ through billion-parameter models with shapes from $(6,4288)$ through $(207,768)$. Trained to near convergence on the full WebText2 dataset, we observe no overfitting (except possibly for the very largest models). We find a steady trend with non-embedding parameter count $N$, fit to the first term of Equation (1.5):</p>
+            <div class="bi-eq">$$L(N) \approx (N_c/N)^{\alpha_N}\tag{3.1}$$</div>
+            <p>To observe these trends it is crucial to study performance as a function of $N$ rather than the total parameter count (including embeddings), which obscures the trend. Although these models have been trained on WebText2, their test loss on a variety of other datasets is also a power-law in $N$ with nearly identical exponent: transfer to a different distribution incurs a roughly constant offset.</p>
+          </div>
+          <div class="zh">
+            <p>我们展示了大量模型的性能,小到 $(2,128)$,大到十亿参数的 $(6,4288)$ 到 $(207,768)$。在完整 WebText2 数据集上训练至接近收敛后,我们<em>看不到</em>过拟合(可能除最大几个模型外)。我们发现性能与非嵌入参数数 $N$ 呈稳定趋势,可由公式 (1.5) 的第一项拟合,即公式 (3.1)。要看到这些趋势,关键是把性能视作 $N$(而非含嵌入的总参数数)的函数——后者会模糊掉趋势。虽然这些模型只在 WebText2 上训,但其在多种其它数据集上的测试 loss 同样是 $N$ 的 power law、指数几乎一致:迁移到不同分布只带来一个近似<em>常数</em>偏移。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Comparing LSTMs and Transformers as a function of non-embedding parameter count: LSTMs match Transformers on early-context tokens but cannot match them on later tokens. We present power-law relationships between performance and context position in the appendix, where increasingly large exponents for larger models suggest improved ability to quickly recognize patterns.</p>
+          </div>
+          <div class="zh">
+            <p>把 LSTM 与 Transformer 作为非嵌入参数数 $N$ 的函数比较:LSTM 在上下文前部的 token 上可以和 Transformer 持平,但在<em>靠后</em>的 token 上跟不上。附录里我们给出"性能 vs 上下文位置"的 power-law 关系——模型越大,指数越大,表明大模型能更快识别模式。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">3.3 L(D), L(C): performance vs dataset size and compute / L(D)、L(C)</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>For the trend with dataset size $D$ we trained a model with $(n_{\mathrm{layer}}, n_{\mathrm{embd}})=(36,1280)$ on fixed subsets of WebText2 with early stopping. The resulting test losses can be fit with a simple power law:</p>
+            <div class="bi-eq">$$L(D) \approx (D_c/D)^{\alpha_D}\tag{3.2}$$</div>
+            <p>The total non-embedding compute used during training can be estimated as $C=6NBS$. For a given value of $C$ we scan over all models of various $N$ to find the model with the best performance. The result fits as</p>
+            <div class="bi-eq">$$L(C) \approx (C_c/C)^{\alpha_C}\tag{3.3}$$</div>
+            <p>Note that in these results the batch size $B$ remains fixed for all models, which means these empirical results are not truly optimal. We will account for this in later sections using an adjusted $C_{\min}$ to produce cleaner trends. The data strongly suggests that sample efficiency improves with model size.</p>
+          </div>
+          <div class="zh">
+            <p>关于数据集规模 $D$ 的趋势,我们用一个 $(n_{\mathrm{layer}}, n_{\mathrm{embd}})=(36,1280)$ 的模型在 WebText2 的不同子集上训练并做 early stopping。得到的测试 loss 可由简单 power law 拟合,即公式 (3.2)。训练期间的非嵌入 compute 可估计为 $C=6NBS$。给定 $C$,我们对各种 $N$ 的模型扫一遍,挑出表现最好的那一个。结果可拟合为公式 (3.3)。注意这里 batch size $B$ 对所有模型固定,因此这条经验结果<em>并非真正最优</em>。后文我们用调整后的 $C_{\min}$ 来产生更干净的趋势。数据强烈暗示样本效率随模型规模提升。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3"></div>
+    </details>
+
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§4-5 Power Laws / N·D·S 联合标度律<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">4 Charting the infinite data limit and overfitting / 无限数据极限与过拟合</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>In Section 3 we found basic scaling laws. Here we study the performance of a model of size $N$ trained on a dataset with $D$ tokens while varying $N$ and $D$ simultaneously, demonstrating that the optimally trained test loss accords with the scaling law of Equation (1.5). This provides guidance on how much data we need for increasing model size while keeping overfitting under control. We chose this parameterization using three principles: (i) changes in vocabulary size or tokenization should rescale the loss by an overall factor; (ii) fixing $D$ and sending $N\to\infty$, the overall loss should approach $L(D)$, and conversely; (iii) $L(N,D)$ should be analytic at $D=\infty$, so that it has a series expansion in $1/D$ with integer powers.</p>
+            <div class="bi-eq">$$L(N,D) = \left[\left(\frac{N_c}{N}\right)^{\alpha_N/\alpha_D} + \frac{D_c}{D}\right]^{\alpha_D}\tag{4.1}$$</div>
+          </div>
+          <div class="zh">
+            <p>§3 中我们找到了基础的 scaling law。本节我们研究"规模为 $N$ 的模型在 $D$ 个 token 数据上训练"的性能,同时改变 $N$ 与 $D$,证明最优训练下的测试 loss 与公式 (1.5) 的 scaling law 一致。这给出了在控制过拟合的前提下、模型放大需要多少数据的指导。我们用三条原则选定这一参数化:(i) 词表或分词的改变应把 loss 整体改写为一个倍数;(ii) 固定 $D$、令 $N\to\infty$,总 loss 应趋于 $L(D)$,反之亦然;(iii) $L(N,D)$ 在 $D=\infty$ 处应解析,从而能在 $1/D$ 上做整数幂级数展开。结果如公式 (4.1)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We regularize all models with 10% dropout, tracking test loss and stopping once it is no longer decreasing. The fit to the four parameters $\alpha_N, \alpha_D, N_c, D_c$ in Equation (1.5) gives $\alpha_N=0.076$, $\alpha_D=0.103$, $N_c=6.4\times 10^{13}$, $D_c=1.8\times 10^{13}$ (Table 2). We obtain an excellent fit. Defining $\delta L(N,D) \equiv L(N,D)/L(N,\infty) - 1$, we find empirically that $\delta L$ depends only on a specific combination of $N$ and $D$:</p>
+            <div class="bi-eq">$$\delta L \approx \left[1 + \left(\frac{N}{N_c}\right)^{\alpha_N/\alpha_D}\frac{D_c}{D}\right]^{\alpha_D} - 1\tag{4.3}$$</div>
+            <p>To avoid overfitting (within a 0.02 random-seed noise budget), we require</p>
+            <div class="bi-eq">$$D \gtrsim (5\times 10^{3})\,N^{0.74}\tag{4.4}$$</div>
+            <p>This relation shows that dataset size may grow sub-linearly in model size while avoiding overfitting. It does not typically represent maximally compute-efficient training.</p>
+          </div>
+          <div class="zh">
+            <p>我们对所有模型用 10% dropout 正则化,追踪测试 loss、不再下降即停止。对公式 (1.5) 中四个参数 $\alpha_N, \alpha_D, N_c, D_c$ 的拟合给出 $\alpha_N=0.076$、$\alpha_D=0.103$、$N_c=6.4\times 10^{13}$、$D_c=1.8\times 10^{13}$(Table 2),拟合极佳。定义 $\delta L(N,D)\equiv L(N,D)/L(N,\infty)-1$,我们实证发现 $\delta L$ 只依赖于 $N$ 与 $D$ 的一个特定组合,见公式 (4.3)。要把过拟合控制在 0.02(随机种子噪声预算)以内,我们需要 $D\gtrsim (5\times 10^{3})\cdot N^{0.74}$,即公式 (4.4)。这条关系表明:为避免过拟合,数据集规模可以<em>次线性</em>地随模型规模增长;但这通常并不是最 compute-efficient 的训练。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">5.1 Adjustment for training at B_crit(L) / 临界 batch size 调整</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>It was previously argued that there is a critical batch size $B_{\mathrm{crit}}$ for training; for $B$ up to $B_{\mathrm{crit}}$ the batch size can be increased with very minimal degradation in compute-efficiency, whereas for $B>B_{\mathrm{crit}}$ increases result in diminishing returns. The gradient noise scale provides a prediction for $B_{\mathrm{crit}}$, which does not depend directly on model size except through the loss. The number of training steps $S$ and the number of data examples processed $E=BS$ satisfy:</p>
+            <div class="bi-eq">$$\left(\frac{S}{S_{\min}}-1\right)\left(\frac{E}{E_{\min}}-1\right)=1\tag{5.1}$$</div>
+            <p>which defines $B_{\mathrm{crit}}(L)\equiv E_{\min}/S_{\min}$, a function of target loss. The critical batch size can be fit:</p>
+            <div class="bi-eq">$$B_{\mathrm{crit}}(L) \approx B_*\,/\,L^{1/\alpha_B},\;\; B_*\approx 2\times 10^{8},\;\; \alpha_B\approx 0.21\tag{5.3}$$</div>
+            <p>This lets us define $S_{\min}$ (minimum steps at $B\gg B_{\mathrm{crit}}$) and $C_{\min}$ (minimum compute at $B\ll B_{\mathrm{crit}}$) by Eqs. (5.4)–(5.5).</p>
+          </div>
+          <div class="zh">
+            <p>已有研究指出存在一个训练的<em>临界 batch size</em> $B_{\mathrm{crit}}$:$B$ 不超过 $B_{\mathrm{crit}}$ 时增大 batch 对 compute 效率几乎无损;$B>B_{\mathrm{crit}}$ 之后收益递减。<em>gradient noise scale</em> 可预测 $B_{\mathrm{crit}}$,它<em>不</em>直接依赖于模型规模,只通过当前 loss 间接依赖。训练步数 $S$ 与处理样本数 $E=BS$ 满足公式 (5.1),进而定义 $B_{\mathrm{crit}}(L)\equiv E_{\min}/S_{\min}$,是目标 loss 的函数。临界 batch size 可拟合为公式 (5.3),$B_*\approx 2\times 10^{8}$、$\alpha_B\approx 0.21$。由此可定义 $S_{\min}$($B\gg B_{\mathrm{crit}}$ 下的最小步数)与 $C_{\min}$($B\ll B_{\mathrm{crit}}$ 下的最小 compute),分别见公式 (5.4)、(5.5)。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">5.2 L(N, S_min) / 模型规模与步数的联合标度</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>Using $S_{\min}$ we obtain a simple and universal fit for the dependence of loss on model size and training time in the infinite data limit:</p>
+            <div class="bi-eq">$$L(N, S_{\min}) = \left(\frac{N_c}{N}\right)^{\alpha_N} + \left(\frac{S_c}{S_{\min}}\right)^{\alpha_S}\tag{5.6}$$</div>
+            <p>with parameters $\alpha_N=0.077$, $\alpha_S=0.76$, $N_c=6.5\times 10^{13}$, $S_c=2.1\times 10^{3}$. The fit is imperfect but compelling. The power-law dependence on $S_{\min}$ reflects the interplay of optimizer dynamics and the loss landscape; its universality suggests that the Hessian eigenvalue density is roughly independent of model size.</p>
+          </div>
+          <div class="zh">
+            <p>利用 $S_{\min}$,我们在无限数据极限下得到一个简单、普适的拟合,描述 loss 对模型规模与训练时间的依赖,见公式 (5.6),参数为 $\alpha_N=0.077$、$\alpha_S=0.76$、$N_c=6.5\times 10^{13}$、$S_c=2.1\times 10^{3}$。拟合并不完美,但很有说服力。$S_{\min}$ 上的 power-law 依赖反映了优化器动力学与 loss 地形的相互作用;它的普适性提示我们 Hessian 谱密度<em>大致与模型规模无关</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The result for $L(N, S_{\min})$ can be used to derive a lower bound on the early-stopping step when training is data-limited. Reasoning that finite and infinite $D$ learning curves are similar until $S_{\min}\approx S_{\mathrm{stop}}$, we get:</p>
+            <div class="bi-eq">$$S_{\mathrm{stop}}(N, D) \gtrsim \frac{S_c}{\left[L(N, D) - L(N, \infty)\right]^{1/\alpha_S}}\tag{5.7}$$</div>
+            <p>This underestimates $S_{\mathrm{stop}}$ since finite $D$ slows convergence, but it gives a useful lower bound.</p>
+          </div>
+          <div class="zh">
+            <p>$L(N, S_{\min})$ 的结果也可用来推导<em>data-limited</em> 训练下 early stopping 步数的下界。论证思路是:有限 $D$ 与无限 $D$ 的 learning curve 在 $S_{\min}\approx S_{\mathrm{stop}}$ 之前是相似的。由此得到公式 (5.7)。这个下界<em>低估</em>了真实的 $S_{\mathrm{stop}}$(因为有限 $D$ 会减慢收敛),但提供了一个有用的下界。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4"></div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§6 Optimal Compute Allocation / 最优计算分配<span class="sec-page">p.14</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">6.1 Optimal performance and allocations / 最优性能与分配</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>The empirical trend of performance versus compute was previously shown training at a fixed batch size $B$. In fact we could train more efficiently at the critical batch size $B_{\mathrm{crit}}$. Standardizing to the critical batch size results in cleaner and more predictable trends. We now use the results of Section 5 to determine the optimal allocation of compute between model size $N$ and the quantity of data processed $2 B_{\mathrm{crit}} S_{\min}$.</p>
+            <p>Plotting $L(C_{\min})$ along with a power-law fit shows it is somewhat improved compared to the fixed-batch $L(C)$. Given $L(C_{\min})$, the optimal model size $N(C_{\min})$ that minimizes loss at given compute fits very well as:</p>
+            <div class="bi-eq">$$N(C_{\min}) \propto (C_{\min})^{0.73}\tag{6.1}$$</div>
+            <p>Models between 0.6x and 2.2x the optimal size can be trained with only a 20% larger compute budget.</p>
+          </div>
+          <div class="zh">
+            <p>之前展示的"性能 vs compute"经验趋势是在固定 batch size $B$ 下做的。事实上,在临界 batch size $B_{\mathrm{crit}}$ 处训练效率会更高。把所有量标准化到临界 batch size 下能得到更干净、更可预测的趋势。我们现在用 §5 的结果,确定 compute 在模型规模 $N$ 与处理数据量 $2 B_{\mathrm{crit}} S_{\min}$ 之间的<em>最优分配</em>。</p>
+            <p>画出 $L(C_{\min})$ 与其 power-law 拟合可见,它比固定 batch 的 $L(C)$ 略好。给定 $L(C_{\min})$,使 loss 最小化的最优模型规模 $N(C_{\min})$ 拟合极好,即公式 (6.1)。模型规模在最优值的 0.6x 到 2.2x 之间,只需多花 20% 的 compute 预算即可。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>By definition $C_{\min} = 6 N B_{\mathrm{crit}} S$, so we can extract further results. Since prior fits show $B\propto L^{-4.8}$ and $L\propto C_{\min}^{-0.05}$, we conclude $B_{\mathrm{crit}} \propto C_{\min}^{0.24}$. Thus the optimal number of steps grows very slowly with compute:</p>
+            <div class="bi-eq">$$S_{\min} \propto (C_{\min})^{0.03}\tag{6.2}$$</div>
+            <p>The measured exponent is so small that our results may even be consistent with zero. Thus as we scale up language modeling with an optimal allocation of computation, we should predominantly increase the model size $N$, while simultaneously scaling up the batch size via $B\propto B_{\mathrm{crit}}$, with negligible increase in the number of serial steps. Since compute-efficient training uses relatively few optimization steps, additional work on speeding up early training dynamics may be warranted.</p>
+          </div>
+          <div class="zh">
+            <p>由定义 $C_{\min} = 6 N B_{\mathrm{crit}} S$,可进一步推出别的结果。已知 $B\propto L^{-4.8}$、$L\propto C_{\min}^{-0.05}$,因此 $B_{\mathrm{crit}} \propto C_{\min}^{0.24}$。于是最优步数随 compute <em>非常慢</em>地增长,即公式 (6.2)。实测指数小到我们的数据甚至与"零增长"相容。因此,在最优分配下放大语言建模,我们应当<em>主要</em>放大模型规模 $N$,同时按 $B\propto B_{\mathrm{crit}}$ 放大 batch size,而 serial steps 几乎不增。由于 compute-efficient 训练只用很少的优化步,加快"训练早期动力学"也许是值得投资的方向。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">6.2 Predictions from L(N, S_min) / 来自 L(N, S_min) 的预测</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>The results for $L(C_{\min})$ and the allocations can be predicted from $L(N, S_{\min})$. Substituting $S_{\min} = C_{\min}/(6NB)$ and minimizing over $N$ at fixed compute, we predict:</p>
+            <div class="bi-eq">$$L(C_{\min}) = (C_c^{\min}/C_{\min})^{\alpha_C^{\min}}\tag{6.3}$$</div>
+            <div class="bi-eq">$$\alpha_C^{\min} \equiv \frac{1}{1/\alpha_S + 1/\alpha_B + 1/\alpha_N} \approx 0.054\tag{6.4}$$</div>
+            <div class="bi-eq">$$N(C_{\min}) \propto (C_{\min})^{\alpha_C^{\min}/\alpha_N} \approx (C_{\min})^{0.71}\tag{6.5}$$</div>
+            <p>in excellent agreement with the empirical exponents. Our scaling laws provide a predictive framework for the performance of language modeling.</p>
+          </div>
+          <div class="zh">
+            <p>$L(C_{\min})$ 与各分配指数都可从 $L(N, S_{\min})$ 直接预测。代入 $S_{\min} = C_{\min}/(6NB)$、在固定 compute 下对 $N$ 求最小,我们预测公式 (6.3)~(6.5),与经验指数<em>极好</em>地吻合。我们的 scaling law 因此构成一个对语言建模性能的<em>预测框架</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">6.3 Contradictions and a conjecture / 矛盾与猜想</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>The compute-efficient training described above contains an apparent contradiction. At scales many orders of magnitude beyond those we study, the loss predicted by $L(C_{\min})$ decreases below what should be possible given the slow growth of training data with compute. To keep overfitting under control we should scale $D\propto N^{0.74}\propto C_{\min}^{0.54}$, but compute-efficient training at one epoch only grows data as</p>
+            <div class="bi-eq">$$D(C_{\min}) = \frac{2 C_{\min}}{6 N(C_{\min})} \approx (4\times 10^{10})\,(C_{\min}/\text{PF-Day})^{0.26}\tag{6.7}$$</div>
+            <p>which is much slower. Once data-limited, the loss should scale as $L(D(C_{\min}))\propto C_{\min}^{-0.03}$, eventually intersecting $L(C_{\min})\propto C_{\min}^{-0.050}$. The intersection occurs at roughly:</p>
+            <div class="bi-eq">$$C^*\sim 10^{4}\text{ PF-Days},\;\; N^*\sim 10^{12},\;\; D^*\sim 10^{12}\text{ tokens},\;\; L^*\sim 1.7\text{ nats/token}\tag{6.8}$$</div>
+            <p>though the numerical values are highly uncertain. The most obvious interpretation is that our scaling laws break down at or before this point. One might also conjecture that this intersection has a deeper meaning: $L^*$ may estimate the entropy-per-token of natural language, beyond which qualitatively different data is needed.</p>
+          </div>
+          <div class="zh">
+            <p>前述 compute-efficient 训练中潜伏着一个明显的矛盾。在比我们研究的 scale 高数个数量级处,$L(C_{\min})$ 预测的 loss 会降到低于"数据量缓慢增长所允许的下界"。为控制过拟合,我们本应让 $D\propto N^{0.74}\propto C_{\min}^{0.54}$,但 compute-efficient 训练只走一个 epoch 时数据增长率为公式 (6.7),慢得多。一旦受限于数据,loss 应按 $L(D(C_{\min}))\propto C_{\min}^{-0.03}$ 标度,最终会与 $L(C_{\min})\propto C_{\min}^{-0.050}$ 相交。相交点大约见公式 (6.8),虽然数值高度不确定。最直接的解读是:我们的 scaling law 在该点或更早就会失效。另一种猜想是该相交点有更深含义——$L^*$ 也许给出了自然语言的<em>每 token 熵</em>,越过它就需要质上不同的数据。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="5"></div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§7-8 Related Work &amp; Discussion / 相关工作与讨论<span class="sec-page">p.18</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">7 Related Work / 相关工作</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>Power laws can arise from a wide variety of sources. Power-law scalings with model and dataset size in density estimation and in random forest models may be connected with our results. Some early work found power-law scalings between performance and dataset size. More recent work also investigated scaling between model size and data size; notably, Hestness et al. found super-linear scaling of dataset size with model size, whereas we find a sub-linear scaling. EfficientNets also appear to obey an approximate power-law relation between accuracy and model size. EfficientNet advocates scaling depth and width exponentially for optimal performance of image models; we find that for language models the precise architectural hyperparameters are unimportant compared to the overall scale.</p>
+            <p>Various works have investigated generalization in highly overparameterized models, finding a "jamming transition" when the model size reaches the dataset size. We do not observe such a transition, and find that the necessary training data scales sublinearly in the model size. Our results on optimization, such as the shape of learning curves, can likely be explained using a noisy quadratic model.</p>
+          </div>
+          <div class="zh">
+            <p>power law 可由多种来源产生。密度估计与随机森林里关于模型与数据规模的 power-law 标度也许与我们的结果有关联。一些早期工作就发现了"性能 vs 数据规模"的 power law。更近的工作研究过"模型规模 vs 数据规模"的 scaling;值得注意的是,Hestness 等找到的是<em>超线性</em>(数据比模型增长得更快),而我们找到的是<em>次线性</em>。EfficientNet 在图像模型上也观察到"精度 vs 模型规模"的近似 power law,主张同时按指数放大深度与宽度;但我们发现,对语言模型而言,具体架构超参的影响远<em>小于</em> overall scale。</p>
+            <p>多项工作研究过<em>高度过参</em>模型的泛化,发现当模型规模达到数据规模时出现"jamming transition"。我们<em>未</em>观察到这种相变,且必要的训练数据是<em>次线性</em>地随模型规模增长。我们关于优化(如 learning curve 的形状)的结果,很可能可以用一个 noisy quadratic 模型来解释。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">8 Discussion / 讨论</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>We have observed consistent scalings of language model log-likelihood loss with non-embedding parameter count $N$, dataset size $D$, and optimized training computation $C_{\min}$, as encapsulated in Equations (1.5) and (1.6). Conversely, we find very weak dependence on many architectural and optimization hyperparameters. Since the scalings with $N$, $D$, $C_{\min}$ are power laws, there are diminishing returns with increasing scale. We were able to precisely model the dependence of the loss on $N$ and $D$ when these are varied simultaneously, and used these relations to derive the compute scaling, magnitude of overfitting, early-stopping step, and data requirements for training large language models. So our scaling relations go beyond mere observation to provide a predictive framework.</p>
+          </div>
+          <div class="zh">
+            <p>我们观察到语言模型对数似然 loss 与<em>非嵌入参数数</em> $N$、<em>数据集规模</em> $D$、<em>优化后的训练计算</em> $C_{\min}$ 的标度关系一致(由公式 (1.5)、(1.6) 封装)。与此相反,对许多架构与优化超参的依赖<em>非常弱</em>。由于 $N$、$D$、$C_{\min}$ 上的 scaling 都是 power law,随着 scale 增加存在<em>边际收益递减</em>。我们能够精确建模 $N$ 与 $D$ 联合变化时的 loss 行为,并据此推导出 compute scaling、过拟合幅度、early-stopping 步数、训练大模型所需数据。因此我们的 scaling 关系不只是<em>观察</em>,更构成一个<em>预测框架</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>One might interpret these relations as analogues of the ideal gas law, which relates the macroscopic properties of a gas in a universal way, independent of most details of its microscopic constituents. It is natural to conjecture that the scaling relations will apply to other generative modeling tasks with a maximum likelihood loss, and perhaps in other settings as well. It would also be exciting to find a theoretical framework from which the scaling relations can be derived: a "statistical mechanics" underlying the "thermodynamics" we have observed.</p>
+            <p>Our results strongly suggest that larger models will continue to perform better, and will also be much more sample-efficient than has been previously appreciated. <em>Big models may be more important than big data.</em> In this context, further investigation into model parallelism is warranted. Deep models can be trained using pipelining; wide networks are more amenable to parallelization; sparsity or branching may allow for even faster training of large networks. Methods that grow networks as they train might keep training on the compute-efficient frontier for an entire run.</p>
+          </div>
+          <div class="zh">
+            <p>我们可以把这些关系类比为<em>理想气体定律</em>——它以普适的方式把气体的宏观性质联系起来,与微观成分的多数细节无关。一个自然的猜想是:这些 scaling 关系也适用于其它采用极大似然损失的生成式建模任务,可能在更多场景下亦然。如果能找到一个理论框架,从中<em>推导</em>出这些 scaling——即"我们观察到的<em>热力学</em>"背后的<em>统计力学</em>——那将令人兴奋。</p>
+            <p>我们的结果强烈暗示:更大的模型将继续表现更好,而且样本效率也比以往认为的<em>高得多</em>。<em>大模型也许比大数据更重要。</em>(注:这一结论在 2022 年被 Chinchilla 推翻——参见上方"面试考点 5"。)在此背景下,进一步研究模型并行是值得的。深层模型可通过 pipelining 训练;宽网络更适合并行;sparsity 或 branching 可让大网络更快训练;而"边训练边扩张"的方法也许能让整个训练始终位于 compute-efficient 前沿。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>Appendix A: Summary of Power Laws / 标度律总表<span class="sec-page">p.20</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">A. Trend equations / 核心方程汇总</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>For easier reference, we summarize the key trends:</p>
+            <div class="bi-eq">$$L(N) = (N_c/N)^{\alpha_N}\qquad (D=\infty,\,\text{fixed batch})$$</div>
+            <div class="bi-eq">$$L(D) = (D_c/D)^{\alpha_D}\qquad (N=\infty,\,\text{early stop,\,fixed batch})$$</div>
+            <div class="bi-eq">$$L(C) = (C_c/C)^{\alpha_C}\qquad (N_{\mathrm{opt}},\,D_{\mathrm{opt}},\,\text{fixed batch -- naive})$$</div>
+            <div class="bi-eq">$$L(C_{\min}) = (C_c^{\min}/C_{\min})^{\alpha_C^{\min}}\qquad (N_{\mathrm{opt}},\,D_{\mathrm{opt}},\,B\ll B_{\mathrm{crit}})$$</div>
+            <div class="bi-eq">$$L(N,D) = \left[(N_c/N)^{\alpha_N/\alpha_D} + D_c/D\right]^{\alpha_D}\qquad (\text{early stop,\,fixed batch})$$</div>
+            <div class="bi-eq">$$L(N,S) = (N_c/N)^{\alpha_N} + (S_c/S_{\min}(S,B))^{\alpha_S}\qquad (D=\infty,\,S\text{ steps,\,batch }B)$$</div>
+          </div>
+          <div class="zh">
+            <p>为便于查阅,这里汇总关键趋势式(对应原文 Table 4)。从上到下分别是:固定 batch、无限数据下的 $L(N)$;固定 batch、$N=\infty$ 加 early stop 下的 $L(D)$;naive 固定 batch 下的 $L(C)$;最优分配且 $B\ll B_{\mathrm{crit}}$ 时的 $L(C_{\min})$;同时变 $N$、$D$ 的 $L(N,D)$;在无限数据极限下、走 $S$ 步、batch 为 $B$ 时的 $L(N,S)$。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">A. Fitted exponents and scales / 拟合数值</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>The empirical fitted values (tokenization-dependent for scales): $\alpha_N = 0.076$, $N_c = 8.8\times 10^{13}$ params (non-embed); $\alpha_D = 0.095$, $D_c = 5.4\times 10^{13}$ tokens; $\alpha_C = 0.057$, $C_c = 1.6\times 10^{7}$ PF-days; $\alpha_C^{\min} = 0.050$, $C_c^{\min} = 3.1\times 10^{8}$ PF-days; $\alpha_B = 0.21$, $B_* = 2.1\times 10^{8}$ tokens; $\alpha_S = 0.76$, $S_c = 2.1\times 10^{3}$ steps.</p>
+            <p>Compute-efficient values: $N_{\mathrm{opt}} = N_e\cdot C_{\min}^{p_N}$ with $p_N = 0.73$, $N_e = 1.3\cdot 10^{9}$; $B = B_e\cdot C_{\min}^{p_B}$ with $p_B = 0.24$, $B_e = 2.0\cdot 10^{6}$; $S_{\min} = S_e\cdot C_{\min}^{p_S}$ with $p_S = 0.03$, $S_e = 5.4\cdot 10^{3}$; $D_{\mathrm{opt}} = D_e\cdot C_{\min}^{p_D}$ with $p_D = 0.27$, $D_e = 2\cdot 10^{10}$ (one epoch).</p>
+          </div>
+          <div class="zh">
+            <p>经验拟合数值(scale 量依赖于分词):$\alpha_N=0.076$、$N_c=8.8\times 10^{13}$ 参数(非嵌入);$\alpha_D=0.095$、$D_c=5.4\times 10^{13}$ tokens;$\alpha_C=0.057$、$C_c=1.6\times 10^{7}$ PF-days;$\alpha_C^{\min}=0.050$、$C_c^{\min}=3.1\times 10^{8}$ PF-days;$\alpha_B=0.21$、$B_*=2.1\times 10^{8}$ tokens;$\alpha_S=0.76$、$S_c=2.1\times 10^{3}$ 步。</p>
+            <p>compute-efficient 数值:$N_{\mathrm{opt}}=N_e\cdot C_{\min}^{p_N}$,$p_N=0.73$、$N_e=1.3\cdot 10^{9}$;$B=B_e\cdot C_{\min}^{p_B}$,$p_B=0.24$、$B_e=2.0\cdot 10^{6}$;$S_{\min}=S_e\cdot C_{\min}^{p_S}$,$p_S=0.03$、$S_e=5.4\cdot 10^{3}$;$D_{\mathrm{opt}}=D_e\cdot C_{\min}^{p_D}$,$p_D=0.27$、$D_e=2\cdot 10^{10}$(一个 epoch)。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">B. Compute-efficient frontier derivation / compute-efficient 前沿推导</div>
+        <div class="bi-pair">
+          <div class="en">
+            <p>From Equation (1.6) with $S = C/(6 N B(L))$ and $B(L) = B_*/L^{1/\alpha_B}$, setting $\partial_N L|_C = 0$ yields the optimality condition $\frac{\alpha_N}{\alpha_S}(N_c/N)^{\alpha_N} = (6 B_* S_c N^{-1} L^{1/\alpha_B} C^{-1})^{\alpha_S}$. Eliminating $N$ gives $L(C) = (C_c/C)^{\alpha_C}$ with $\alpha_C = 1/(1/\alpha_S + 1/\alpha_B + 1/\alpha_N) \approx 0.052$, and substituting back yields $L(N_{\mathrm{eff}}, C) = (1 + \alpha_N/\alpha_S)\,L(N_{\mathrm{eff}}, \infty)$ — i.e. for compute-efficient training we should train to $\alpha_N/\alpha_S \approx 10\%$ above the converged loss.</p>
+          </div>
+          <div class="zh">
+            <p>从公式 (1.6) 出发,代入 $S = C/(6 N B(L))$ 与 $B(L)=B_*/L^{1/\alpha_B}$,令 $\partial_N L|_C = 0$,得到最优条件 $\frac{\alpha_N}{\alpha_S}(N_c/N)^{\alpha_N} = (6 B_* S_c N^{-1} L^{1/\alpha_B} C^{-1})^{\alpha_S}$。消去 $N$ 得 $L(C) = (C_c/C)^{\alpha_C}$,其中 $\alpha_C = 1/(1/\alpha_S + 1/\alpha_B + 1/\alpha_N) \approx 0.052$;再代回得 $L(N_{\mathrm{eff}}, C) = (1+\alpha_N/\alpha_S)\,L(N_{\mathrm{eff}}, \infty)$——也就是说,compute-efficient 训练应当训到比收敛 loss 高约 $\alpha_N/\alpha_S \approx 10\%$ 的位置就停下。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="7"></div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>References(略)<span class="sec-page">p.28</span></span>
+      </summary>
+      <div class="sec-content"><p>(References 段在本笔记中略;完整参考文献见 <a href="https://arxiv.org/abs/2001.08361" target="_blank">arXiv:2001.08361</a>。)</p></div>
+      <div class="sec-claude-note" data-sec-idx="8"></div>
+    </details>
+
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

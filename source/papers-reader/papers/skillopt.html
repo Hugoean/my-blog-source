@@ -1,0 +1,934 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillOpt: Executive Strategy for Self-Evolving Agent Skills · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2605.23904 · 27 页 · 10 张图</div>
+    <h1>SkillOpt: Executive Strategy for Self-Evolving Agent Skills</h1>
+    <div class="meta-bar">
+      <span class="track-B">轨道 B</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W12</span>
+      <span>Agent Skills</span><span>Optimization</span><span>Text-space</span>
+      <span><a href="https://arxiv.org/abs/2605.23904" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2605.23904.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong> SkillOpt 把 agent skill 当成冻结模型之外的可训练文本状态,用 rollout evidence、结构化 add/delete/replace edit、textual learning rate、held-out validation gate 和 rejected-edit buffer,把“写一份技能说明”变成类似深度学习优化器的可控训练过程。</p>
+      <ol>
+        <li><strong>核心对象:</strong>训练的不是 model weights,而是一份可移植的 <code>best_skill.md</code>;部署时不增加额外模型调用。</li>
+        <li><strong>优化变量:</strong>skill document $s$ 是 external state,目标模型 $M$ 和 harness $h$ 固定,执行得到 trajectory $	au(s)$ 与 scalar score $r(s)$。</li>
+        <li><strong>选择准则:</strong>候选 skill 只在 held-out selection split 上严格超过当前分数时接受,最后只在 test split 报告一次。</li>
+        <li><strong>学习率类比:</strong>textual learning rate 是每步最多应用的 edit budget $L_t$,控制一次文本更新能走多远。</li>
+        <li><strong>反向传播类比:</strong>optimizer model 从失败/成功 minibatch 中归纳通用模式,输出可解析的 add/delete/replace patch,再经 merge、rank、clip。</li>
+        <li><strong>稳定性机制:</strong>rejected-edit buffer 把失败更新变成负反馈;epoch-wise slow/meta update 类似 momentum,保留跨 epoch 的稳定方向。</li>
+        <li><strong>实验结论:</strong>6 个 benchmark、7 个 target model、3 种 harness 上,SkillOpt 在 52/52 个 cell 中 best 或 tied-best;GPT-5.5 direct chat 平均比 no-skill 高 +23.5 点。</li>
+        <li><strong>面试切口:</strong>它不是 prompt engineering,而是“带验证门控的文本空间优化”;重点比较 GEPA/TextGrad/EvoSkill 与 SkillOpt 的 optimization state、validation gate 和 deploy artifact。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      Agent skill 作为可训练外部状态:关注 validation gate、textual learning rate、rejected-edit buffer 和跨模型/跨 harness 迁移。
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-4">§2 Related Work / 相关工作</a><span class="toc-page">p.3</span></li>
+      <li><a href="#sec-5">§3 Method / 方法</a><span class="toc-page">p.4</span></li>
+      <li><a href="#sec-6">§4 Experiments / 实验</a><span class="toc-page">p.6</span></li>
+      <li><a href="#sec-7">§5 Conclusion / 结论</a><span class="toc-page">p.16</span></li>
+      <li><a href="#sec-8">Limitations & Appendix / 局限与附录</a><span class="toc-page">p.20</span></li>
+      <li><a href="#sec-9">References</a><span class="toc-page">p.17</span></li>
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (10 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2605.23904_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.2 · 1188×655</div>
+          <div class="fig-caption">Figure 1: Overview of SkillOpt</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1"><p><strong>① 图说明:</strong>总览图把 SkillOpt 类比为“文本空间 optimizer”:目标模型带着当前 skill 执行任务,optimizer model 根据 scored rollouts 生成有界 skill edits,再由 held-out gate 决定是否接受。</p><p><strong>② 关键数据:</strong>图中明确对应 weight-space training 的几个部件:parameter → skill document, gradient direction → trajectory-derived edit direction, learning rate → edit budget, validation check → held-out selection gate。</p><p><strong>③ 启示:</strong>论文的核心不是让 LLM 自我反思一次,而是把 skill 版本之间的变化限制在可追踪、可拒绝、可复用的路径上;这也是它声称比 ad hoc skill rewriting 稳定的根本理由。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2605.23904_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.4 · 1213×830</div>
+          <div class="fig-caption">Figure 2: Pipeline of SkillOpt</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2"><p><strong>① 图说明:</strong>完整 pipeline 图:train split 产生 rollout evidence,optimizer model 对失败/成功 minibatch 分别反思,生成 add/delete/replace edits,经 batch-level merge、rank/clip 和 modifier 得到 candidate skill,再用 validation split 接受或拒绝。</p><p><strong>② 关键数据:</strong>图中有三个状态通道:当前 skill $S_t$,候选 skill $S_{t+1}$,best validated skill;失败更新进入 rejected-edit buffer,epoch 边界还会执行 slow/meta update。</p><p><strong>③ 启示:</strong>这张图说明 SkillOpt 的“训练纪律”来自拆分:train 只供产生证据,validation 只供门控,test 锁到最终报告;这比无条件把反思写回 skill 的流程更像真正的训练系统。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_3">
+        <img src="../figures/2605.23904_fig_3.png" alt="fig_3" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_3</span> · p.7 · 1178×1853</div>
+          <div class="fig-caption">Table 1: Main results on held-out test splits</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_3"><p><strong>① 图说明:</strong>主结果表,横跨 direct chat、Codex harness、Claude Code harness,比较 no skill、human skill、LLM skill、Trace2Skill、TextGrad/GEPA/EvoSkill 与 SkillOpt。</p><p><strong>② 关键数据:</strong>GPT-5.5 direct chat 平均从 no-skill 的 58.8 提升到 82.3,+23.5;Codex harness 平均 +24.8;Claude Code harness 平均 +19.1。论文统计所有 52 个 model-benchmark-harness cell 中 SkillOpt 都是 best 或 tied-best。</p><p><strong>③ 启示:</strong>SkillOpt 的收益不是只来自一个 benchmark 或一个执行环境;最有说服力的是它在 direct chat 和 agentic harness 里都有效,说明优化出来的是可迁移 procedural skill,不是某个 harness 的 prompt hack。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_4">
+        <img src="../figures/2605.23904_fig_4.png" alt="fig_4" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_4</span> · p.8 · 1173×480</div>
+          <div class="fig-caption">Table 2: Hyperparameter analysis for the text optimizer</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_4"><p><strong>① 图说明:</strong>超参数表,分别考察 training set size、reflection minibatch size、rollout batch size、learning rate、learning-rate scheduler 和 slow-update samples。</p><p><strong>② 关键数据:</strong>训练数据增加通常提升效果但很快进入收益递减;默认配置围绕 4 epochs、batch size 40、minibatch size 8、edit budget 4、cosine decay、slow update 20 samples。</p><p><strong>③ 启示:</strong>文本优化同样需要 batch、minibatch、step size 与 schedule。过小 batch 噪声大,过大 edit budget 会破坏 skill 连续性;这支撑了“learning rate in text space”的设计。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_5">
+        <img src="../figures/2605.23904_fig_5.png" alt="fig_5" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_5</span> · p.8 · 1173×425</div>
+          <div class="fig-caption">Table 3: Component ablations</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_5"><p><strong>① 图说明:</strong>组件消融表,比较学习率形式、是否使用 rejected buffer、是否启用 epoch-wise slow/meta update 等机制。</p><p><strong>② 关键数据:</strong>表中浅蓝行标记默认 SkillOpt;去掉 rejected buffer 或 slow/meta update 后,SearchQA、SpreadsheetBench、LiveMath 等任务都有不同程度下降。</p><p><strong>③ 启示:</strong>性能不只是来自“让强模型帮忙改 prompt”。负反馈缓存和跨 epoch 慢更新是稳定优化路径的一部分,能减少重复犯错和短期修补造成的退化。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_6">
+        <img src="../figures/2605.23904_fig_6.png" alt="fig_6" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_6</span> · p.9 · 1183×945</div>
+          <div class="fig-caption">Table 4: Transfer of optimized skills across cross-model, cross-harness, and cross-benchmark axes</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_6"><p><strong>① 图说明:</strong>迁移表分三块:cross-model、cross-harness、cross-benchmark,检验训练出的 skill artifact 离开原始设置后是否仍有效。</p><p><strong>② 关键数据:</strong>SpreadsheetBench skill 从 GPT-5.4 迁移到 GPT-5.4-mini/nano 仍有正收益;Codex 与 Claude Code 之间互迁也保持明显提升;OlympiadBench skill 迁移到 Omni-MATH 仍带来 +1 到 +4 点左右收益。</p><p><strong>③ 启示:</strong>如果 skill 只是过拟合某个模型或某批样本,迁移应当崩掉。表 4 是论文应用价值的关键证据:skill 可以优化一次、审计为文本、再跨模型和环境复用。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_7">
+        <img src="../figures/2605.23904_fig_7.png" alt="fig_7" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_7</span> · p.12 · 1183×630</div>
+          <div class="fig-caption">Figure 3: Performance trends across epoch checkpoints</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_7"><p><strong>① 图说明:</strong>三条 epoch checkpoint 曲线分别展示 SpreadsheetBench、SearchQA、LiveMath 上的性能随优化进程变化。</p><p><strong>② 关键数据:</strong>曲线整体呈阶梯式提升,并非每个 checkpoint 都单调上升;validation gate 只让通过选择集验证的 candidate 进入 best_skill。</p><p><strong>③ 启示:</strong>这张图补充了表格结果:SkillOpt 是 iterative optimization,不是一次性生成。提升来自多次小步、验证门控和拒绝失败更新的组合。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_8">
+        <img src="../figures/2605.23904_fig_8.png" alt="fig_8" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_8</span> · p.14 · 1170×365</div>
+          <div class="fig-caption">Table 5: Effect of optimizer strength</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_8"><p><strong>① 图说明:</strong>optimizer strength 表,比较 strong frontier optimizer 与 target-matched optimizer 对同一 target model 的技能优化效果。</p><p><strong>② 关键数据:</strong>强 optimizer 通常更好,例如 SpreadsheetBench 对 GPT-5.4-nano 的增益可到 +19.0;target-matched optimizer 也有正收益,但提升幅度较小。</p><p><strong>③ 启示:</strong>SkillOpt 把“会做任务的模型”和“会改 skill 的模型”解耦。强 optimizer 可以作为训练时老师,而部署时只留下小 skill 文档,不留下老师模型调用成本。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_9">
+        <img src="../figures/2605.23904_fig_9.png" alt="fig_9" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_9</span> · p.14 · 1170×330</div>
+          <div class="fig-caption">Table 6: Cost and edit economy</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_9"><p><strong>① 图说明:</strong>成本与 edit economy 表,报告各 benchmark 初始/最终 skill 长度、accepted edits 数量、优化 token 成本与部署时 skill token 成本。</p><p><strong>② 关键数据:</strong>最终 best_skill.md 大多在约 300-2000 tokens 范围内,accepted edits 只有 1-4 次;训练时 optimizer token 成本较高,但部署时只需附带小文本。</p><p><strong>③ 启示:</strong>论文想证明的工程卖点是 amortization:优化阶段可以较贵,但产物是可读、可审计、低推理成本的 skill。真正适合的是会重复使用的任务域,不是一次性查询。</p></div>
+      </div>
+      
+      <div class="figure-card" id="fig_10">
+        <img src="../figures/2605.23904_fig_10.png" alt="fig_10" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_10</span> · p.15 · 1173×535</div>
+          <div class="fig-caption">Figure 4: Representative learned rules</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_10"><p><strong>① 图说明:</strong>代表性 learned rules,每个 benchmark 抽出一条最终 best_skill.md 中学到的规则,如 SearchQA 的答案类型推断、SpreadsheetBench 的公式和值检查、ALFWorld 的 visited/frontier ledger。</p><p><strong>② 关键数据:</strong>这些规则不是训练样本答案,而是任务过程约束:如何搜索、验证、写入、排除、管理状态。它们体现 skill 的 procedural nature。</p><p><strong>③ 启示:</strong>SkillOpt 学到的是“怎么做事”的可读操作规范,而不是把案例硬编码进去。这也解释了为什么跨模型/跨 harness transfer 会有价值。</p></div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(双语,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>May 2026. <strong>SkillOpt: Executive Strategy for Self-Evolving Agent Skills</strong>. Yifan Yang, Ziyang Gong, Weiquan Huang, Qihao Yang, Ziwei Zhou, Zisu Huang, Yan Li, Xuemei Gao, Qi Dai, Bei Liu, Kai Qiu, Yuqing Yang, Dongdong Chen, Xue Yang, Chong Luo.</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en"><p>Agent skills today are hand-crafted, generated one-shot, or evolved through loosely controlled self-revision; none of these behaves like a deep-learning optimizer for the skill, and none reliably improves over its starting point under feedback. SkillOpt treats the skill as the external state of a frozen agent. A separate optimizer model converts scored rollouts into bounded add/delete/replace edits, and an edit is accepted only when it strictly improves a held-out validation score.</p></div>
+          <div class="zh"><p>今天的 agent skills 要么是人工手写,要么是一次性生成,要么是在松散控制的自我修订中演化;这些做法都不像深度学习 optimizer 那样优化 skill,也不能可靠保证在反馈下超过初始版本。SkillOpt 把 skill 看作冻结 agent 的外部状态。一个独立的 optimizer model 会把带分数的 rollouts 转成有界的 add/delete/replace edits,并且只有当 edit 严格提升 held-out validation score 时才接受。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>A textual learning-rate budget, a rejected-edit buffer, and an epoch-wise slow/meta update make skill training stable while adding zero inference-time model calls at deployment. Across six benchmarks, seven target models, and three harnesses, SkillOpt is best or tied on all 52 evaluated cells. On GPT-5.5 it raises average no-skill accuracy by +23.5 points in direct chat, +24.8 inside Codex, and +19.1 inside Claude Code.</p></div>
+          <div class="zh"><p>文本学习率预算、rejected-edit buffer 与 epoch-wise slow/meta update 让 skill training 更稳定,同时部署时不增加任何额外模型调用。在 6 个 benchmark、7 个 target model 与 3 种 harness 上,SkillOpt 在全部 52 个评测 cell 中都是 best 或 tied-best。在 GPT-5.5 上,它让 no-skill 平均准确率在 direct chat 中提升 +23.5 点,在 Codex 中提升 +24.8 点,在 Claude Code 中提升 +19.1 点。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>Transfer experiments show that optimized skill artifacts retain value when moved across model scales, across Codex and Claude Code execution environments, and to a nearby math benchmark without further optimization. The paper therefore frames a skill as a compact, inspectable, reusable adaptation artifact rather than as a throwaway prompt.</p></div>
+          <div class="zh"><p>迁移实验显示,优化后的 skill artifact 在跨模型规模、跨 Codex 与 Claude Code 执行环境、以及迁移到邻近数学 benchmark 时,不经再次优化仍然保留价值。因此本文把 skill 定位为一种紧凑、可审计、可复用的适配产物,而不是一次性 prompt。</p></div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en"><p>Frontier language models are increasingly deployed as agents, from single-prompt callers to multi-step execution harnesses with tools, files, and verifiers. In these settings, domain adaptation is not only about model weights or prompts. It also requires improving the procedures by which the agent gathers evidence, calls tools, follows domain conventions, and formats outputs.</p></div>
+          <div class="zh"><p>前沿语言模型越来越多地以 agent 形式部署,从单 prompt 调用器到带工具、文件和 verifier 的多步执行 harness 都包括在内。在这些场景下,领域适配不再只是模型权重或 prompt 的问题。它还需要改进 agent 收集证据、调用工具、遵守领域约定以及格式化输出的过程。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>Agent skills provide a natural interface for this procedural adaptation. A skill is a portable natural-language artifact that packages procedures, domain heuristics, tool policies, output constraints, and failure modes, allowing a frozen agent to adapt through external text. If the recurring object of adaptation is the agent procedure, then the skill document itself should be trainable.</p></div>
+          <div class="zh"><p>Agent skills 为这种过程性适配提供了自然接口。一个 skill 是可移植的自然语言 artifact,其中封装了流程、领域启发式、工具策略、输出约束和失败模式,让冻结 agent 能通过外部文本完成适配。如果反复被适配的对象是 agent 的过程,那么 skill document 本身就应该是可训练的。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The paper introduces SkillOpt as a text-space optimizer for agent skills. Given a target domain, an initial skill, and the model being adapted, SkillOpt repeatedly samples trajectory batches, analyzes successes and failures, asks a frontier optimizer model to propose structured edits, aggregates and ranks those edits under a textual learning-rate budget, and accepts a candidate skill only through a held-out selection gate.</p></div>
+          <div class="zh"><p>本文提出 SkillOpt,一个面向 agent skills 的 text-space optimizer。给定目标领域、初始 skill 和被适配模型,SkillOpt 会反复采样 trajectory batches,分析成功与失败,让 frontier optimizer model 提出结构化 edits,在 textual learning-rate budget 下聚合和排序这些 edits,并且只通过 held-out selection gate 接受候选 skill。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The deep-learning analogy is operational rather than decorative. Rollout and reflection batch sizes control evidence noise; the textual learning rate and schedule control the distance between skill versions; the validation gate plays the role of model selection; and the epoch-wise slow/meta update carries stable editing directions across epochs.</p></div>
+          <div class="zh"><p>这种深度学习类比是操作性的,不是装饰性的。Rollout batch size 和 reflection batch size 控制证据噪声;textual learning rate 与 schedule 控制 skill 版本之间的距离;validation gate 扮演模型选择角色;epoch-wise slow/meta update 则把稳定编辑方向跨 epoch 传递下去。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The authors argue that stability depends on keeping consecutive skill revisions close enough that rejected edits and previous accepted edits remain meaningful history. With bounded and validation-gated updates, later optimizer calls can learn what helped, what failed, and what should be preserved.</p></div>
+          <div class="zh"><p>作者认为稳定性的关键在于让连续 skill revisions 足够接近,这样 rejected edits 和之前 accepted edits 才能继续作为有意义的优化历史。通过有界更新和 validation gate,后续 optimizer 调用才能学习哪些修改有帮助、哪些失败了、哪些应该保留。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The main empirical claim is broad: SkillOpt is tested on QA, spreadsheets, documents, math, and embodied decision making, across frontier and smaller models, and inside direct chat, Codex, and Claude Code. The learned artifact is deliberately small, roughly 300-2000 tokens after a few accepted edits, so it can be audited and reused.</p></div>
+          <div class="zh"><p>核心实证主张很宽:SkillOpt 覆盖 QA、spreadsheet、document、math 和 embodied decision making,横跨 frontier 与较小模型,并在 direct chat、Codex、Claude Code 中测试。学到的 artifact 被刻意保持很小,少数 accepted edits 后约 300-2000 tokens,因此可以审计和复用。</p></div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3"></div>
+    </details>
+    
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§2 Related Work / 相关工作<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en"><p>Prompt auto-tuning and agent-configuration search show that language artifacts can be optimized from trajectory feedback. GEPA evolves reflective prompts; ABSTRAL and EvoTest move toward multi-agent design documents and test-time system evolution. SkillOpt differs by optimizing a persistent domain skill that is trained, validated, exported, and reused with the adapted model.</p></div>
+          <div class="zh"><p>Prompt auto-tuning 和 agent-configuration search 表明,语言 artifact 可以从 trajectory feedback 中被优化。GEPA 演化 reflective prompts;ABSTRAL 和 EvoTest 则走向 multi-agent design documents 与 test-time system evolution。SkillOpt 的区别在于它优化的是一个持久的领域 skill,这个 skill 会被训练、验证、导出,并和被适配模型一起复用。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The skill-construction literature studies reusable procedural knowledge, tool policies, applicability conditions, execution routines, and supporting resources. Prior systems build skills from lifelong experience, trajectory lessons, skill knowledge bases, domain resources, failure analysis, creation-evaluation-revision loops, or co-evolving generators and verifiers.</p></div>
+          <div class="zh"><p>Skill construction 文献研究的是可复用 procedural knowledge,包括工具策略、适用条件、执行例程和辅助资源。已有系统会从 lifelong experience、trajectory lessons、skill knowledge bases、领域资源、failure analysis、creation-evaluation-revision loop 或 generator/verifier 共演化中构建 skills。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>SkillOpt narrows the problem: how to train one compact domain skill with controls similar to deep learning. Its distinctive mechanisms are trajectory batches, reflection minibatches, textual learning rates, validation gates, rejected-edit buffers, and slow/meta updates, producing a portable best_skill.md without changing model weights.</p></div>
+          <div class="zh"><p>SkillOpt 把问题收窄为:如何用类似深度学习的控制机制训练一份紧凑的领域 skill。它的标志性机制是 trajectory batches、reflection minibatches、textual learning rates、validation gates、rejected-edit buffers 和 slow/meta updates,最终产出一份不改变模型权重的可移植 best_skill.md。</p></div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4"></div>
+    </details>
+    
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§3 Method / 方法<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en"><p>A skill $s$ is a natural-language policy inserted into the agent context before execution. For a harness $h$, task $x$, and frozen model $M$, execution produces a trajectory and scalar score: $$(\tau(s), r(s)) = h(M, x, s),\quad r(s)\in[0,1].$$ The train split supplies experience, the selection split gates candidate skills, and the test split is locked until final reporting.</p></div>
+          <div class="zh"><p>Skill $s$ 是执行前插入 agent context 的自然语言 policy。对 harness $h$、task $x$ 和冻结模型 $M$ 来说,执行产生 trajectory 与 scalar score: $$(\tau(s), r(s)) = h(M, x, s),\quad r(s)\in[0,1].$$ Train split 提供经验,selection split 对候选 skill 做门控,test split 只在最终报告时使用。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>SkillOpt keeps several state variables: the current skill, the best validation-gated skill, cached skill hashes, an epoch-local rejected-step buffer, and optional slow/meta-update state. The deployed output is only the best accepted skill, not the optimizer prompts or the training traces.</p></div>
+          <div class="zh"><p>SkillOpt 维护若干状态变量:current skill、best validation-gated skill、cached skill hashes、epoch-local rejected-step buffer,以及可选的 slow/meta-update state。部署时输出的只有最佳 accepted skill,不包含 optimizer prompts 或 training traces。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The forward pass runs the target model on a rollout batch from the training split with the current skill. The harness records messages, tool calls, observations, command outputs, final answers, verifier feedback, and benchmark-specific context. This batch is the evidence unit used for the next edit.</p></div>
+          <div class="zh"><p>Forward pass 会让目标模型带着 current skill 在 training split 的 rollout batch 上执行。Harness 会记录 messages、tool calls、observations、command outputs、final answers、verifier feedback 以及 benchmark-specific context。这个 batch 就是下一次 edit 使用的证据单元。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The backward pass is minibatch reflection. The optimizer model separates failures from successes, partitions them into reflection minibatches, and proposes structured add/delete/replace edits. Failure minibatches propose corrective rules; success minibatches preserve behaviors that already work. Local proposals are merged hierarchically and filtered for duplicates, contradictions, and example-specific fixes.</p></div>
+          <div class="zh"><p>Backward pass 是 minibatch reflection。Optimizer model 把 failures 与 successes 分开,切成 reflection minibatches,并提出结构化 add/delete/replace edits。Failure minibatches 提出纠错规则;success minibatches 保留已经有效的行为。局部 proposals 会被分层合并,过滤重复、冲突和过于样本特定的修补。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The edit budget $L_t$ is the learning-rate analogue. After aggregation, the optimizer ranks the merged edit pool and clips it to the top $L_t$ edits. Bounded updates preserve continuity between skill versions, while rewrite-style uncontrolled updates can erase useful rules, introduce incompatible instructions, or overfit to local failures.</p></div>
+          <div class="zh"><p>Edit budget $L_t$ 是 learning-rate analogue。聚合后,optimizer 会对 merged edit pool 排序,只保留 top $L_t$ edits。有界更新能保持 skill 版本之间的连续性;不受控 rewrite 可能擦掉有用规则、引入不兼容指令,或过拟合局部失败。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>Every candidate skill is evaluated on the selection split. If it improves over the current selection score, it becomes the new current skill; otherwise it is rejected. Rejected updates are stored with failure patterns and score drops, so later reflection calls can avoid repeating harmful edits and focus on unresolved failures.</p></div>
+          <div class="zh"><p>每个 candidate skill 都会在 selection split 上评估。如果它超过当前 selection score,就成为新的 current skill;否则被拒绝。Rejected updates 会连同 failure patterns 和 score drops 一起保存,让后续 reflection calls 避免重复有害 edits,并集中处理未解决失败。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>At epoch boundaries, the slow/meta update compares the same sampled tasks under previous and current epoch-end skills. It groups them into improvements, regressions, persistent failures, and stable successes, then writes concise longitudinal guidance into a protected field. The optimizer-side meta skill is separate from the deployed skill and guides future edit generation.</p></div>
+          <div class="zh"><p>在 epoch 边界,slow/meta update 会用 previous 与 current epoch-end skills 跑同一批 sampled tasks。它把结果分成 improvements、regressions、persistent failures 和 stable successes,再把简洁的 longitudinal guidance 写入 protected field。Optimizer-side meta skill 与部署 skill 分离,只用于指导未来 edit generation。</p></div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="5"></div>
+    </details>
+    
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§4 Experiments / 实验<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en"><p>The evaluation covers six benchmarks: SearchQA for extractive QA, SpreadsheetBench for spreadsheet-oriented code and tool use, OfficeQA and DocVQA for document reasoning, LiveMathematicianBench for mathematical multiple-choice reasoning, and ALFWorld for sequential embodied decision making. The benchmark suite is chosen to stress different procedural failures rather than one narrow skill.</p></div>
+          <div class="zh"><p>实验覆盖 6 个 benchmark:SearchQA 测抽取式 QA,SpreadsheetBench 测面向 spreadsheet 的代码和工具使用,OfficeQA 与 DocVQA 测文档推理,LiveMathematicianBench 测数学多选推理,ALFWorld 测顺序 embodied decision making。这个 suite 的目的不是测单一能力,而是施压不同类型的 procedural failures。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>Baselines include no skill, human-written skill, one-shot LLM skill, Trace2Skill, TextGrad, GEPA, and EvoSkill where the protocol supports them. Entries that were not measured under the aligned protocol are omitted rather than mixed into incompatible comparisons.</p></div>
+          <div class="zh"><p>Baselines 包括 no skill、human-written skill、one-shot LLM skill、Trace2Skill、TextGrad、GEPA,以及协议支持时的 EvoSkill。没有在统一协议下测量的项目被省略,而不是混进不可比的比较中。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>In the main results, SkillOpt is best or tied-best in every reported cell. For GPT-5.5 direct chat, it lifts SearchQA from 77.7 to 87.3, SpreadsheetBench from 41.8 to 80.7, OfficeQA from 33.1 to 72.1, DocVQA from 78.8 to 91.2, LiveMathematicianBench from 37.6 to 66.9, and ALFWorld from 83.6 to 95.5.</p></div>
+          <div class="zh"><p>主结果中,SkillOpt 在每个 reported cell 中都是 best 或 tied-best。对 GPT-5.5 direct chat,它把 SearchQA 从 77.7 提到 87.3,SpreadsheetBench 从 41.8 提到 80.7,OfficeQA 从 33.1 提到 72.1,DocVQA 从 78.8 提到 91.2,LiveMathematicianBench 从 37.6 提到 66.9,ALFWorld 从 83.6 提到 95.5。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The same interface works inside agentic coding-style harnesses. On GPT-5.5, SkillOpt improves the Codex loop by +24.8 points over no skill and the Claude Code loop by +19.1 points. It also beats EvoSkill in those harness-backed comparisons.</p></div>
+          <div class="zh"><p>同一个接口在 agentic coding-style harness 中也有效。对 GPT-5.5,SkillOpt 在 Codex loop 中相对 no skill 提升 +24.8 点,在 Claude Code loop 中提升 +19.1 点。它在这些 harness-backed comparisons 中也超过 EvoSkill。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The hyperparameter analysis shows that SkillOpt behaves like an optimizer with real training knobs. Train size, rollout batch size, reflection minibatch size, edit budget, scheduler, and slow-update samples all change the trade-off between evidence quality, step size, and stability.</p></div>
+          <div class="zh"><p>超参数分析显示,SkillOpt 的行为像一个有真实 training knobs 的 optimizer。Train size、rollout batch size、reflection minibatch size、edit budget、scheduler 和 slow-update samples 都会改变证据质量、step size 与稳定性之间的权衡。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>Component ablations support the design. Bounded textual learning beats uncontrolled rewriting; held-out gating prevents harmful proposals from accumulating; the rejected-step buffer turns failed edits into negative feedback; and the epoch-wise slow/meta update improves long-horizon refinement without bloating the deployed skill.</p></div>
+          <div class="zh"><p>组件消融支持这些设计。有界 textual learning 优于不受控 rewriting;held-out gating 防止有害 proposals 累积;rejected-step buffer 把失败 edits 转成负反馈;epoch-wise slow/meta update 在不膨胀部署 skill 的前提下改善长程 refinement。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The transfer experiments test whether the skill is a reusable artifact. A SpreadsheetBench skill trained for GPT-5.4 improves smaller GPT variants. A Codex-trained spreadsheet skill transfers to Claude Code with a large gain, and an OlympiadBench skill transfers positively to Omni-MATH.</p></div>
+          <div class="zh"><p>迁移实验检验 skill 是否真是 reusable artifact。为 GPT-5.4 训练的 SpreadsheetBench skill 能改善更小 GPT 变体。Codex-trained spreadsheet skill 迁移到 Claude Code 后有大幅收益,OlympiadBench skill 迁移到 Omni-MATH 也有正收益。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The optimizer-strength experiment separates the student model from the optimizer model. Strong frontier optimizers usually produce better skills than target-matched optimizers, but both can yield gains. This makes the training-time cost explicit and keeps deployment cheap because only the skill text remains.</p></div>
+          <div class="zh"><p>Optimizer-strength 实验把 student model 与 optimizer model 分离。强 frontier optimizer 通常比 target-matched optimizer 产出更好的 skills,但两者都能带来收益。这让 training-time cost 显性化,同时保持部署便宜,因为最终只留下 skill text。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The cost table shows the deployed artifact is compact. Final best_skill.md files range roughly from a few hundred to about two thousand tokens, and only a small number of edits are accepted. This is why the method is most attractive for recurring domains where optimization cost can be amortized.</p></div>
+          <div class="zh"><p>成本表显示部署 artifact 很紧凑。最终 best_skill.md 大约从几百到两千 tokens,accepted edits 也只有少数几次。因此这种方法最适合重复出现的领域,可以把 optimization cost 摊销掉。</p></div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+    
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5 Conclusion / 结论<span class="sec-page">p.16</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en"><p>The paper argues that agent skills should be treated as trainable procedural state rather than static hand-written instructions. SkillOpt supplies the missing training loop: collect rollout evidence, propose bounded text edits, validate candidates on held-out data, retain rejected edits as negative feedback, and consolidate stable directions across epochs.</p></div>
+          <div class="zh"><p>本文主张 agent skills 应该被视为可训练的过程性状态,而不是静态手写指令。SkillOpt 补上了缺失的训练循环:收集 rollout evidence,提出有界 text edits,在 held-out data 上验证 candidates,把 rejected edits 保留为负反馈,并跨 epoch 巩固稳定方向。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The empirical study shows that this external-state optimization can substantially improve frozen frontier agents across tasks, models, and harnesses without changing weights or increasing inference-time calls. The most important practical result is that the learned skill remains a small readable document.</p></div>
+          <div class="zh"><p>实证研究表明,这种 external-state optimization 可以在不改变权重、不增加推理时模型调用的情况下,跨任务、模型和 harness 明显改善冻结 frontier agents。最重要的实践结果是,学到的 skill 仍然是一份小而可读的文档。</p></div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="7"></div>
+    </details>
+    
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>Limitations & Appendix / 局限与附录<span class="sec-page">p.20</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en"><p>SkillOpt still depends on scored trajectories and a reliable held-out selection split. It is most directly applicable when the task has automatic verifiers, exact-match metrics, executable checks, or otherwise trustworthy feedback. Open-ended domains with subjective or costly evaluation may need human or stronger model-based judging.</p></div>
+          <div class="zh"><p>SkillOpt 仍然依赖 scored trajectories 与可靠的 held-out selection split。它最直接适用于有 automatic verifiers、exact-match metrics、executable checks 或其他可信反馈的任务。对主观、多维或评估昂贵的开放领域,可能需要人工或更强的 model-based judging。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>Although deployment is cheap, training the skill requires rollout computation and calls to an optimizer model. This cost is worthwhile when the resulting skill is reused, but less attractive for one-off tasks. The method intentionally optimizes one portable skill rather than growing a large library or changing weights.</p></div>
+          <div class="zh"><p>虽然部署便宜,但训练 skill 需要 rollout computation 与 optimizer model calls。当结果 skill 会被复用时,这个成本值得;对一次性任务则没那么有吸引力。该方法有意优化一份可移植 skill,而不是扩张大型 skill library 或改模型权重。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>A single skill may be insufficient for highly heterogeneous domains with many disjoint procedures. Optimized skills can also encode domain-specific heuristics from the training distribution, so held-out evaluation remains necessary before transferring to substantially different models, harnesses, or task settings.</p></div>
+          <div class="zh"><p>对包含许多互不相干流程的高度异质领域来说,单份 skill 可能不够。优化后的 skills 也可能编码训练分布中的领域特定启发式,因此迁移到显著不同的模型、harness 或任务设置之前,仍必须做 held-out evaluation。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The appendix makes the method executable. It specifies the optimizer state, the SkillOpt algorithm, and prompt contracts for failure analysis, success analysis, failure merge, success merge, final merge, ranking, slow update, and optimizer memory. These contracts force JSON outputs so edits can be parsed, filtered, applied, and validated without manual intervention.</p></div>
+          <div class="zh"><p>附录把方法写成可执行流程。它规定 optimizer state、SkillOpt algorithm,以及 failure analysis、success analysis、failure merge、success merge、final merge、ranking、slow update 和 optimizer memory 的 prompt contracts。这些 contracts 强制 JSON 输出,使 edits 可以在没有人工介入的情况下被解析、过滤、应用和验证。</p></div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en"><p>The final design principles are: keep the task-execution model fixed; validate every candidate skill on a selection split; merge minibatch analyses hierarchically; use the edit budget as a textual learning rate; and keep the deployed skill separate from the optimizer-side meta skill.</p></div>
+          <div class="zh"><p>最终设计原则是:保持 task-execution model 固定;每个 candidate skill 都在 selection split 上验证;分层合并 minibatch analyses;把 edit budget 当作 textual learning rate;并把部署 skill 与 optimizer-side meta skill 分开。</p></div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="8"></div>
+    </details>
+    
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>References<span class="sec-page">p.17</span></span>
+      </summary>
+      <div class="sec-content"><p>(参考文献仅作索引,不译。完整引用见原 PDF。)</p></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

@@ -348,30 +348,30 @@ layout: false
   <header>
     <div class="eyebrow">PAPERS READER · 大模型论文阅读地图 · 开源版 v0.1</div>
     <h1>大模型论文 <span class="accent">阅读地图</span></h1>
-    <div class="subtitle">5 篇已发布 · 每天 1 篇更新 · 5 标签分类 · 3 类读者推荐路径 · 中英双语全文翻译 · 公式 KaTeX · 图含中文图注</div>
+    <div class="subtitle">35 篇精选 · 5 标签分类 · 3 类读者推荐路径 · 中英双语全文翻译 · 公式 KaTeX · 图含中文图注</div>
   </header>
 
   <!-- ===== 标签统计 ===== -->
   <div class="stats">
     <div class="stat-card" data-stat="数据工程">
       <div class="stat-label">🔧 数据工程</div>
-      <div class="stat-value">4</div>
+      <div class="stat-value">6</div>
     </div>
     <div class="stat-card" data-stat="CPT">
       <div class="stat-label">🏗️ CPT</div>
-      <div class="stat-value">1</div>
+      <div class="stat-value">4</div>
     </div>
     <div class="stat-card" data-stat="后训练">
       <div class="stat-label">🎯 后训练</div>
-      <div class="stat-value">0</div>
+      <div class="stat-value">10</div>
     </div>
     <div class="stat-card" data-stat="技术报告">
       <div class="stat-label">📊 技术报告</div>
-      <div class="stat-value">0</div>
+      <div class="stat-value">11</div>
     </div>
     <div class="stat-card" data-stat="其他">
       <div class="stat-label">🌐 其他</div>
-      <div class="stat-value">0</div>
+      <div class="stat-value">2</div>
     </div>
   </div>
 
@@ -426,7 +426,7 @@ layout: false
   <div class="tag-section" data-tag="数据工程">
     <div class="tag-header">
       <span class="tag-name">🔧 数据工程</span>
-      <span class="tag-count">4 篇</span>
+      <span class="tag-count">6 篇</span>
       <span class="tag-pitch">收集 / 清洗 / 去重 / 配比 / 合成数据 — 工业训练的真正瓶颈</span>
     </div>
     <div class="papers-grid">
@@ -485,7 +485,23 @@ layout: false
         </div>
       </div>
 
-      
+      <div class="paper" data-tags="数据工程" data-aud="A,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/multilang-filter.html">Multilingual Data Filtering for Pretraining</a></div>
+          <div class="paper-arxiv">2505.22232</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-数据工程">数据工程</span>
+          <span class="prio-deep">deep</span>
+          <span>多语种</span>
+        </div>
+        <div class="paper-note">英语外其他语言数据该怎么筛？低资源语种的工业实战，东南亚/印地语适用。</div>
+        <div class="paper-actions">
+          <a href="papers/multilang-filter.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2505.22232" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
       <div class="paper" data-tags="数据工程" data-aud="A,B,C" data-priority="read">
         <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
@@ -505,7 +521,23 @@ layout: false
         </div>
       </div>
 
-      
+      <div class="paper" data-tags="数据工程" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/redpajama-v2.html">RedPajama-v2: an Open Dataset for Training LLMs</a></div>
+          <div class="paper-arxiv">2411.12372</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-数据工程">数据工程</span>
+          <span class="prio-read">read</span>
+          <span>30T · 5 语</span>
+        </div>
+        <div class="paper-note">质量信号比 v1 多 40+，多语种支持，2025 仍是开源训练的主力底料。</div>
+        <div class="paper-actions">
+          <a href="papers/redpajama-v2.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2411.12372" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -516,7 +548,7 @@ layout: false
   <div class="tag-section" data-tag="CPT">
     <div class="tag-header">
       <span class="tag-name">🏗️ CPT · 继续预训练</span>
-      <span class="tag-count">1 篇</span>
+      <span class="tag-count">4 篇</span>
       <span class="tag-pitch">领域适配 / 能力增强 / Scaling 理论 — base 模型上长出新能力</span>
     </div>
     <div class="papers-grid">
@@ -539,11 +571,61 @@ layout: false
         </div>
       </div>
 
-      
+      <div class="paper" data-tags="CPT" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/cpt-gupta.html">Continual Pre-Training of LLMs: How to (re)warm your model?</a></div>
+          <div class="paper-arxiv">2308.04014</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-CPT">CPT</span>
+          <span class="prio-read">read</span>
+          <span>LR 调度</span>
+        </div>
+        <div class="paper-note">CPT 学习率重启策略 + replay 比例。工业训练落地必读，灾难性遗忘缓解方案。</div>
+        <div class="paper-actions">
+          <a href="papers/cpt-gupta.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2308.04014" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="CPT,其他" data-aud="B,C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/scaling-laws.html">Scaling Laws for Neural Language Models</a></div>
+          <div class="paper-arxiv">2001.08361</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-CPT">CPT</span>
+          <span class="tag-其他">其他</span>
+          <span class="prio-skim">skim</span>
+          <span>Kaplan</span>
+        </div>
+        <div class="paper-note">Kaplan 2020 的 power law 三件套。面试经典，后被 Chinchilla 修正但仍要知道。</div>
+        <div class="paper-actions">
+          <a href="papers/scaling-laws.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2001.08361" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="CPT,其他" data-aud="B,C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/chinchilla.html">Training Compute-Optimal Large Language Models (Chinchilla)</a></div>
+          <div class="paper-arxiv">2203.15556</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-CPT">CPT</span>
+          <span class="tag-其他">其他</span>
+          <span class="prio-skim">skim</span>
+          <span>20 tokens / param</span>
+        </div>
+        <div class="paper-note">推翻 Kaplan，现行 compute-optimal 标准（D ≈ 20×N）。70B 时代的依据。</div>
+        <div class="paper-actions">
+          <a href="papers/chinchilla.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2203.15556" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -554,30 +636,190 @@ layout: false
   <div class="tag-section" data-tag="后训练">
     <div class="tag-header">
       <span class="tag-name">🎯 后训练</span>
-      <span class="tag-count">0 篇</span>
+      <span class="tag-count">10 篇</span>
       <span class="tag-pitch">SFT / RLHF / DPO / GRPO / RLVR / 蒸馏 — base 模型变 chat / reasoning 的关键</span>
     </div>
     <div class="papers-grid">
 
-      
+      <div class="paper" data-tags="后训练" data-aud="B,C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/instructgpt.html">Training LMs to Follow Instructions with Human Feedback (InstructGPT)</a></div>
+          <div class="paper-arxiv">2203.02155</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-skim">skim</span>
+          <span>RLHF 经典</span>
+        </div>
+        <div class="paper-note">RLHF 三阶段流水线奠基。所有后训练论文的"前作"，面试必背三阶段画图。</div>
+        <div class="paper-actions">
+          <a href="papers/instructgpt.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2203.02155" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="A,B,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/dpo.html">Direct Preference Optimization: Your LM is Secretly a Reward Model</a></div>
+          <div class="paper-arxiv">2305.18290</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-deep">deep</span>
+          <span>DPO</span>
+        </div>
+        <div class="paper-note">用 BT 模型 + KL 等价性，把 RLHF 退化成监督式分类。损失函数必默写。</div>
+        <div class="paper-actions">
+          <a href="papers/dpo.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2305.18290" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="A,B,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/simpo.html">SimPO: Simple Preference Optimization with a Reference-Free Reward</a></div>
+          <div class="paper-arxiv">2405.14734</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-deep">deep</span>
+          <span>无 ref model</span>
+        </div>
+        <div class="paper-note">DPO 的 reference-free 简化版，长度归一化 + 目标 margin γ。小算力首选 baseline。</div>
+        <div class="paper-actions">
+          <a href="papers/simpo.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2405.14734" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="B,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/kto.html">KTO: Model Alignment as Prospect Theoretic Optimization</a></div>
+          <div class="paper-arxiv">2402.01306</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+          <span>非成对数据</span>
+        </div>
+        <div class="paper-note">用前景理论解释损失厌恶，需要"好/坏"二元标签而非成对偏好。冷启动友好。</div>
+        <div class="paper-actions">
+          <a href="papers/kto.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2402.01306" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="B,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/ipo.html">A General Theoretical Paradigm to Understand Learning from Human Preferences (IPO)</a></div>
+          <div class="paper-arxiv">2310.12036</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+          <span>Ψ-PO 理论</span>
+        </div>
+        <div class="paper-note">指出 BT 在 deterministic 偏好下 reward 发散 → DPO 过拟合，提 squared loss 修正。写论文必引。</div>
+        <div class="paper-actions">
+          <a href="papers/ipo.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2310.12036" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="A,B,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/grpo.html">DeepSeekMath: Pushing the Limits of Mathematical Reasoning (GRPO 出处)</a></div>
+          <div class="paper-arxiv">2402.03300</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-deep">deep</span>
+          <span>GRPO</span>
+        </div>
+        <div class="paper-note">GRPO 原论文：去掉 critic 用 group baseline，省一半显存，成为 2024-2025 RL 后训练事实标准。</div>
+        <div class="paper-actions">
+          <a href="papers/grpo.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2402.03300" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/dapo.html">DAPO: An Open-Source LLM Reinforcement Learning System at Scale</a></div>
+          <div class="paper-arxiv">2503.14476</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+          <span>字节 · GRPO++</span>
+        </div>
+        <div class="paper-note">字节工程版 GRPO：Clip-Higher + Dynamic Sampling + Token-Level Loss + Overlong Reward Shaping。</div>
+        <div class="paper-actions">
+          <a href="papers/dapo.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2503.14476" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="A,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/minillm.html">MiniLLM: Knowledge Distillation of Large Language Models</a></div>
+          <div class="paper-arxiv">2306.08543</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-deep">deep</span>
+          <span>反向 KL</span>
+        </div>
+        <div class="paper-note">把 KD 从 forward KL 换成 reverse KL，避免 mode-averaging，LLM 蒸馏的范式转变。</div>
+        <div class="paper-actions">
+          <a href="papers/minillm.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2306.08543" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/distillm.html">DistiLLM: Towards Streamlined Distillation for LLMs</a></div>
+          <div class="paper-arxiv">2402.03898</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+          <span>Skew KL</span>
+        </div>
+        <div class="paper-note">Skew-KL 插值 + adaptive off-policy，蒸馏工程效率显著提升。</div>
+        <div class="paper-actions">
+          <a href="papers/distillm.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2402.03898" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="后训练" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/on-policy-distill.html">On-Policy Distillation: Learning from Self-Generated Mistakes</a></div>
+          <div class="paper-arxiv">2306.13649</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+          <span>蒸馏 + RL</span>
+        </div>
+        <div class="paper-note">学生采样自己的输出 + 老师打分的范式，蒸馏与 RL 的桥梁。</div>
+        <div class="paper-actions">
+          <a href="papers/on-policy-distill.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2306.13649" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -588,32 +830,212 @@ layout: false
   <div class="tag-section" data-tag="技术报告">
     <div class="tag-header">
       <span class="tag-name">📊 技术报告</span>
-      <span class="tag-count">0 篇</span>
+      <span class="tag-count">11 篇</span>
       <span class="tag-pitch">头部厂商完整 pipeline — 看行业在解决什么问题、用什么手段</span>
     </div>
     <div class="papers-grid">
 
-      
+      <div class="paper" data-tags="技术报告" data-aud="A,B,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/deepseek-v3.html">DeepSeek-V3 Technical Report</a></div>
+          <div class="paper-arxiv">2412.19437</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="prio-deep">deep</span>
+          <span>MoE + MLA + MTP + FP8</span>
+        </div>
+        <div class="paper-note">2024 年底 SOTA：DeepSeekMoE + MLA 注意力 + MTP 多 token 预测 + FP8 训练。系统工程教科书。</div>
+        <div class="paper-actions">
+          <a href="papers/deepseek-v3.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2412.19437" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告" data-aud="A,B,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/qwen-2.5.html">Qwen2.5 Technical Report</a></div>
+          <div class="paper-arxiv">2412.15115</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="prio-deep">deep</span>
+          <span>阿里 · 18T</span>
+        </div>
+        <div class="paper-note">CPT 数据章节教科书级。0.5B-72B 全规模，多语言、长上下文、数学/代码专项全覆盖。</div>
+        <div class="paper-actions">
+          <a href="papers/qwen-2.5.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2412.15115" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/qwen-3.html">Qwen3 Technical Report</a></div>
+          <div class="paper-arxiv">2505.09388</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="prio-read">read</span>
+          <span>Hybrid Thinking</span>
+        </div>
+        <div class="paper-note">最新一代 · 思考/非思考混合模式 · 36T 预训练 · 后训练四阶段。一份就能讲清现代 pipeline。</div>
+        <div class="paper-actions">
+          <a href="papers/qwen-3.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2505.09388" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告,后训练" data-aud="A,B,C" data-priority="deep">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/deepseek-r1.html">DeepSeek-R1: Incentivizing Reasoning via RL</a></div>
+          <div class="paper-arxiv">2501.12948</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-deep">deep</span>
+          <span>RL on base</span>
+        </div>
+        <div class="paper-note">R1-Zero 纯 RL · cold-start SFT + 多阶段 RL · aha moment · GRPO 工业实战 · distill 到小模型。开源推理 SOTA。</div>
+        <div class="paper-actions">
+          <a href="papers/deepseek-r1.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2501.12948" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/kimi-k2.html">Kimi K2: Open Agentic Intelligence</a></div>
+          <div class="paper-arxiv">2507.20534</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="prio-read">read</span>
+          <span>1T MoE · Muon</span>
+        </div>
+        <div class="paper-note">Muon 优化器大规模训练（面试热点！）+ agentic foundation。</div>
+        <div class="paper-actions">
+          <a href="papers/kimi-k2.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2507.20534" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告,后训练" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/kimi-k1.5.html">Kimi K1.5: Scaling RL with LLMs</a></div>
+          <div class="paper-arxiv">2501.12599</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+          <span>Long context RL</span>
+        </div>
+        <div class="paper-note">long context RL + partial rollouts + length penalty。和 R1 同期对标，方法论不同。</div>
+        <div class="paper-actions">
+          <a href="papers/kimi-k1.5.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2501.12599" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告" data-aud="C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/llama-3.html">The Llama 3 Herd of Models</a></div>
+          <div class="paper-arxiv">2407.21783</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="prio-skim">skim</span>
+          <span>Meta · 92 页</span>
+        </div>
+        <div class="paper-note">405B dense + 多模态。92 页全方位，只读架构 + 数据 + 后训练四阶段。</div>
+        <div class="paper-actions">
+          <a href="papers/llama-3.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2407.21783" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告,其他" data-aud="A,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/minimax-01.html">MiniMax-01: Scaling with Lightning Attention</a></div>
+          <div class="paper-arxiv">2501.08313</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="tag-其他">其他</span>
+          <span class="prio-read">read</span>
+          <span>4M context</span>
+        </div>
+        <div class="paper-note">Lightning Attention 7/8 + softmax 1/8 混合，MoE 456B，4M 上下文。线性注意力工业落地标杆。</div>
+        <div class="paper-actions">
+          <a href="papers/minimax-01.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2501.08313" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告" data-aud="C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/glm-4.5.html">GLM-4.5 Technical Report</a></div>
+          <div class="paper-arxiv">2508.06471</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="prio-skim">skim</span>
+          <span>智谱 · 355B MoE</span>
+        </div>
+        <div class="paper-note">三阶段 RL 路线，Reasoning + Coding + Agentic 三轴并进。</div>
+        <div class="paper-actions">
+          <a href="papers/glm-4.5.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2508.06471" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告,后训练" data-aud="C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/mimo.html">MiMo: Unlocking the Reasoning Potential of LM (Xiaomi)</a></div>
+          <div class="paper-arxiv">2505.07608</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-skim">skim</span>
+          <span>小米 · 7B</span>
+        </div>
+        <div class="paper-note">小米首个推理模型 · RL on math/code · 数据合成思路 · 与 R1 对比。</div>
+        <div class="paper-actions">
+          <a href="papers/mimo.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2505.07608" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="技术报告" data-aud="C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/yi.html">Yi: Open Foundation Models by 01.AI</a></div>
+          <div class="paper-arxiv">2403.04652</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-技术报告">技术报告</span>
+          <span class="prio-skim">skim</span>
+          <span>01.AI · 数据中心</span>
+        </div>
+        <div class="paper-note">Yi-6B / 34B，数据 pipeline 写得最细，中文优化方法系统。</div>
+        <div class="paper-actions">
+          <a href="papers/yi.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2403.04652" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -624,21 +1046,125 @@ layout: false
   <div class="tag-section" data-tag="其他">
     <div class="tag-header">
       <span class="tag-name">🌐 其他</span>
-      <span class="tag-count">0 篇</span>
+      <span class="tag-count">6 篇主标</span>
       <span class="tag-pitch">Scaling Law 理论 + 长序列架构 — 跨主题的支柱</span>
     </div>
     <div class="papers-grid">
 
-      
+      <div class="paper" data-tags="其他,CPT" data-aud="B,C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/scaling-laws.html">Scaling Laws for Neural Language Models</a></div>
+          <div class="paper-arxiv">2001.08361</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-其他">其他</span>
+          <span class="tag-CPT">CPT</span>
+          <span class="prio-skim">skim</span>
+        </div>
+        <div class="paper-note">见 CPT 区。Kaplan 的 power law 三件套。</div>
+        <div class="paper-actions">
+          <a href="papers/scaling-laws.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2001.08361" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
-      
+      <div class="paper" data-tags="其他,CPT" data-aud="B,C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/chinchilla.html">Training Compute-Optimal LLMs (Chinchilla)</a></div>
+          <div class="paper-arxiv">2203.15556</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-其他">其他</span>
+          <span class="tag-CPT">CPT</span>
+          <span class="prio-skim">skim</span>
+        </div>
+        <div class="paper-note">见 CPT 区。20 tokens / param 现行标准。</div>
+        <div class="paper-actions">
+          <a href="papers/chinchilla.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2203.15556" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
+
+      <div class="paper" data-tags="其他,数据工程" data-aud="A,B,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/data-survey.html">A Survey of LLM x DATA</a></div>
+          <div class="paper-arxiv">2505.18458</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-其他">其他</span>
+          <span class="tag-数据工程">数据工程</span>
+          <span class="prio-read">read</span>
+        </div>
+        <div class="paper-note">LLM 数据体系综述，补齐数据工程方向的全景视角。</div>
+        <div class="paper-actions">
+          <a href="papers/data-survey.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2505.18458" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
+
+      <div class="paper" data-tags="其他,后训练" data-aud="A,B,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/long-cot-survey.html">Towards Reasoning Era: A Survey of Long Chain-of-Thought</a></div>
+          <div class="paper-arxiv">2503.09567</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-其他">其他</span>
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+        </div>
+        <div class="paper-note">Long CoT 推理综述，串起 reasoning LLM 的方法谱系。</div>
+        <div class="paper-actions">
+          <a href="papers/long-cot-survey.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2503.09567" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
+
+      <div class="paper" data-tags="其他,后训练" data-aud="A,B" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/skillopt.html">SkillOpt: Executive Strategy for Self-Evolving Agent Skills</a></div>
+          <div class="paper-arxiv">2605.23904</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-其他">其他</span>
+          <span class="tag-后训练">后训练</span>
+          <span class="prio-read">read</span>
+        </div>
+        <div class="paper-note">Agent 技能自演化策略，补充工具/技能优化方向。</div>
+        <div class="paper-actions">
+          <a href="papers/skillopt.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2605.23904" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
+
+      <div class="paper" data-tags="其他,数据工程" data-aud="A,B,C" data-priority="read">
+        <div class="aud-badges"><span class="aud-badge A">工</span><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/snorkel.html">Snorkel: Rapid Training Data Creation with Weak Supervision</a></div>
+          <div class="paper-arxiv">1711.10160</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-其他">其他</span>
+          <span class="tag-数据工程">数据工程</span>
+          <span class="prio-read">read</span>
+        </div>
+        <div class="paper-note">弱监督数据构建经典论文，适合和数据质量、标注成本一起看。</div>
+        <div class="paper-actions">
+          <a href="papers/snorkel.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/1711.10160" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
     </div>
   </div>
 
   <footer>
     <div class="quote">"报告告诉你做什么，论文 + 代码告诉你为什么 + 怎么做。"</div>
-    <div>v0.1 · 5 篇已发布 · 每天 1 篇更新 · 中英双语全文 + KaTeX 公式 + 图含中文图注</div>
+    <div>v0.1 · 35 篇精选 · 中英双语全文 + KaTeX 公式 + 图含中文图注</div>
     <div style="margin-top:8px">致谢：DPO/GRPO/SimPO/FineWeb/Qwen/DeepSeek/Kimi/Llama/MiniMax/Yi/GLM/MiMo 等开源团队</div>
   </footer>
 </div>

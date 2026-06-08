@@ -1,0 +1,1079 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2501.12948 · 86 页 · 3 张图</div>
+    <h1>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</h1>
+    <div class="meta-bar">
+      <span class="track-B">轨道 B</span>
+      <span class="prio-deep">优先级 deep</span>
+      <span>W5</span>
+      <span>Tech Report</span><span>GRPO</span><span>RL</span>
+      <span><a href="https://arxiv.org/abs/2501.12948" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2501.12948.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>跳过 SFT,直接在 DeepSeek-V3-Base 上用 GRPO + 纯 rule-based reward(accuracy + format)做大规模 RL,就能<em>涌现</em>出 self-reflection / verification / long CoT(R1-Zero);再用"几千条 cold-start CoT SFT → 推理 RL → 拒采 SFT(含通用数据)→ 全场景 RL"四阶段把它打磨成 R1,并蒸馏到 Qwen / Llama 1.5B–70B,小模型 reasoning 全面超 GPT-4o / Claude-3.5。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>R1-Zero 训练流程(必默写)</strong>:<code>DeepSeek-V3-Base</code> + <code>GRPO</code> + 仅 <code>Reward = Reward_acc + Reward_format</code>(数学答案放 <code>\boxed{}</code> 验证、代码跑 compiler、CoT 必须包在 <code>&lt;think&gt;…&lt;/think&gt;</code> 内)。完全<em>不做 SFT</em>,batch 512(每步 32 道题 × 16 rollouts),max len 32k → 8.2k 步后扩到 65k;训练 10,400 步 ≈ 1.6 epoch;<strong>AIME pass@1 从 15.6% → 77.9%</strong>,cons@16 达 86.7%(超过人类参赛者平均)。
+        </li>
+        <li>
+          <strong>GRPO 公式(必默写)</strong>:抛弃 PPO 的 value/critic,对每个 prompt 采样一组 $G$ 个 rollouts,用<em>组内相对奖励</em>当 advantage:
+          $$A_i = \frac{r_i - \mathrm{mean}(\{r_1,\dots,r_G\})}{\mathrm{std}(\{r_1,\dots,r_G\})}$$
+          $$\mathcal{J}_{\text{GRPO}}(\theta) = \mathbb{E}\!\left[\tfrac{1}{G}\!\sum_{i=1}^{G}\!\min\!\Bigl(\tfrac{\pi_\theta(o_i|q)}{\pi_{\theta_{\mathrm{old}}}(o_i|q)}A_i,\;\mathrm{clip}\bigl(\tfrac{\pi_\theta(o_i|q)}{\pi_{\theta_{\mathrm{old}}}(o_i|q)},1{-}\varepsilon,1{+}\varepsilon\bigr)A_i\Bigr) - \beta\,\mathbb{D}_{KL}(\pi_\theta\|\pi_{\mathrm{ref}})\right]$$
+          内部 KL 用<em>无偏估计</em> $\frac{\pi_{\mathrm{ref}}}{\pi_\theta}-\log\frac{\pi_{\mathrm{ref}}}{\pi_\theta}-1$。省一份 value model → 显存/算力对半。R1 把 clip $\varepsilon$ 调到 <strong>10</strong>(大 clip)以避免梯度被截断、容许大步长更新——这是把 GRPO 拉到性能上限的关键 trick。
+        </li>
+        <li>
+          <strong>Rule-based vs 神经 RM</strong>:作者明确<em>拒绝</em>在 reasoning RL 中使用 outcome-PRM / process-PRM——因为(i)神经 RM 在大规模 RL 下必被 reward hacking,(ii)需要额外算力维护、(iii)PRM 还要定义 fine-grain step,标注极难规模化。只用 rule(数学答案/编译/格式)→ 反馈精确、无 hacking 风险。
+        </li>
+        <li>
+          <strong>R1 四阶段 pipeline(必背)</strong>:
+          ① <em>Cold-start SFT</em>:几千条人类对齐的对话式 long-CoT 数据微调 V3-Base → Dev1(解决 R1-Zero 可读性差 / 中英混杂);
+          ② <em>Reasoning-oriented RL</em>:仍用 rule-based reward,再加 <code>Reward_language</code>(目标语种 token 占比,缓解 lang mixing,代价是<em>略</em>降 reasoning)→ Dev2;
+          ③ <em>拒采 + SFT</em>:从 Dev2 拒采推理样本 + DeepSeek-V3 的非推理 SFT 数据混训 → Dev3,补齐写作 / 通用能力;
+          ④ <em>全场景 RL</em>:reasoning 用 rule reward,general 用 helpful RM(pairwise,66k 对)+ safety RM(pointwise,106k 条),再叠加 language reward;preference reward 只在最后 400 / 1700 步加入,防止 reward hacking。温度从 1.0 → 0.7。AlpacaEval2 +25%、ArenaHard +17%,Codeforces Rating 2029(超 96.3% 人类)。
+        </li>
+        <li>
+          <strong>"Aha moment"现象</strong>:训练中期 R1-Zero 的 CoT 里突然大量出现"Wait, wait. Wait. That's an aha moment I can flag here.""Let me reevaluate this step-by-step"等拟人化反思短语,平均 response length 从 ~数百 token 单调上升到接近 20k tokens——<em>没人教过它要反思</em>,长 CoT 是被 outcome reward 自然激励出来的。这是论文最具传播力的 finding。
+        </li>
+        <li>
+          <strong>蒸馏 to 小模型</strong>:R1 生成 800k 样本 → 对 Qwen-1.5B/7B/14B/32B、Llama-8B/70B<em>仅做 SFT 不做 RL</em>。R1-Distill-Qwen-32B AIME pass@1 = 72.6,远超在同基模上跑 10k 步 RL 得到的 Qwen2.5-32B-Zero(47.0)。结论:对小模型,<em>"从强 teacher 蒸馏" &gt;&gt; "自己跑 RL"</em>,且省巨量算力——这是 reasoning democratization 的关键路径。
+        </li>
+        <li>
+          <strong>失败尝试(高频考点)</strong>:
+          <em>(a) PRM(Process Reward Model)</em>——三大坑:reasoning step 难严格切分;step 对错难自动判断;model-based PRM 必被 reward hack。结论:PRM 适合 rerank top-N / 引导 search,但<em>不适合</em>作大规模 RL 的训练信号。
+          <em>(b) MCTS</em>——token 空间指数级远比围棋大,设节点扩展上限 → 易陷局部最优;且 fine-grain value model 极难训。结论:MCTS 配训好的 value model 可在推理期增益,但<em>自搜自学</em>那一套(AlphaGo-style)在 LLM 上跑不通。
+        </li>
+        <li>
+          <strong>GRPO vs PPO 对比</strong>:论文 Figure 3 在同 prompt 集上比较,GRPO 全程 dominate PPO(λ=0.95) 与 PPO(λ=1.0),accuracy 高 ~3-5 pp 且更稳。优势:省 value model、组内归一让 advantage 天然标准化、对稀疏 0/1 reward 更稳。注意:GRPO 对 group size $G$、clip $\varepsilon$ 较敏感(R1 用 $G=16$、$\varepsilon=10$)。
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      GRPO 工业实战 + cold-start data
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-4">§2 DeepSeek-R1-Zero / 纯 RL on Base</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-5">§3 DeepSeek-R1 / 多阶段 pipeline</a><span class="toc-page">p.6</span></li>
+      <li><a href="#sec-6">§4 Experiment / 实验</a><span class="toc-page">p.8</span></li>
+      <li><a href="#sec-7">§5–6 Safety + Conclusion / 安全与结论</a><span class="toc-page">p.10</span></li>
+      <li><a href="#sec-8">附录 A·背景 + GRPO vs PPO</a><span class="toc-page">p.13</span></li>
+      <li><a href="#sec-9">附录 F·Distillation 到小模型</a><span class="toc-page">p.60</span></li>
+      <li><a href="#sec-10">附录 G·Discussion + Unsuccessful Attempts(PRM / MCTS)</a><span class="toc-page">p.62</span></li>
+      <li><a href="#sec-refs">References</a><span class="toc-page">p.79</span></li>
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (3 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2501.12948_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.16 · 11881×7646</div>
+          <div class="fig-caption">Figure 4 (附录 A.3): GRPO vs PPO 在 MATH 任务上的训练曲线。DeepSeek-Coder-V2-Lite(16B MoE / 2.4B active)上跑出的对照实验。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>附录 A.3 的 <code>GRPO vs PPO</code> 训练曲线——同一基模(DeepSeek-Coder-V2-Lite)、同一 MATH 任务,横轴 RL 训练 <em>Steps</em>(0–2500),纵轴验证 <em>Accuracy</em>(0.42–0.56)。三条线:<strong>深蓝圆</strong> = PPO($\lambda=0.95$)、<strong>浅蓝方块</strong> = PPO($\lambda=1.0$)、<strong>绿菱形</strong> = GRPO。</p>
+          <p><strong>② 关键数据:</strong>三条线均从 ~<strong>0.44</strong> 起步,但<em>整段曲线 GRPO 始终在最上方</em>。读到 2400 步:GRPO ≈ <strong>0.554</strong>,PPO($\lambda=1.0$)≈ <strong>0.535</strong>,PPO($\lambda=0.95$)只到 <strong>~0.501</strong>。GRPO 与 PPO($\lambda=0.95$)之间的 gap 稳定在 <strong>+4~5 pp</strong>;PPO($\lambda=1.0$)由于近似 Monte-Carlo,比 $\lambda=0.95$ 强约 +3 pp,但<em>始终被 GRPO 压住</em>。</p>
+          <p><strong>③ 启示:</strong>(i) 在<em>稀疏 0/1 outcome reward</em> 下,PPO 的 value/critic 难学准,GAE 反而引入偏差;GRPO 用<em>组内相对奖励</em>当 advantage,完全绕开 value model——省一份模型显存,且规避 critic 学不准的不稳定。(ii) PPO 默认的 $\lambda=0.95$ 是性能陷阱,实际需要调到 1.0(MC-style)才接近 GRPO,但仍被 dominated。(iii) GRPO 的样本效率优势在前 1000 步就显现 → 工业实战大规模 reasoning RL 的默认选择;这也是 R1 / Kimi-1.5 / DAPO 等后续工作都选 GRPO 系的核心动机。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2501.12948_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.43 · 2527×1272</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>Chatbot Arena Overall 排行榜截图(2025-01-23 数据,#models=195,#votes ≈ 257 万),开启 Style Control 后的总榜。红框标出 <strong>DeepSeek-R1 并列 Rank 1</strong>,Arena Score = 1316,95% CI = +15/−11,投票数 1883,license <em>MIT</em>(完全开源可商用)。</p>
+          <p><strong>② 关键数据:</strong>同处 Rank 1 的还有 OpenAI o1-2024-12-17(1323)、Gemini-Exp-1206(1321)、ChatGPT-4o-latest(1318)——R1 与这三者<em>分数差距 ≤ 7 分,落在 CI 之内</em>,统计意义上不可分辨。Gemini-2.0-Flash-Thinking(1310)、o1-preview(1303)、Gemini-2.0-Flash-Exp(1297)被甩在后面;Claude-3.5-Sonnet-1022(1286)排第 7。</p>
+          <p><strong>③ 启示:</strong>(i) R1 是首个<em>开源 MIT</em> 模型登顶 Arena,与三家最强闭源模型并列;(ii) 在开启 Style Control(剥离回复长度 / Markdown 等风格因素)的口径下仍能并列第一,说明胜出不是靠"长答 + 排版好看"这种风格红利;(iii) 印证论文核心论点——纯 RL 激励的 reasoning 能在 chatbot arena 这种<em>偏对话偏感知质量</em>的赛道上,也照样赢过用海量 SFT + RLHF 的同行,reasoning 强度<em>对</em>用户感知质量是正贡献。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_3">
+        <img src="../figures/2501.12948_fig_3.png" alt="fig_3" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_3</span> · p.44 · 3385×859</div>
+          
+        </div>
+        <div class="figure-explain" data-fig-id="fig_3">
+          <p><strong>① 图说明:</strong>Chatbot Arena 的<em>分类</em>排行截图——把 Overall 拆成 Overall w/ Style Control / Hard Prompts / Hard Prompts w/ Style / Coding / Math / Creative Writing / Instruction Following / Longer Query / Multi-Turn 共 9 个子赛道,每行一个模型,单元格里写各赛道的 rank。</p>
+          <p><strong>② 关键数据:</strong><strong>DeepSeek-R1 在 7/9 个细分赛道上排名 1</strong>(包括 Hard Prompts、Coding、Math、Creative Writing、Instruction Following、Longer Query 等强项),Overall=3、Overall w/Style=1。对比:gemini-2.0-flash-thinking-exp-01-21 Overall=1 但 Style Control 后掉到 3;chatgpt-4o-latest 在 Math 上 rank=8 明显短板;o1-preview 在 Multi-Turn 上 rank=6,落后 R1。</p>
+          <p><strong>③ 启示:</strong>(i) R1 不是只会刷数学题——在 <em>Creative Writing / Instruction Following / Multi-Turn</em> 这些"通用对话感"赛道上同样并列第一,验证四阶段 pipeline 第 3、4 阶段加入的非推理 SFT + 偏好 RL 的<em>必要性</em>(R1-Zero 单靠 reasoning RL 在 AlpacaEval 上只有 24.7,R1 拉到 87.6,+25 pp);(ii) Style Control 维持 rank=1 进一步说明<em>提升不是来自冗长回复</em>,而是真实质量;(iii) 工程教训:即使核心卖点是 reasoning,通用对话能力也必须靠多阶段后训练把齐(尤其拒采 SFT + preference RM 那一步)。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <!-- 章节正文 -->
+
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(双语逐段对照)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning · DeepSeek-AI · research@deepseek.com</p></div>
+    </details>
+
+    <details class="sec" id="sec-2" open>
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>General reasoning represents a long-standing and formidable challenge in artificial intelligence. Recent breakthroughs, exemplified by large language models (LLMs) and chain-of-thought prompting, have achieved considerable success on foundational reasoning tasks. However, this success is heavily contingent upon extensive human-annotated demonstrations, and models' capabilities are still insufficient for more complex problems. Here we show that the reasoning abilities of LLMs can be incentivized through pure reinforcement learning (RL), obviating the need for human-labeled reasoning trajectories. The proposed RL framework facilitates the emergent development of advanced reasoning patterns, such as self-reflection, verification, and dynamic strategy adaptation. Consequently, the trained model achieves superior performance on verifiable tasks such as mathematics, coding competitions, and STEM fields, surpassing its counterparts trained via conventional supervised learning on human demonstrations. Moreover, the emergent reasoning patterns exhibited by these large-scale models can be systematically harnessed to guide and enhance the reasoning capabilities of smaller models.</p>
+          </div>
+          <div class="zh">
+            <p>通用推理是人工智能领域长期且艰巨的挑战。近期的突破——以大语言模型(LLM)与思维链(CoT)提示为代表——在基础推理任务上取得了显著成功。然而,这一成功严重依赖大量的人工标注示范,模型在更复杂的问题上能力仍然不足。本文表明:LLM 的推理能力可以通过<em>纯强化学习(RL)</em>来激励出来,从而摆脱对人工标注推理轨迹的依赖。我们提出的 RL 框架推动了高级推理模式的<em>涌现</em>——例如自我反思、验证、动态策略调整。由此训练得到的模型在数学、编程竞赛、STEM 等<em>可验证</em>任务上取得了优于"在人类示范上做传统监督学习"的同类模型的表现。此外,这些大模型展现出的涌现推理模式还可以被系统性地利用,以引导和增强更小模型的推理能力。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Reasoning capability, the cornerstone of human intelligence, enables complex cognitive tasks ranging from mathematical problem-solving to logical deduction and programming. Recent advances in artificial intelligence have demonstrated that large language models (LLMs) can exhibit emergent behaviors, including reasoning abilities, when scaled to a sufficient size. However, achieving such capabilities in pre-training typically demands substantial computational resources. In parallel, a complementary line of research has demonstrated that large language models can be effectively augmented through chain-of-thought (CoT) prompting—either via carefully designed few-shot examples or minimalistic prompts such as "Let's think step by step"—enabling models to produce intermediate reasoning steps, thereby substantially enhancing their performance on complex tasks.</p>
+          </div>
+          <div class="zh">
+            <p>推理能力是人类智能的基石,支撑着从数学问题求解到逻辑推断、编程等各种复杂的认知任务。AI 的最近进展表明,大语言模型(LLM)在<em>规模足够大</em>时会展现出包括推理能力在内的<em>涌现行为</em>。但在预训练阶段达到这种能力通常需要巨量算力。与此并行,另一条互补的工作路线展示出 LLM 可以通过<em>思维链(CoT)提示</em>显著增强——无论是精心设计的 few-shot 示例,还是 "Let's think step by step" 这样的极简提示,都能让模型产生中间推理步骤,从而在复杂任务上显著提升表现。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Despite their effectiveness, these approaches exhibit notable limitations. Their dependence on human-annotated reasoning traces hinders scalability and introduces cognitive biases. Furthermore, by constraining models to replicate human thought processes, their performance is inherently capped by the human-provided exemplars, which prevents the exploration of superior, non-human-like reasoning pathways. To tackle these issues, we aim to explore the potential of LLMs for developing reasoning abilities through self-evolution in an RL framework, with minimal reliance on human labeling efforts. Specifically, we build upon DeepSeek-V3-Base and employ Group Relative Policy Optimization (GRPO) as our RL framework. The reward signal is solely based on the correctness of final predictions against ground-truth answers, without imposing constraints on the reasoning process itself. Notably, we bypass the conventional supervised fine-tuning (SFT) phase before RL training.</p>
+          </div>
+          <div class="zh">
+            <p>尽管这些方法有效,它们也存在明显局限。其对<em>人工标注推理轨迹</em>的依赖阻碍了规模化扩展,并引入认知偏差;同时,把模型约束到"复刻人类思维过程"会让性能<em>被人类示范的上限锁死</em>,无法探索更优的、非人类风格的推理路径。为了解决这些问题,我们试图在 RL 框架下、以<em>最少的人工标注</em>探索 LLM 通过<em>自演化</em>发展推理能力的潜力。具体来说,我们在 <code>DeepSeek-V3-Base</code> 之上,采用 <strong>Group Relative Policy Optimization(GRPO)</strong> 作为 RL 框架。奖励信号<em>仅来自最终预测与真实答案的对比</em>,对推理过程本身不施加任何约束。值得注意的是,我们<em>跳过</em>了 RL 之前传统的监督微调(SFT)阶段。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Through this process (detailed in Section 2), our model—referred to as DeepSeek-R1-Zero—naturally developed diverse and sophisticated reasoning behaviors. In solving reasoning problems, the model exhibits a tendency to generate longer responses, incorporating verification, reflection, and the exploration of alternative approaches within each response. Although we do not explicitly teach the model how to reason, it successfully learns improved reasoning strategies through reinforcement learning. However, DeepSeek-R1-Zero faces challenges such as poor readability and language mixing, occasionally combining English and Chinese within a single chain-of-thought response. Furthermore, the rule-based RL training stage is narrowly focused on reasoning tasks, resulting in limited performance in broader areas such as writing and open-domain question answering.</p>
+          </div>
+          <div class="zh">
+            <p>通过这一过程(详见第 2 节),我们的模型——记作 <strong>DeepSeek-R1-Zero</strong>——<em>自然涌现</em>出多样且复杂的推理行为:解答推理题时倾向于生成更长的响应,在单条响应中包含验证、反思与对替代解法的探索。虽然我们<em>没有显式</em>教过模型如何推理,它仍通过 RL 学会了更好的推理策略。然而,R1-Zero 存在<em>可读性差</em>与<em>中英文混杂</em>等问题(有时在一条 CoT 中混用英文与中文)。此外,纯 rule-based 的 RL 阶段仅聚焦推理任务,因此在写作、开放域问答等更广泛领域的表现有限。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To address these challenges, we introduce DeepSeek-R1, a model trained through a multi-stage learning framework that integrates rejection sampling, reinforcement learning, and supervised fine-tuning (detailed in Section 3). This training pipeline enables DeepSeek-R1 to inherit the reasoning capabilities of its predecessor, DeepSeek-R1-Zero, while aligning model behavior with human preferences through additional non-reasoning data. To enable broader access to powerful AI at a lower energy cost, we have distilled several smaller models and made them publicly available. These distilled models exhibit strong reasoning capabilities, surpassing the performance of their original instruction-tuned counterparts. We release DeepSeek-R1 series models to the public at https://huggingface.co/deepseek-ai.</p>
+          </div>
+          <div class="zh">
+            <p>为了解决这些挑战,我们提出 <strong>DeepSeek-R1</strong>——一个通过<em>多阶段</em>训练框架(融合拒绝采样、强化学习与监督微调,详见第 3 节)训练得到的模型。该训练管线使 R1 既继承了 R1-Zero 的推理能力,又通过额外的<em>非推理</em>数据使模型行为与人类偏好对齐。为了以更低能耗让更多人用上强大的 AI,我们还<em>蒸馏</em>了若干小模型并开源:这些蒸馏模型展现出强大的推理能力,超过它们对应的原始 instruction-tuned 版本。所有 DeepSeek-R1 系列模型在 <code>https://huggingface.co/deepseek-ai</code> 公开发布。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§2 DeepSeek-R1-Zero / 纯 RL on Base<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">2.1 Group Relative Policy Optimization / GRPO 算法</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>GRPO is the reinforcement learning algorithm that we adopt to train DeepSeek-R1-Zero and DeepSeek-R1. It was originally proposed to simplify the training process and reduce the resource consumption of Proximal Policy Optimization (PPO), which is widely used in the RL stage of LLMs. For each question $q$, GRPO samples a group of outputs $\{o_1, o_2, \ldots, o_G\}$ from the old policy $\pi_{\theta_\mathrm{old}}$ and then optimizes the policy model $\pi_\theta$ by maximizing the following objective:</p>
+            <div class="bi-eq">$$\mathcal{J}_{\mathrm{GRPO}}(\theta) = \mathbb{E}_{q\sim P(Q),\,\{o_i\}_{i=1}^{G}\sim\pi_{\theta_{\mathrm{old}}}(O|q)}\!\left[\,\frac{1}{G}\sum_{i=1}^{G}\!\left(\min\!\left(\frac{\pi_\theta(o_i|q)}{\pi_{\theta_{\mathrm{old}}}(o_i|q)}A_i,\;\mathrm{clip}\!\left(\frac{\pi_\theta(o_i|q)}{\pi_{\theta_{\mathrm{old}}}(o_i|q)},\,1-\varepsilon,\,1+\varepsilon\right)A_i\right) - \beta\,\mathbb{D}_{KL}\!\left(\pi_\theta\,\|\,\pi_{\mathrm{ref}}\right)\!\right)\right]\quad(1)$$</div>
+            <div class="bi-eq">$$\mathbb{D}_{KL}\!\left(\pi_\theta\,\|\,\pi_{\mathrm{ref}}\right) = \frac{\pi_{\mathrm{ref}}(o_i|q)}{\pi_\theta(o_i|q)} - \log\frac{\pi_{\mathrm{ref}}(o_i|q)}{\pi_\theta(o_i|q)} - 1,\quad(2)$$</div>
+            <p>where $\pi_\mathrm{ref}$ is a reference policy, $\varepsilon$ and $\beta$ are hyper-parameters, and $A_i$ is the advantage, computed using a group of rewards $\{r_1,\ldots,r_G\}$ corresponding to the outputs within each group:</p>
+            <div class="bi-eq">$$A_i = \frac{r_i - \mathrm{mean}(\{r_1, r_2, \ldots, r_G\})}{\mathrm{std}(\{r_1, r_2, \ldots, r_G\})}.\quad(3)$$</div>
+          </div>
+          <div class="zh">
+            <p>GRPO 是我们用于训练 R1-Zero 与 R1 的强化学习算法。它的提出动机是<em>简化训练流程、降低 PPO 的资源开销</em>——PPO 在 LLM 的 RL 阶段被广泛使用。对每个问题 $q$,GRPO 从旧策略 $\pi_{\theta_\mathrm{old}}$ 采样一组输出 $\{o_1, o_2, \ldots, o_G\}$,然后通过<em>最大化以下目标</em>来优化策略 $\pi_\theta$:见公式 (1)。其中内部 KL 散度用<em>无偏估计</em>(Schulman 2020)给出,见公式 (2);$\pi_\mathrm{ref}$ 是参考策略,$\varepsilon$、$\beta$ 是超参数;$A_i$ 是 advantage,用<em>组内奖励 $\{r_1,\ldots,r_G\}$</em> 归一化得到,见公式 (3)。</p>
+            <p>核心 trick:用<em>组内相对奖励</em>替代 value/critic 模型——这<em>砍掉了一份与策略模型同等大小的 value model</em>,显存/算力对半。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To train DeepSeek-R1-Zero, we set the learning rate to 3e-6, the KL coefficient to 0.001, and the sampling temperature to 1 for rollout. For each question, we sample 16 outputs with a maximum length of 32,768 tokens before the 8.2k step and 65,536 tokens afterward. As a result, both the performance and response length of DeepSeek-R1-Zero exhibit a significant jump at the 8.2k step, with training continuing for a total of 10,400 steps, corresponding to 1.6 training epochs. Each training step consists of 32 unique questions, resulting in a training batch size of 512. Every 400 steps, we replace the reference model with the latest policy model. To accelerate training, each rollout generates 8,192 outputs, which are randomly split into 16 mini-batches and trained for only a single inner epoch.</p>
+          </div>
+          <div class="zh">
+            <p>训练 R1-Zero 时,我们设学习率 $3\!\times\!10^{-6}$、KL 系数 $0.001$、rollout 采样温度 $1$。对每道题采样 $G=16$ 条输出,最大长度在 <strong>8.2k 步前为 32,768 tokens</strong>,<strong>之后扩到 65,536 tokens</strong>。因此 R1-Zero 的性能与响应长度在 8.2k 步出现显著台阶,整个训练共 <strong>10,400 步 ≈ 1.6 epoch</strong>。每步 32 道题、batch size = $32\!\times\!16 = 512$。<em>每 400 步</em>把参考模型更新为最新策略。为加速训练,每次 rollout 生成 8,192 条输出,随机切成 16 个 mini-batch,只跑 1 个 inner epoch。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">2.2 Reward Design / 奖励设计:Rule-based,拒绝神经 RM</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The reward is the source of the training signal, which decides the direction of RL optimization. For DeepSeek-R1-Zero, we employ rule-based rewards in mathematical, coding, and logical reasoning domains. Our rule-based reward system mainly consists of two types: accuracy rewards and format rewards. <strong>Accuracy rewards</strong> evaluate whether the response is correct: for math problems with deterministic results, the model is required to provide the final answer in a specified format (e.g., within a <code>\boxed{}</code>), enabling reliable rule-based verification of correctness; for code competition prompts, a compiler can be utilized to evaluate the model's responses against a suite of predefined test cases. <strong>Format rewards</strong> complement the accuracy reward by enforcing the model to encapsulate its reasoning process within designated tags <code>&lt;think&gt;…&lt;/think&gt;</code>.</p>
+            <div class="bi-eq">$$\mathrm{Reward}_{\text{rule}} = \mathrm{Reward}_{\text{acc}} + \mathrm{Reward}_{\text{format}}\quad(4)$$</div>
+            <p>Notably, we abstain from applying neural reward models—whether outcome-based or process-based—to reasoning tasks. This decision is predicated on our observation that neural reward models are susceptible to reward hacking during large-scale reinforcement learning. Moreover, retraining such models necessitates substantial computational resources and introduces additional complexity into the training pipeline.</p>
+          </div>
+          <div class="zh">
+            <p>奖励是训练信号的来源,决定 RL 优化的方向。对 R1-Zero,我们在数学/代码/逻辑推理领域使用<em>基于规则</em>的奖励,主要由两部分组成:准确率奖励 + 格式奖励。<strong>准确率奖励</strong>:对结果确定的数学题,要求最终答案放进 <code>\boxed{}</code> 内,这样可以<em>用规则可靠地验证</em>对错;对代码竞赛题,可以用编译器在<em>预定义测试用例</em>上评估模型答案。<strong>格式奖励</strong>:要求模型必须把推理过程包在 <code>&lt;think&gt;…&lt;/think&gt;</code> 标签内,与准确率奖励同等权重相加(公式 (4))。</p>
+            <p>值得注意的是:我们<em>明确拒绝</em>在推理任务上使用任何神经奖励模型(无论 outcome-based 还是 process-based)。理由是——神经 RM 在大规模 RL 下<em>不可避免会被 reward hacking</em>;此外,重新训练神经 RM 需要额外算力,也会让训练流水线更复杂。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">2.3 Incentivize Reasoning / 推理能力的激励与 "Aha Moment"</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We apply the RL technique on the DeepSeek-V3 base to train DeepSeek-R1-Zero. We design a straightforward template requiring DeepSeek-R1-Zero to first produce a reasoning process, then the final answer. We intentionally limit our constraints to this structural format, avoiding any content-specific biases to ensure that we can accurately observe the model's natural progression during the RL process. Figure 1(a) depicts the performance trajectory of DeepSeek-R1-Zero on the AIME 2024 benchmark throughout the RL training process, where the average pass@1 score on AIME 2024 shows a significant increase, jumping from an initial 15.6% to 77.9%. By leveraging self-consistency decoding, the model's performance can be further improved, achieving an accuracy of 86.7%—significantly surpassing the average performance across all human competitors.</p>
+          </div>
+          <div class="zh">
+            <p>我们直接在 <code>DeepSeek-V3-Base</code> 上应用 RL 训练得到 R1-Zero。我们设计了一个非常简洁的模板,只要求模型先输出推理过程、再给最终答案。我们<em>有意把约束限制在"结构格式"</em>上,不加任何与内容相关的偏置,这样才能<em>纯净地观察</em>模型在 RL 过程中的自然演化。Figure 1(a) 展示 R1-Zero 在 AIME 2024 上的训练曲线:<strong>pass@1 从 15.6% 单调上升到 77.9%</strong>,通过 self-consistency 解码进一步推到 <strong>86.7%</strong>——<em>显著超过 AIME 人类参赛者平均水平</em>。除了数学竞赛,R1-Zero 在编程竞赛与研究生水平的生物/物理/化学题上也表现强劲(见 Figure 10)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The self-evolution of DeepSeek-R1-Zero exemplifies how RL can autonomously enhance a model's reasoning capabilities. As shown in Figure 1(b), DeepSeek-R1-Zero exhibits a steady increase in thinking time throughout training, driven solely by intrinsic adaptation rather than external modifications. Leveraging long CoT, the model progressively refines its reasoning, generating hundreds to thousands of tokens. Notably, during training, DeepSeek-R1-Zero exhibits an "aha moment" (Table 2), characterized by a sudden increase in the use of phrases such as "Wait, wait. Wait. That's an aha moment I can flag here." This moment marks a distinct change in reasoning patterns. The self-evolution of DeepSeek-R1-Zero underscores the power and beauty of RL: rather than explicitly teaching the model how to solve a problem, we simply provide it with the right incentives, and it autonomously develops advanced problem-solving strategies.</p>
+          </div>
+          <div class="zh">
+            <p>R1-Zero 的<em>自演化</em>是 RL 自主增强模型推理能力的典型例证。如 Figure 1(b) 所示,整个训练过程中思考时间(响应长度)<em>单调上升</em>,完全由<em>内生适应</em>驱动,无需任何外部干预;借助长 CoT,模型反复打磨自己的推理,生成数百到数千 tokens 探索/改进解法。尤其值得一提的是训练中期的 "<strong>aha moment</strong>" (Table 2):模型 CoT 中突然大量出现 "Wait, wait. Wait. That's an aha moment I can flag here." 这样的拟人化反思短语,标志推理模式发生显著质变。R1-Zero 的自演化彰显了 RL 的<em>力量与美感</em>——我们不必教模型如何解题,只需给它正确的激励,它就能自主地发展出高级的问题求解策略。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§3 DeepSeek-R1 / 多阶段 Pipeline<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Although DeepSeek-R1-Zero exhibits strong reasoning capabilities, it faces several issues, such as poor readability and language mixing (because DeepSeek-V3-Base is trained on multiple languages, especially English and Chinese). To address these issues, we develop DeepSeek-R1, whose pipeline is illustrated in Figure 2. In the initial stage, we collect thousands of cold-start data that exhibits a conversational, human-aligned thinking process. RL training is then applied to improve the model performance with conversational thinking process and language consistency. Subsequently, we apply rejection sampling and SFT once more—this stage incorporates both reasoning and non-reasoning datasets into the SFT process, enabling the model to not only excel in reasoning tasks but also demonstrate advanced writing capabilities. To further align the model with human preferences, we implement a secondary RL stage designed to enhance the model's helpfulness and harmlessness while simultaneously refining its reasoning capabilities.</p>
+          </div>
+          <div class="zh">
+            <p>尽管 R1-Zero 推理强,但仍有一些问题:可读性差、中英文混杂(因为 V3-Base 主要用中英文预训练)。为解决这些问题,我们设计了 R1 的<em>四阶段 pipeline</em>(Figure 2):</p>
+            <ol>
+              <li><strong>① Cold-start SFT</strong>:先收集<em>几千条</em>"对话式、人类对齐"的长 CoT 数据微调 V3-Base → R1-Dev1;</li>
+              <li><strong>② Reasoning-oriented RL</strong>:在 Dev1 上跑 reasoning RL,提升对话思维与<em>语言一致性</em> → R1-Dev2;</li>
+              <li><strong>③ 拒绝采样 + SFT</strong>:从 Dev2 拒采推理样本,混入 V3 的<em>非推理</em> SFT 数据再次 SFT → R1-Dev3,补齐写作/通用能力;</li>
+              <li><strong>④ 全场景 RL</strong>:用 reasoning 的 rule reward + 通用任务的 preference reward + language reward 做最终 RL → R1。</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="bi-sub">3.1 Model-based Rewards / 通用任务的偏好奖励</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>For general data, we resort to reward models to capture human preferences in complex and nuanced scenarios. We build upon the DeepSeek-V3 pipeline and adopt a similar distribution of preference pairs and training prompts. For <strong>helpfulness</strong>, we focus exclusively on the final summary, ensuring that the assessment emphasizes the utility and relevance of the response to the user while minimizing interference with the underlying reasoning process. For <strong>harmlessness</strong>, we evaluate the entire response of the model, including both the reasoning process and the summary, to identify and mitigate any potential risks, biases, or harmful content.</p>
+          </div>
+          <div class="zh">
+            <p>对通用数据,我们诉诸<em>奖励模型</em>来刻画复杂场景下的人类偏好。我们沿用 V3 的 pipeline、相似的偏好对分布与训练 prompt。对<strong>有用性</strong>:只关注最终摘要,这样评测聚焦于"对用户的实用与相关性",尽量不干扰底层的推理过程。对<strong>无害性</strong>:评估<em>整条响应</em>(包括推理过程与最终摘要),识别并缓解任何潜在风险、偏见、或有害内容。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Helpful Reward Model.</strong> We generate preference pairs by prompting DeepSeek-V3 in the arena-hard prompt format. For each pair, we query DeepSeek-V3 four times, randomly assigning the responses as either A or B to mitigate positional bias, and retain only those pairs where the score difference $\Delta > 1$. We also ensure that chosen and rejected responses have comparable lengths to minimize length-related biases. In total, we curated 66,000 data pairs for the reward model, all from non-reasoning prompts.</p>
+            <div class="bi-eq">$$\mathrm{Reward}_{\text{helpful}} = \mathrm{RM}_{\text{helpful}}(\mathrm{Response}_A,\,\mathrm{Response}_B)\quad(5)$$</div>
+            <p><strong>Safety Reward Model.</strong> We curated a dataset of 106,000 prompts with model-generated responses annotated as "safe" or "unsafe". Unlike the pairwise loss used for helpfulness, the safety RM was trained using a <em>point-wise</em> methodology.</p>
+            <div class="bi-eq">$$\mathrm{Reward}_{\text{safety}} = \mathrm{RM}_{\text{safety}}(\mathrm{Response})\quad(6)$$</div>
+          </div>
+          <div class="zh">
+            <p><strong>有用性奖励模型(pairwise)</strong>:用 arena-hard 格式让 V3 生成偏好对;每对查询 V3<em>四次</em>,随机把 A/B 分配给两条回答以消除位置偏差;只保留分差 $\Delta > 1$ 的偏好对;同时保证 chosen 与 rejected 长度<em>相近</em>以避免长度偏差。共构建 <strong>66,000 对</strong>(全部来自非推理 prompt)。架构与 R1 一致、加一个 reward head,batch=256、lr=$6\!\times\!10^{-6}$、1 epoch、训练时 max_len=8192。公式 (5)。</p>
+            <p><strong>安全奖励模型(pointwise)</strong>:整理 <strong>106,000 条</strong> prompt + 模型回答 + "safe"/"unsafe" 标注。与有用 RM 不同,安全 RM 用<em>逐点</em>损失把"安全"与"不安全"回答区分开。公式 (6)。通用 query 按所属数据集归入安全或有用,对应分配 $\mathrm{Reward}_{\text{General}}$。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">3.2 Training Details / 两阶段 RL 细节</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>First RL stage.</strong> Learning rate 3e-6, KL coefficient 0.001, <em>GRPO clip ratio $\varepsilon = 10$</em> (a large clip!), rollout temperature 1. For each question we sample 16 outputs with max length 32,768. Each step contains 32 unique questions (batch 512). Every 400 steps we replace the reference model with the latest policy. To mitigate language mixing, we introduce a <em>language consistency reward</em> calculated as the proportion of target-language words in the CoT:</p>
+            <div class="bi-eq">$$\mathrm{Reward}_{\text{language}} = \frac{\mathrm{Num}(\mathrm{Words}_{\text{target}})}{\mathrm{Num}(\mathrm{Words})}\quad(7)$$</div>
+            <p>Although ablations show this alignment results in a <em>slight</em> degradation in reasoning, it aligns with human preferences and yields more readable outputs. We apply this reward to both reasoning and non-reasoning data by directly adding to the final reward. Note that the clip ratio plays a crucial role in training: a lower value can truncate gradients for many tokens and degrade performance, while a higher value may cause instability.</p>
+          </div>
+          <div class="zh">
+            <p><strong>第一阶段 RL</strong>:lr $3\!\times\!10^{-6}$、KL 系数 0.001、<em>GRPO clip 比 $\varepsilon = 10$</em>(<strong>大 clip!</strong>这是把 GRPO 拉到性能上限的关键 trick——避免梯度被截断、容许大步长更新)、rollout 温度 1。每题 16 条输出、max_len 32,768;每步 32 题(batch 512);每 400 步把参考模型更新为最新策略。为缓解语言混杂,引入<em>语言一致性奖励</em>(公式 (7))——CoT 中<em>目标语言</em>词所占比例。消融实验(附录 B.6)显示加入语言奖励会让推理<em>略</em>降,但显著提升可读性、更符合人类偏好。该奖励直接加进最终奖励,对推理与非推理数据均适用。</p>
+            <p>注意 clip ratio 在训练中扮演关键角色:取值过小会截断大量 token 的梯度,降低性能;取值过大则会导致训练不稳。R1 经验值 $\varepsilon = 10$。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Second RL stage.</strong> We train the model using a combination of reward signals and diverse prompt distributions. For reasoning data, we follow R1-Zero's rule-based reward. For general data we use reward models. The aggregated reward is:</p>
+            <div class="bi-eq">$$\mathrm{Reward} = \mathrm{Reward}_{\text{reasoning}} + \mathrm{Reward}_{\text{general}} + \mathrm{Reward}_{\text{language}},\quad(8)$$</div>
+            <div class="bi-eq">$$\mathrm{Reward}_{\text{reasoning}} = \mathrm{Reward}_{\text{rule}}\;\;(9),\quad \mathrm{Reward}_{\text{general}} = \mathrm{Reward}_{\text{reward\_model}} + \mathrm{Reward}_{\text{format}}\;\;(10)$$</div>
+            <p>The second stage retains most parameters from the first, with the key difference being a reduced temperature of 0.7 (higher temperatures led to incoherent generation). The stage comprises 1,700 training steps total; general instruction data and preference-based rewards are incorporated <em>exclusively in the final 400 steps</em>. More training steps with the preference reward may lead to reward hacking (documented in Appendix B.5).</p>
+          </div>
+          <div class="zh">
+            <p><strong>第二阶段 RL</strong>:奖励来源更多元——reasoning 数据沿用 R1-Zero 的 rule reward;通用数据用上面的偏好 RM。整批数据的奖励聚合为公式 (8)–(10)。第二阶段的关键参数差异:<em>采样温度从 1.0 降到 0.7</em>(因为高温下生成不连贯)。本阶段共 <strong>1,700 步</strong>;<em>通用指令数据 + 偏好奖励仅在最后 400 步加入</em>——更长时间挂着偏好 RM 会引发 reward hacking(附录 B.5 有详细记录)。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§4 Experiment / 实验<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We evaluate our models on MMLU, MMLU-Redux, MMLU-Pro, C-Eval, CMMLU, IFEval, FRAMES, GPQA Diamond, SimpleQA, C-SimpleQA, SWE-Bench Verified, Aider, LiveCodeBench (2024-08 – 2025-01), Codeforces, CNMO 2024, and AIME 2024. Table 3 summarizes the performance of DeepSeek-R1 across multiple developmental stages.</p>
+            <p>A comparison between DeepSeek-R1-Zero and R1-Dev1 reveals substantial improvements in instruction-following (IF-Eval, ArenaHard). However, due to the limited size of the cold-start dataset, Dev1 exhibits a partial degradation in reasoning compared to R1-Zero, most notably on AIME (77.9 → 59.0). In contrast, R1-Dev2 demonstrates marked enhancements on reasoning-heavy benchmarks (code, math, STEM); general-purpose benchmarks like AlpacaEval 2.0 show only marginal improvement. These results suggest that reasoning-oriented RL considerably enhances reasoning capabilities while exerting limited influence on user preference-oriented benchmarks.</p>
+          </div>
+          <div class="zh">
+            <p>我们在 MMLU、MMLU-Redux、MMLU-Pro、C-Eval、CMMLU、IFEval、FRAMES、GPQA Diamond、SimpleQA、C-SimpleQA、SWE-Bench Verified、Aider、LiveCodeBench(2024-08 – 2025-01)、Codeforces、CNMO 2024、AIME 2024 上评估。Table 3 汇总了 R1 各开发阶段的表现。</p>
+            <p>R1-Zero vs R1-Dev1:Dev1 在<em>指令跟随</em>(IF-Eval, ArenaHard)上大幅提升,但因 cold-start 数据量有限,推理上有<em>部分回退</em>——最明显是 AIME 从 77.9 跌到 59.0。R1-Dev2 则在 code/math/STEM 等<em>重推理</em> benchmark 上显著回升;通用任务(AlpacaEval 2.0)只有微小提升。这说明 <strong>reasoning-oriented RL 主要拉推理、对用户偏好类指标影响有限</strong>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>DeepSeek-R1 Dev3 integrates both reasoning and non-reasoning datasets into the SFT pipeline, enhancing the model's proficiency in both reasoning and general language generation. Compared to Dev2, Dev3 achieves notable improvements on AlpacaEval 2.0 and Aider-Polyglot, attributable to the inclusion of large-scale non-reasoning corpora and code engineering datasets. Finally, comprehensive RL training on Dev3 using mixed reasoning and general-purpose data produced the final DeepSeek-R1. Marginal improvements occurred in code and mathematics benchmarks, as substantial reasoning-specific RL was done in prior stages. The primary advancements in the final R1 were in general instruction-following and user-preference benchmarks: <strong>AlpacaEval 2.0 +25%, ArenaHard +17%, Codeforces Rating 2029 (96.3 percentile, surpassing 96.3% of human contestants)</strong>.</p>
+          </div>
+          <div class="zh">
+            <p>R1-Dev3 把<em>推理与非推理</em>数据都纳入 SFT,使模型在推理与通用语言生成上都更强。相比 Dev2,Dev3 在 AlpacaEval 2.0 与 Aider-Polyglot 上明显提升——得益于大规模非推理语料与代码工程数据的引入。最终在 Dev3 上做<em>融合推理 + 通用</em>的全场景 RL → 得到最终 R1。code/math 因前阶段已大量 RL,只有微小提升;最终 R1 的<em>主要增益在通用指令与用户偏好</em>:<strong>AlpacaEval 2.0 +25%、ArenaHard +17%、Codeforces Rating 2029(96.3 百分位,超过 96.3% 人类选手)</strong>。具体表见 Table 3。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5–6 Safety + Conclusion / 安全与结论<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>With the advancement in the reasoning capabilities of DeepSeek-R1, we deeply recognize the potential ethical risks. R1 can be subject to jailbreak attacks, leading to the generation of dangerous content; the enhanced reasoning enables the model to provide plans with better operational feasibility. A public model is also vulnerable to further fine-tuning that could compromise inherent safety protections. In Appendix D.3 we present a comprehensive safety report. The inherent safety level of DeepSeek-R1 is generally at a moderate level (comparable to GPT-4o 2024-05-13); when coupled with the risk-control system, the safety level is elevated to a superior standard.</p>
+          </div>
+          <div class="zh">
+            <p>随着 R1 推理能力提升,我们深刻认识到潜在的<em>伦理风险</em>:R1 可能被越狱攻击,生成危险内容(如爆炸物制造方案);增强的推理能力会让模型给出<em>可操作性更强</em>的方案。公开模型也容易被进一步微调,从而<em>破坏内嵌的安全保护</em>。附录 D.3 给出多角度的安全报告:R1 <em>固有</em>安全水平大致与 GPT-4o(2024-05-13)<em>相当</em>(中等);叠加风险控制系统后,整体安全水平提升到较高档位。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We present DeepSeek-R1-Zero and DeepSeek-R1, which rely on large-scale RL to incentivize model reasoning behaviors. Our results demonstrate that pre-trained checkpoints inherently possess substantial potential for complex reasoning tasks. We believe that the key to unlocking this potential lies not in large-scale human annotation but in the provision of <em>hard reasoning questions, a reliable verifier, and sufficient computational resources</em> for RL. Sophisticated reasoning behaviors, such as self-verification and reflection, appeared to emerge organically during the RL process.</p>
+            <p>Limitations: (a) Structure Output and Tool Use—suboptimal vs existing models; (b) Token efficiency—still observes "overthinking" on simple questions; (c) Language Mixing—optimized for Chinese/English, mixing occurs for other languages; (d) Prompting Engineering—sensitive to prompts, few-shot consistently degrades performance, zero-shot is recommended; (e) Software Engineering—large-scale RL not yet applied due to long evaluation times. Beyond capability limits, pure RL itself has inherent challenges, especially <em>reward hacking</em>—for tasks where reliable RMs are hard to build (e.g., writing), scaling pure RL remains an open challenge.</p>
+          </div>
+          <div class="zh">
+            <p>结论:R1-Zero 与 R1 都依靠大规模 RL 激发模型的推理行为。结果表明:预训练 checkpoint 本身就<em>潜在具备</em>解决复杂推理的能力;<strong>解锁这种潜能的关键不在大规模人工标注,而在三要素</strong>——<em>高难度的推理题、可靠的 verifier、足够的 RL 算力</em>。自我验证、反思等复杂推理行为<em>自然涌现</em>于 RL 过程中。</p>
+            <p>局限:(a) <em>结构化输出与工具使用</em>:仍弱于现有模型,无法用搜索/计算器,但搭 RL 环境不难,下一版可解;(b) <em>Token 效率</em>:对简单题仍有 overthinking;(c) <em>语言混合</em>:R1 主要优化中英文,处理其它语言时会语言混杂;(d) <em>Prompt 工程</em>:对 prompt 敏感,<em>few-shot 一致地降效</em>,建议<em>zero-shot</em> 直接描述问题与输出格式;(e) <em>软件工程任务</em>:因评测时间长、效率低,大规模 RL 尚未应用,后续版本会用拒采或异步评测改善。除了这些能力短板,纯 RL 方法本身也面临挑战——尤其是<em>reward hacking</em>:对于写作等很难造可靠 RM 的任务,纯 RL 还很难规模化。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>附录 A·背景 + GRPO vs PPO<span class="sec-page">p.13</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">A.1–A.2 Background / DeepSeek-V3 与传统后训练范式</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>DeepSeek V3 is an advanced open-source LLM released in December 2024. Built on a Mixture-of-Experts (MoE) architecture, DeepSeek V3 has <strong>671 billion total parameters, with 37 billion activated per token</strong>. It was pre-trained on an expansive dataset of 14.8 trillion high-quality, diverse tokens. The model incorporates innovative features like Multi-head Latent Attention (MLA) for efficient inference, an auxiliary-loss-free load-balancing strategy, and Multi-Token Prediction (MTP). DeepSeek-V3-Base is the base model, while DeepSeek-V3 is the instructed model. R1 and R1-Zero are both trained on top of V3-Base; R1 leverages non-reasoning data from V3's SFT data. The training data of V3-Base is mostly Chinese and English, which may explain R1-Zero's language mixing when the language consistency reward is absent. A widely adopted two-stage post-training framework is SFT followed by RL. In this study, we demonstrate that the SFT stage may impede a model's ability to explore and develop effective reasoning strategies, because human-provided responses often omit critical components such as explicit reflection and verification steps. R1-Zero enables direct exploration of reasoning patterns by the model itself, independent of human priors.</p>
+          </div>
+          <div class="zh">
+            <p>DeepSeek V3 是 2024 年 12 月发布的开源大模型,采用 MoE 架构,<strong>总参 671B、激活 37B/token</strong>,在 14.8T tokens 上预训练。集成 MLA(高效推理)、无辅助损失负载均衡、Multi-Token Prediction(MTP)。本文用 <em>V3-Base</em> 作 R1/R1-Zero 的<em>基模</em>,V3 作 instructed 模型;R1 利用了 V3 SFT 数据中的<em>非推理</em>部分。V3-Base 的训练数据主要是中英文,这也是为何在没有语言一致性奖励时 R1-Zero 会出现中英文混杂。传统后训练范式是 SFT→RL 两阶段。本工作证明:<em>SFT 阶段可能阻碍模型探索并发展有效推理策略</em>——人类示范常常缺少显式的反思/验证步骤,而 R1-Zero 让模型<em>独立于人类先验</em>地探索推理模式,因此能发现更鲁棒、更可泛化的推理能力。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">A.3 GRPO vs PPO / 算法对照</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>GRPO is the RL algorithm we adopt to train R1-Zero and R1. It was proposed to simplify training and reduce the resource consumption of PPO. For each question $q$, GRPO samples a group of outputs $\{o_1,\ldots,o_G\}$ from $\pi_{\theta_\mathrm{old}}$ and optimizes $\pi_\theta$ by maximizing the objective in Eq. (1), with the per-group advantage $A_i$ in Eq. (3). In contrast, in PPO the advantage is computed via Generalized Advantage Estimation (GAE), which requires a learned value model—usually of similar size as the policy model, introducing a significant memory and computational overhead. Predicting the expected cumulative reward from a partial response is inherently difficult, especially when only the final outcome reward is available; the challenge is more pronounced when training long-CoT models, where content initially generated may later be revised or contradicted.</p>
+          </div>
+          <div class="zh">
+            <p>GRPO 是我们用于训 R1-Zero 与 R1 的 RL 算法,提出动机是<em>简化训练、降低 PPO 资源消耗</em>。对每题 $q$,GRPO 从 $\pi_{\theta_\mathrm{old}}$ 采 $G$ 条输出,通过 Eq. (1) 最大化目标,advantage 用 Eq. (3) 的<em>组内归一</em>得到。相比之下,PPO 的 advantage 由 GAE 计算,需要一个学习得到的 value model——通常与策略模型同量级,带来<em>显著的显存与算力开销</em>。从"半截响应"预测"最终累计奖励"<em>本身就难</em>,在只有最终 outcome reward 时尤其难;训练长 CoT 模型时这个挑战更加突出——因为前面生成的内容可能被后面反思/否定。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Another key difference is how KL divergence is incorporated. In GRPO, an unbiased estimator of KL is directly added in the loss (Eq. 11). In PPO, a per-token KL penalty is added as a dense reward at each token. Since RL's optimization goal is to maximize cumulative rewards, PPO's approach penalizes <em>cumulative</em> KL, which may implicitly penalize response length and prevent it from increasing. Additionally, since we may train thousands of steps when training long-CoT models, the trained policy can diverge significantly from the initial reference policy. To balance exploration and stability, we periodically update the reference policy to the latest policy during actual training. Figure 4 (this fig_1 in the gallery) compares PPO and GRPO on the MATH task using DeepSeek-Coder-V2-Lite. When $\lambda$ in GAE is set to 0.95 (the default), PPO performs considerably worse than GRPO; with careful tuning ($\lambda=1.0$), PPO approaches but still trails GRPO. Given the additional computational cost for hyperparameter tuning and the value model overhead, GRPO is a more practical alternative for large-scale models with constrained resources.</p>
+          </div>
+          <div class="zh">
+            <p>另一个关键差异在<em>如何把 KL 纳入</em>:GRPO 用 KL 的<em>无偏估计</em> $\tfrac{\pi_{\mathrm{ref}}}{\pi_\theta}-\log\tfrac{\pi_{\mathrm{ref}}}{\pi_\theta}-1$ 直接加进 loss(Eq. 11);PPO 把 per-token KL 罚作为 dense reward 加到每个 token 上。RL 的目标是<em>最大化累积奖励</em>,PPO 的方式相当于在罚<em>累计 KL</em>——会隐式地<em>压响应长度</em>,阻碍长度增长。此外,在长 CoT 训练上跑成千上万步,策略会显著偏离初始参考策略;为兼顾探索与稳定,实践中我们<em>周期性</em>地把参考策略更新为最新策略。Figure 4(画廊中的 fig_1)用 DeepSeek-Coder-V2-Lite 比较 PPO 与 GRPO 在 MATH 任务上的表现:GAE 默认 $\lambda=0.95$ 时 PPO 远逊于 GRPO;调到 $\lambda=1.0$(近似 MC)后接近 GRPO 但仍被压住。考虑 PPO 的额外调参成本与 value model 显存开销,在大模型有限资源下 GRPO 是<em>更实用</em>的选择。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>附录 F·Distillation 到小模型<span class="sec-page">p.60</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>LLMs are energy-intensive, requiring substantial computational resources, including high-performance GPUs and considerable electricity, for training and deployment. These resource demands present a significant barrier to democratizing access to AI-powered technologies. To address this challenge, we adopt a model distillation approach. We fine-tune open-source foundation models such as Qwen and LLaMA using a curated dataset comprising <strong>800,000 samples generated with DeepSeek-R1</strong>. For distilled models, we apply only SFT and do not include an RL stage, even though incorporating RL could substantially boost model performance. Our primary goal here is to demonstrate the effectiveness of distillation, leaving RL to the broader research community.</p>
+          </div>
+          <div class="zh">
+            <p>LLM 是能耗大户——训练与部署都要高端 GPU 与大量电力,这是 AI 民主化的一大障碍。为此我们采用<em>模型蒸馏</em>路径:用 DeepSeek-R1 生成的 <strong>800k 样本</strong>对 Qwen 与 LLaMA 系列的开源基础模型做微调。对蒸馏模型,我们<em>只做 SFT、不做 RL</em>——尽管加 RL 还能涨点。我们的<em>主要目标</em>是验证"蒸馏"这条路本身的有效性,把"再叠加 RL"留给社区。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>As shown in Table 15, the straightforward distillation from DeepSeek-R1 allows the distilled model DeepSeek-R1-Distill-Qwen-1.5B to surpass non-reasoning baselines on mathematical benchmarks—remarkable that a 1.5B model exceeds best closed-source models on math. Model performance improves progressively as student size grows: <strong>R1-Distill-Qwen-32B</strong> achieves AIME 2024 pass@1 = <strong>72.6</strong>, MATH-500 = 94.3, GPQA Diamond = 62.1, Codeforces Rating = 1691; <strong>R1-Distill-Llama-70B</strong> reaches AIME 70.0, MATH 94.5, Codeforces 1633.</p>
+          </div>
+          <div class="zh">
+            <p>Table 15 显示:仅做<em>朴素蒸馏</em>就能让 <strong>R1-Distill-Qwen-1.5B</strong>(1.5B 参数!)在数学 benchmark 上超过非推理 baseline 闭源模型——这相当震撼。蒸馏效果随学生体量单调增长:<strong>R1-Distill-Qwen-32B</strong> AIME 2024 pass@1 = <strong>72.6</strong>、MATH-500 = 94.3、GPQA Diamond = 62.1、Codeforces Rating = 1691;<strong>R1-Distill-Llama-70B</strong> 达 AIME 70.0 / MATH 94.5 / Codeforces 1633。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">F.1 Distillation vs. RL / 蒸馏 vs 自跑 RL</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The remaining question: can a small model achieve comparable performance through large-scale RL alone, without distillation? We conducted large-scale RL training on Qwen2.5-32B-Base using math/code/STEM data for over 10K steps, producing <strong>Qwen2.5-32B-Zero</strong>. As shown in Table 16, the 32B base after large-scale RL achieves performance on par with QwQ-32B-Preview (AIME 47.0). However, <strong>R1-Distill-Qwen-32B (AIME 72.6) significantly outperforms Qwen2.5-32B-Zero (AIME 47.0)</strong> across all benchmarks. Two conclusions: (1) <em>distilling more powerful models into smaller ones yields excellent results</em>, whereas small models relying on large-scale RL require enormous compute and may not even reach distillation performance; (2) while distillation is economical and effective, advancing beyond human intelligence may still require more powerful base models and larger-scale RL.</p>
+          </div>
+          <div class="zh">
+            <p>剩下的问题是:小模型能否仅靠<em>大规模 RL</em>(不蒸馏)达到同等水平?我们在 Qwen2.5-32B-Base 上用 math/code/STEM 数据跑了 <strong>10k+ 步</strong>大规模 RL,得到 <strong>Qwen2.5-32B-Zero</strong>。Table 16 显示:32B 基模跑完大规模 RL 后,水平与 QwQ-32B-Preview 持平(AIME 47.0)。但 <strong>R1-Distill-Qwen-32B(AIME 72.6) 在所有基准上都显著优于 Qwen2.5-32B-Zero(AIME 47.0)</strong>。两条结论:</p>
+            <ol>
+              <li><strong>"从更强的 teacher 蒸馏" &gt;&gt; "小模型自己跑 RL"</strong>——后者算力极大,可能还达不到蒸馏的水平;</li>
+              <li>蒸馏经济实用,但要想<em>突破人类智能上限</em>,仍需更强的基础模型 + 更大规模的 RL。</li>
+            </ol>
+            <p>另一个补充实验:在 OpenAI-o1 发布之前(2024 年 8 月)我们就在 <strong>Qwen2-Math-7B</strong> 上跑了 ~10,000 步 policy-gradient,得到 Qwen2-Math-7B-Zero,显著超过非推理 baseline(Table 17)——再次验证大规模 RL 可以让模型自主发展出高级推理。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-10">
+      <summary>
+        <span>附录 G·Discussion + Unsuccessful Attempts(PRM / MCTS)<span class="sec-page">p.62</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">G.1 Key Findings / 关键发现</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Importance of base checkpoint.</strong> Initially we experimented with smaller-scale bases (7B dense, 16B MoE) for RL training, but these configurations consistently failed to yield meaningful improvements on AIME. As response lengths increased, these smaller models exhibited a tendency toward repetition and could not effectively leverage long CoT. We transitioned to larger architectures—32B dense, 230B MoE, 671B MoE—and finally observed substantial gains from pure RL. The effectiveness of RL from base models is highly dependent on the underlying model capacity. We recommend future research prioritize sufficiently large and expressive base models when validating RL-from-scratch.</p>
+            <p><strong>Importance of verifiers.</strong> Two approaches—rule-based RMs and LLMs that assess correctness against a predefined ground-truth—serve as robust mechanisms for mitigating reward hacking. LLM-based evaluation is particularly effective for tasks with well-defined, concise answers, but exhibits limited generalizability to open-ended generation and long-form writing where correctness is subjective.</p>
+            <p><strong>Iterative pipeline.</strong> Both RL and SFT are indispensable: RL enables the model to explore optimal reasoning trajectories beyond human traces; SFT plays a crucial role where reliable reward signals are hard to define. Exclusive RL leads to reward hacking and suboptimal behavior on ill-posed tasks; SFT alone prevents the model from optimizing reasoning via exploration.</p>
+          </div>
+          <div class="zh">
+            <p><strong>基模规模很关键。</strong>早期我们尝试在更小的基模上跑 RL(7B dense、16B MoE),结果在 AIME 上<em>始终没有有意义的提升</em>:随着响应变长,小模型倾向于重复,无法有效利用长 CoT 提升推理。转到更大的 32B dense / 230B MoE / 671B MoE 后,纯 RL 才真正出效果。结论:<em>RL-from-base 的有效性高度依赖基模能力</em>;后续工作如果要复现"从零跑 RL",务必用足够大的基模。</p>
+            <p><strong>Verifier 很关键。</strong>两种方案被验证为鲁棒:(i) rule-based RM;(ii) 用 LLM 对照 ground-truth 判分。后者在答案明确、简短(短句/短语)的任务上特别有效;但在开放生成、长文写作等"对错主观"的任务上泛化受限。</p>
+            <p><strong>多阶段 pipeline。</strong>RL 与 SFT <em>都不可或缺</em>:RL 让模型探索超越人类轨迹的最优推理路径;SFT 在难以定义可靠奖励的任务上承担基础角色。<em>纯靠 RL</em> → reward hacking、在不良任务上次优;<em>纯靠 SFT</em> → 无法通过探索优化推理。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">G.2 Unsuccessful Attempts / 失败尝试</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Process Reward Model (PRM).</strong> PRM is a reasonable method to guide the model toward better approaches for solving reasoning tasks. However, in practice PRM has <em>three main limitations</em>: (1) it is challenging to explicitly define a fine-grain step in general reasoning; (2) determining whether the current intermediate step is correct is challenging—automated annotation may not yield satisfactory results while manual annotation is not scalable; (3) once a model-based PRM is introduced, it <em>inevitably</em> leads to reward hacking, and retraining the RM needs additional compute and complicates the pipeline. In conclusion, while PRM is good at reranking top-N or assisting guided search, its advantages are limited compared to the additional overhead in large-scale RL.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Process Reward Model(PRM)</strong>是一个看似合理的引导方法,但实践中有<em>三大瓶颈</em>:</p>
+            <ol>
+              <li>通用推理里很难把"细粒度 step"严格定义出来;</li>
+              <li>判断"当前中间 step 是否正确"很难——自动标注效果差,人工标注又难规模化;</li>
+              <li>一旦引入<em>模型化的 PRM</em>,在大规模 RL 下<em>必然</em>引发 reward hacking;重训 PRM 还要额外算力,让训练流水线更复杂。</li>
+            </ol>
+            <p>结论:PRM 在<em>对 top-N 候选 rerank</em> 或<em>引导 search</em> 上仍有用,但作为<em>大规模 RL 的训练信号</em>,其收益不抵其开销。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Monte Carlo Tree Search (MCTS).</strong> Inspired by AlphaGo / AlphaZero, we explored using MCTS to enhance test-time compute scalability. The approach breaks answers into smaller parts to allow systematic search; we prompted the model to generate tagged reasoning steps, used a pre-trained value model to guide MCTS, then trained both actor and value model iteratively from the resulting (q, a) pairs. However, this approach encounters several challenges. <em>First</em>, unlike chess where the search space is well-defined, token generation has an exponentially larger search space; setting a max node-extension limit causes the model to get stuck in local optima. <em>Second</em>, the value model directly influences generation quality—training a fine-grained value model is inherently difficult, making iterative self-improvement hard to replicate from AlphaGo's recipe. In conclusion, while MCTS paired with a pre-trained value model can improve <em>inference</em> performance, iteratively boosting model performance through self-search remains a significant challenge.</p>
+          </div>
+          <div class="zh">
+            <p><strong>蒙特卡洛树搜索(MCTS)</strong>:受 AlphaGo / AlphaZero 启发,我们想用 MCTS 把<em>测试期算力</em>规模化扩展。具体做法是把答案切成"小块"以系统搜索解空间:让模型生成<em>带标签</em>的推理步骤,用预训练的 value model 引导 MCTS 找解,再用 (q, a) 对迭代地训练 actor 与 value model。但放大规模时遇到两个难题:</p>
+            <ol>
+              <li><strong>搜索空间爆炸</strong>:与围棋不同,token 生成的搜索空间<em>指数级远大于围棋</em>;为缓解我们设了节点扩展上限,但这又导致模型容易卡在<em>局部最优</em>。</li>
+              <li><strong>细粒度 value model 难训</strong>:value model 直接影响每一步搜索的质量,但训一个细粒度且准确的 value model<em>本质上很难</em>;AlphaGo 靠"循序提升的 value model"成功,而 token 生成场景里这一原理很难复现。</li>
+            </ol>
+            <p>结论:MCTS 配预训练好的 value model 可以在<em>推理期</em>增益,但"靠 self-search 反过来迭代提升模型本身"在 LLM 上<em>跑不通</em>——这与 AlphaGo-style self-play 在棋类成功形成鲜明对比。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-refs">
+      <summary>
+        <span>References<span class="sec-page">p.79</span></span>
+      </summary>
+      <div class="sec-content"><p style="color:var(--text-faint);font-style:italic;">参考文献略 — 共 80+ 条,包括 GRPO(Shao et al. 2024)、PPO(Schulman et al. 2017)、AlphaGo / AlphaZero(Silver et al. 2017)、Let's verify step by step(Lightman et al. 2024)、CoT prompting(Wei et al. 2022b)、Math-Shepherd(Wang et al. 2023a)、Process & Outcome reward(Uesato et al. 2022)等;原文 PDF 第 79–86 页。</p></div>
+    </details>
+
+  </div>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

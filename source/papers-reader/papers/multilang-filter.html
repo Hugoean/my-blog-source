@@ -1,0 +1,990 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Judging Quality Across Languages: A Multilingual Approach to Pretraining Data Filtering with Language Models · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2505.22232 · 38 页 · 1 张图</div>
+    <h1>Judging Quality Across Languages: A Multilingual Approach to Pretraining Data Filtering with Language Models</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-deep">优先级 deep</span>
+      <span>W4</span>
+      <span>CPT</span><span>Multilingual</span>
+      <span><a href="https://arxiv.org/abs/2505.22232" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2505.22232.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>JQL(Judging Quality across Languages)用「人工标注 GT → 选 top-N LLM-as-judge → 蒸馏到 frozen 多语言 embedding + 轻量回归头」三段管线,把 Fineweb-Edu 那套英文教育价值打分扩展到 35 种欧洲语言,并对阿拉伯语/泰语/中文做 zero-shot 迁移;在用同等或更多 token 的前提下,显著超过 FineWeb2 的启发式过滤基线。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li><strong>三阶段管线(必复述)</strong>:① 511 个英文文档由 15 名标注员按 Fineweb-Edu 的 0–5 教育价值 prompt 打分,再用 DeepL(22 语种)+ GPT-4o(13 语种)翻译为 35 种欧洲语言,得到 17 500 文档的多语言 GT;② 在 GT 上用 <strong>Spearman 相关系数</strong>(而非 F1/Accuracy)挑出 Gemma-3-27B-it、Mistral-3.1-24B-it、Llama-3.3-70B-it 三个 top judges,用它们给每语种 500k 个 FW2 文档各打 3 次分;③ 用 frozen Snowflake Arctic Embed v2 + 一个 MLP 回归头蒸馏,head 参数 $<1\%$,A100 单卡 $\sim 11{,}000$ docs/min(平均 690 tok/doc)。</li>
+        <li><strong>为什么用 Spearman 而非 F1</strong>:教育价值是「有序连续语义」(0…5 是序数 ordinal,不是类别),分类指标 order-invariant、对刻度漂移敏感;而在 web 级语料里,文档的<em>相对排名</em>才是决定保留谁的关键。文中 Gemma-3-27B-it 排名第一但分类指标差就是反例。</li>
+        <li><strong>multilingual NLU vs NLG 解耦</strong>:全程用英文 prompt + 让模型用英文回答,让模型只动用「跨语言理解能力」,绕开低资源语种生成不稳定的问题——这是 LLM-as-judge 能跨 35 种语言保持稳定的关键 trick。</li>
+        <li><strong>百分位阈值 vs 绝对阈值</strong>:Gemma > Mistral > Llama 给出的分数分布<em>系统性</em>偏移(虽 Spearman > 0.87),所以「score $\geq 3$」这种绝对阈值不可移植;JQL 改用 <strong>per-head percentile threshold</strong>(论文用 0.6 / 0.7),并要求 3 个 head 同时通过,降单模型 bias、控质量–保留量 tradeoff。</li>
+        <li><strong>关键收益</strong>:Spanish 上 0.6 阈值比 FW2 多保留 $\sim 9\%$ tokens 还赢质量;13 语种平均:0.6 阈值 tokens $+4.8\%$ / benchmark Avg $+4.27\%$ / Final $+4.6\%$;0.7 阈值 tokens $-15.8\%$ / Avg $+6.70\%$ / Final $+7.2\%$——更严的阈值用更少 token 换更高质量。</li>
+        <li><strong>跨语言泛化机制</strong>:Snowflake Arctic Embed v2 把跨语种语义对齐到同一嵌入空间,因此对训练时<em>未见过</em>的阿拉伯语/泰语/中文也能 zero-shot 直接用,无需再训(Fig.6 在 MMLU 与多语 QA 上仍优于 FW2)。三个孤立语种 Irish/Maltese/Basque 因 embed 训练语料覆盖差而表现下滑——属于 backbone 的锅,不是方法本身的锅。</li>
+        <li><strong>消融与扩展</strong>:① 训练样本量在 500k 左右收敛;② frozen backbone + 多个 head 共享 → 同一份 embed 可以并行算教育价值/数学正确性/成人内容,边际成本极低;③ 论文消融只在 2B-LLaMA 上做了 14B/27B tokens,scaling 到更大模型未验证,是公开 limitation。</li>
+        <li><strong>对 Shopee 的借鉴</strong>:TH/ID/PT 等低资源市场最直接可复用——拿现有 multilingual embed + 一个轻量 head + 几百条 PM 标注的「商品文案/客服回答质量」就能跑;不必每语种都重训 judge。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      直击 Shopee TH/ID/PT 多语言痛点
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      <li><a href="#sec-1">Preamble · 题目 & 作者</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-4a">§2 Collecting Human Annotations / 收集人工标注</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-4b">§3 LLMs for Multilingual Annotation / LLM-as-judge</a><span class="toc-page">p.3</span></li>
+      <li><a href="#sec-4c">§4 Distilling Lightweight Annotators / 蒸馏轻量标注器</a><span class="toc-page">p.4</span></li>
+      <li><a href="#sec-4d">§5 Assessing Training Data Quality / 评估数据质量</a><span class="toc-page">p.6</span></li>
+      <li><a href="#sec-4e">§6 Generalization to Unseen Languages / 未见语言泛化</a><span class="toc-page">p.7</span></li>
+      <li><a href="#sec-5">§7 Related Work / 相关工作 · §8 Conclusion / 结论</a><span class="toc-page">p.8</span></li>
+      <li><a href="#sec-6">Limitations / 局限</a><span class="toc-page">p.9</span></li>
+      <li><a href="#sec-7">References (stub)</a><span class="toc-page">p.10</span></li>
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (1 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2505.22232_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.31 · 16147×10357</div>
+          <div class="fig-caption">附录图:三个 JQL 轻量标注器(Gemma / Mistral / Llama)在 16 种语言上对 FW2-Removed vs FW2-Filtered 的 Edu-Score 分布对比(箱线图)。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>三行子图分别是 <code>JQL-Gemma-Edu</code> / <code>JQL-Mistral-Edu</code> / <code>JQL-Llama-Edu</code> 三个蒸馏出的轻量标注头;横轴 16 种语言(ar/bg/de/el/es/fi/fr/hu/it/lt/no/pl/th/tr/uk/zh,含 zero-shot 的 ar/th/zh);每语种两条箱线——蓝色 <strong>FW2-Removed</strong>(被 Fineweb2 启发式规则过滤掉的文档)、橙色 <strong>FW2-Filtered</strong>(被启发式保留下来的文档),箱体反映 0–5 教育价值分的中位数与四分位距。</p>
+          <p><strong>② 关键数据 / 对照:</strong>三行内,几乎所有语种橙色箱体都<em>系统性高于</em>蓝色——这相当于把 JQL 当成「裁判」反向给 FW2 打分,说明 FW2 的启发式过滤确实抓到了真实的质量信号(sanity check)。但跨标注器看,绝对刻度不一致:Gemma 行整体偏高(中位数普遍 $\sim 2$),Llama 行偏低(中位数普遍 $\sim 1$);同一份文档被三个 head 打出的<em>分数</em>不同、但<em>排名</em>高度一致(论文正文报告 Spearman $r > 0.87$)。</p>
+          <p><strong>③ 启示:</strong>这张图直接论证了为什么 JQL 必须用 <strong>per-head percentile</strong>(0.6/0.7)而不是绝对阈值——同一个「score $\geq 3$」在 Gemma 上保留一半文档,在 Llama 上几乎全删,会造成跨语种、跨 head 不可比;改用百分位,既保留每个 head 自己的相对排名,又能用三 head 投票降低单模型偏差。工程上的另一启示:JQL 也可以反过来当 FW2 的诊断工具——看哪个语种/数据切片上橙蓝差距小,就说明 FW2 启发式在该语种失灵,可以优先用 JQL 替换。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>arXiv:2505.22232v2  [cs.CL]  31 May 2025 Judging Quality Across Languages: A Multilingual Approach to Pretraining Data Filtering with Language Models Mehdi Ali1,2† Manuel Brack3,5† Max Lübbering1,2† Elias Wendt5† Abbas Goher Khan1† Richard Rutmann1,2 Alex Jude2 Maurice Kraus5 Alexander Arno Weber1,2 David Kaczér1 Florian Mai1 Lucie Flek1 Rafet Sifa1,2 Nicolas Flores-Herr2 Joachim Köhler1,2 Patrick Schramowski3,4,5 Michael Fromm1,2 Kristian Kersting3,4,5 1Lamarr Institute, 2Fraunhofer IAIS, 3DFKI SAINT, 4Hessian AI, 5TU Darmstadt mehdi.ali@iais.fraunhofer.de, brack@cs.tu-darmstadt.de</p></div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>High-quality multilingual training data is essential for effectively pretraining large language models (LLMs). Yet, the availability of suitable open-source multilingual datasets remains limited. Existing state-of-the-art datasets mostly rely on heuristic filtering methods, restricting both their cross-lingual transferability and scalability. Here, we introduce JQL, a systematic approach that efficiently curates diverse and high-quality multilingual data at scale while significantly reducing computational demands. JQL distills LLMs' annotation capabilities into lightweight annotators based on pretrained multilingual embeddings. These models exhibit robust multilingual and cross-lingual performance, even for languages and scripts unseen during training. Evaluated empirically across 35 languages, the resulting annotation pipeline substantially outperforms current heuristic filtering methods like Fineweb2. JQL notably enhances downstream model training quality and increases data retention rates. Our research provides practical insights and valuable resources for multilingual data curation, raising the standards of multilingual dataset development.</p>
+          </div>
+          <div class="zh">
+            <p>高质量的多语言训练数据是有效预训练大语言模型(LLM)的关键。然而,合适的开源多语言数据集依旧供给有限。现有的最先进数据集大多依赖<em>启发式</em>(基于规则的)过滤方法,既限制了跨语言可迁移性,也限制了规模扩展能力。在此,我们引入 JQL——一个系统化的方法,能够在显著降低算力需求的同时,大规模高效地策展多样且高质量的多语言数据。JQL 把 LLM 的标注能力<em>蒸馏</em>到基于预训练多语言嵌入的轻量标注器上。这些模型在多语言与跨语言场景中表现稳健,即使是训练期间从未见过的语言与文字也能胜任。我们在 35 种语言上做了实证评估,所得标注流水线显著超过 Fineweb2 这类当前的启发式过滤方法。JQL 既明显提升了下游模型的训练质量,也提高了数据保留率(retention rate)。我们的研究为多语言数据策展提供了可操作的洞见与有价值的资源,推动多语言数据集建设的标准升级。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">1.1 动机:数据质量决定预训练上限</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The quality of pre-training data remains a crucial factor in LLM performance and represents one of the most effective factors for reducing training costs (Penedo et al., 2024a). Even recent improvements in post-training and scaling of inference-time compute heavily depend on the quality of the pre-trained base model (Guo et al., 2025). Consequently, a growing number of research efforts have focused on developing data curation pipelines for large-scale web data (Penedo et al., 2024a; Li et al., 2024; Su et al., 2024). The overall goal of any data filtering set-up is to achieve the largest possible dataset of the highest quality. Traditionally, heuristic-based approaches rely on predefined rules to filter the raw training data (Abadji et al., 2022; Penedo et al., 2024a). Recently, however, there has been a shift towards machine learning-based data curation, which tends to outperform complex rule-based systems in producing high-quality pre-training corpora.</p>
+          </div>
+          <div class="zh">
+            <p>预训练数据的<strong>质量</strong>仍然是决定 LLM 性能的关键因素之一,也是降低训练成本最有效的手段之一(Penedo 等,2024a)。即便是近期 post-training 与推理期算力扩展(inference-time scaling)的进步,也都<em>严重依赖</em>预训练 base model 的质量(Guo 等,2025)。因此,越来越多的研究工作开始投入到面向大规模 web 数据的策展(curation)管线中(Penedo 等,2024a;Li 等,2024;Su 等,2024)。任何数据过滤流程的总体目标都是:在<em>质量最高</em>的前提下拿到<em>体量最大</em>的数据集。传统做法依赖<strong>启发式规则</strong>(heuristic)来清洗原始训练数据(Abadji 等,2022;Penedo 等,2024a);近来则在向「机器学习驱动的数据策展」迁移,后者在构造高质量预训练语料方面通常优于复杂的规则系统。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">1.2 问题:LLM-as-judge 在多语言场景下的空白</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>A particularly interesting research avenue is the use of existing LLMs to identify high-quality content. This "LLMs as judges to filter datasets" approach has proven highly effective in selecting high-quality data that leads to more performant models (Penedo et al., 2024a; Su et al., 2024). A significant limitation, however, is that existing research in this area largely focuses on English, making it unclear whether these methods effectively transfer to highly multilingual settings, especially those involving low-resource languages. Specifically, in contrast to English-centric data curation, multilingual settings raise additional questions on potential gaps between high- and low-resource languages and the cross-lingual performance on unseen languages. Moreover, much of the research in this field is led by frontier AI labs, which tend to keep state-of-the-art data procurement and curation strategies closed-source, impeding reproducibility and follow-up research.</p>
+          </div>
+          <div class="zh">
+            <p>其中一条特别有意思的路线是「让现有 LLM 来识别高质量内容」,即<strong>LLM-as-judge 过滤数据集</strong>。这套方法已在英文上被证明能挑出高质量数据、显著提升模型表现(Penedo 等,2024a;Su 等,2024)。但一个明显的局限是:现有研究主要聚焦英文,这些方法能否有效迁移到<em>高度多语言</em>的场景(尤其涉及低资源语种)还不清楚。与英文为中心的策展不同,多语言场景会额外冒出两类问题——① 高资源 vs 低资源语种之间可能存在能力鸿沟;② 模型对训练期间<em>未见过</em>的语言能否做到跨语言迁移。此外,这一领域的研究大多由前沿 AI lab 主导,而它们倾向于将最先进的数据获取与策展策略闭源,阻碍了可复现性与后续研究。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">1.3 方法:JQL 四阶段管线</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Addressing these limitations, we propose a multilingual data filtering approach called JQL (Judging Quality across Languages, pronounced "Jackal") comprising the four stages outlined in Fig. 1. With minimal human supervision and small amounts of distilled annotation data, we are able to train lightweight regressors for efficient filtering of multilingual, large-scale data at low computational cost. JQL is language agnostic and can be extended to arbitrary filter criteria. In the first stage (Sec. 2), human annotators generate ground truth (GT) annotations on monolingual documents based on an instruction set defined in a prompt; the documents are then translated into all target languages to obtain a multilingual GT dataset. In the second stage (Sec. 3), the GT dataset is used to select the top-$N$ performing LLMs-as-judges. In the third stage (Sec. 4), the resulting synthetic dataset is used to train a set of lightweight annotators at low cost by reusing shared embeddings. Using these annotators, we can efficiently annotate pre-training corpora and filter high-quality subsets (Sec. 5).</p>
+          </div>
+          <div class="zh">
+            <p>针对上述局限,我们提出多语言数据过滤方法 <strong>JQL</strong>(Judging Quality across Languages,发音同 "Jackal"),由图 1 所示的四个阶段组成:在<em>最少人工监督</em>外加少量蒸馏标注数据的条件下,我们能训练出<strong>轻量回归器</strong>,以极低算力代价高效过滤多语言大规模数据。JQL 与语言无关(language-agnostic),并可扩展到任意过滤准则。① <strong>阶段一(§2)</strong>:由人工标注员在单语文档上按 prompt 中定义的指令集生成 ground truth(GT),然后把这些文档翻译到所有目标语言,得到多语言 GT 数据集;② <strong>阶段二(§3)</strong>:用 GT 数据集挑出 top-$N$ 表现最好的 LLM-as-judge;③ <strong>阶段三(§4)</strong>:用上一阶段产出的合成数据集训练一组轻量标注器,通过<em>共享 embedding 复用</em>降低成本;④ <strong>阶段四(§5)</strong>:用这些标注器高效地为预训练语料打分,并过滤出高质量子集。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">1.4 贡献与开源 artifact</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Overall, we make the following contributions: (1) A human-centric approach to creating ground truth by using human annotations to build a reliable dataset for evaluating and guiding pipeline component selection. We release a novel ground truth dataset comprising 511 manually annotated documents, translated into 35 languages (Sec. 2). (2) A study investigating LLM capabilities in assessing the quality of multilingual documents (Sec. 3). We release annotations from the three best-performing LLMs across 35 languages, covering over 14 million documents. (3) A study investigating the multi- and cross-lingual transfer capabilities of lightweight annotator models, evaluating how well judgment abilities generalize to unseen languages (Sec. 4). (4) Demonstration that our approach leads to high-quality pre-training datasets that improve downstream LLM performance (Sec. 5). Table 1 lists the 35 European languages we cover, organized by family (Slavic 9, Germanic 7, Romance 7, Uralic 3, Baltic 2, plus seven singleton families: Hellenic, Celtic, Basque, West Semitic, Turkic, Albanoid, Armenian).</p>
+          </div>
+          <div class="zh">
+            <p>本文总体贡献有四点:<strong>(1)</strong>「以人为本」地构造 GT——用人工标注搭起一个可靠的基准数据集,用来评估并指导管线各组件的选型;我们开源一份新的 GT 数据集——511 个文档由人工标注,并翻译到 35 种语言(§2)。<strong>(2)</strong> 一项关于「LLM 评估多语言文档质量」能力的系统研究(§3),开源了表现最好的<em>三个</em> LLM 在 35 种语言上的标注结果,覆盖超过 1400 万文档。<strong>(3)</strong> 一项关于「轻量标注器的多语言/跨语言迁移能力」的研究,评估其判断能力对未见语种的泛化(§4)。<strong>(4)</strong> 实验证明本方法产出的预训练数据集能改善下游 LLM 性能(§5)。表 1 列出覆盖的 35 种欧洲语言,按语系组织:Slavic 9、Germanic 7、Romance 7、Uralic 3、Baltic 2,外加 7 个 singleton 语系(Hellenic、Celtic、Basque、West Semitic、Turkic、Albanoid、Armenian)。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3"></div>
+    </details>
+    
+    <details class="sec" id="sec-4a">
+      <summary>
+        <span>§2 Collecting Human Annotations / 收集人工标注<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">2.1 User Study Design / 用户研究设计</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To construct a multilingual ground truth dataset for selecting an LLM-as-judge for evaluating the educational value of documents, we conducted a human annotation study. As a starting point, we leveraged the English LLM-annotated dataset from Fineweb-Edu (Penedo et al., 2024a), which contains approximately 450,000 educational-value annotations. Given the demonstrated effectiveness of their scoring scheme, we adopted the same 6-point scale, ranging from $0$ (lowest educational value) to $5$ (highest). To ensure balanced representation, we sampled $100$ documents for each score level; only $11$ documents were available for score $5$, so the resulting dataset totals $511$ samples. Fifteen annotators with backgrounds in CS, English studies, physics and mathematics annotated each document three times. We employed the Fineweb-Edu educational prompt as guidelines and ran a dedicated training session—essential because, without training, some annotators partially misunderstood the task despite written guidelines. The three annotations per document were aggregated via majority voting (or averaging when no clear majority emerged).</p>
+          </div>
+          <div class="zh">
+            <p>为构造一份用于挑选「教育价值 LLM-as-judge」的多语言 GT 数据集,我们做了一项人工标注研究。起点是 Fineweb-Edu(Penedo 等,2024a)的英文 LLM 标注数据集,该集大约有 45 万条对「教育价值」的打分。鉴于其打分体系已被证明有效,我们直接沿用相同的 6 档刻度——$0$(教育价值最低)~ $5$(最高)。为了让各档分布平衡,我们对每个分数档<em>采样 100 个文档</em>;由于 5 分文档只有 11 个,最终数据集共 $511$ 条样本。15 名标注员(背景涵盖 CS、英语、物理、数学)各自独立标注三次。我们以 Fineweb-Edu 的教育 prompt 作为指南,并专门开了培训会——这一步至关重要,因为预试发现:即使有书面指南,没培训的标注员仍会部分误解任务。每个文档的 3 次标注,通过<em>多数投票</em>(无明确多数时取平均)聚合成一个分数。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">2.2 Multilingual Extension / 多语言扩展</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>For multilingual support, we translated the English GT dataset into the 35 European languages outlined in Tab. 1. We focused on these languages because they offer a good tradeoff between linguistic diversity and well-populated language families. Nonetheless, we demonstrate in Sec. 6 that our pipeline works equally well on typologically different languages such as Chinese without any modifications. We used DeepL for the 22 languages it supports, and GPT-4o for the remaining 13 languages. To improve correctness of GPT-translated texts, we ran a language classifier over all documents and discarded those not matching the target language. Additionally, we removed prefatory phrases added by GPT-4o to ensure overall consistency.</p>
+          </div>
+          <div class="zh">
+            <p>为支持多语言,我们把英文 GT 数据集翻译到表 1 中列出的 35 种欧洲语言。聚焦欧洲语种是因为它们在「语言多样性」与「每个语系有多个代表语种」之间取得了不错的平衡。不过 §6 也展示了:对类型学上完全不同的语种(如中文),本管线<em>无需任何改动</em>即可直接使用。22 种语言用 DeepL 翻译,其余 13 种用 GPT-4o 翻译。为提升 GPT 翻译的正确率,我们对所有翻译结果跑了一个语种分类器,丢弃那些语种与目标不符的文档;另外我们删除了 GPT-4o 自动加的前缀短语,以保证一致性。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">2.3 Inter-Annotator Agreement / 标注员一致性</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To verify consistency, we analyzed the collected labels and annotator consensus. Agreement is high: a majority emerged for $78.5\%$ of documents and the overall standard deviation is $0.56$. While the annotation spread is $\leq 2$ for $86\%$ of the data, a few documents exhibited a spread $> 3$. Upon manual inspection we found the educational value of these examples is indeed highly subjective. Overall, our rigorous training and data cleaning yielded a reliable ground truth suitable for robust evaluation of ML-based annotators.</p>
+          </div>
+          <div class="zh">
+            <p>为验证标注流程是否一致,我们分析了所收集的标签与标注员共识。一致性<em>很高</em>:$78.5\%$ 的文档出现明确多数,整体标准差 $0.56$;$86\%$ 的数据 spread $\leq 2$,只有少数文档 spread $> 3$。人工检查发现,这些高分歧文档的教育价值本身就<em>高度主观</em>,所以分歧合理。整体而言,严格的培训 + 数据清洗,产生了一份可信的 GT,可用来稳健评估 ML 标注器。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">2.4 Suitable Evaluation Criteria / 评估指标的选择(关键!)</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Choosing an appropriate evaluation metric is essential for assessing the performance of LLM-based annotators against human GT. While standard classification metrics like F1 are appropriate for discrete categories with clear semantic boundaries (e.g., spam vs. non-spam), they are less suitable for <em>ordered</em> categorical labels that span a semantic continuum (e.g., very low, low, medium, high, excellent). Classification metrics are order-invariant—they fail to reflect the severity of misclassifications—and they are sensitive to scale shifts. For identifying high-quality documents in a web-scale corpus, the <em>relative ranking</em> of documents is significantly more relevant than adherence to an arbitrary scoring scheme. We therefore adopt <strong>Spearman correlation</strong> as our primary evaluation metric: it captures the ordinal structure of the data and is robust to monotonic scale transformations, making it well-suited for assessing models on tasks with ordered semantic categories. Key insights: well-trained human annotators can produce consistent, high-quality GT; rank-based metrics are better suited than classification metrics for model selection.</p>
+          </div>
+          <div class="zh">
+            <p>选对评估指标,对「用人工 GT 检验 LLM 标注器」至关重要。F1 这类标准分类指标只适合<em>有明确语义边界</em>的离散类别(如垃圾邮件 vs 正常邮件),不适合处于「语义连续谱」上的<strong>有序</strong>类别(如「很低/低/中/高/优秀」)。分类指标是<em>order-invariant</em>(序不变)的——它无法反映「错得多严重」,而且对刻度漂移(scale shift)很敏感。但在 web 级语料里识别高质量文档时,<em>文档之间的相对排名</em>远比是否符合某个绝对刻度更重要。因此我们采用 <strong>Spearman 秩相关</strong>作为主指标:它捕捉数据的<em>有序结构</em>,且对任何单调刻度变换都鲁棒,正契合「有序语义类别」这类任务。<strong>核心结论</strong>:① 经过良好培训的人工标注员能产出稳定、高质量的 GT;② 排名类指标比分类指标更适合 LLM 模型选型。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4a"></div>
+    </details>
+
+    <details class="sec" id="sec-4b">
+      <summary>
+        <span>§3 Harnessing LLMs for Multilingual Annotation / LLM-as-judge<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">3.1 Experimental Setup / 实验设置</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We selected a diverse set of strong multilingual LLMs across sizes and families (Fig. 2): Gemma-2-9B/27B-it, Gemma-3-27B-it, Llama-3.1-8B-it, Llama-3.2-3B-it, Llama-3.3-70B-it, Mistral-3.1-24B-it, Phi-4-14B, and Qwen-2.5-7B/14B/32B/72B-it. To ensure consistency across languages and leverage the models' strong English capabilities, we used the original English FineWeb (Penedo et al., 2024a) educational prompt for <em>all</em> evaluations. We also instructed the models to produce <em>English</em> assessments, allowing us to focus on their multilingual natural-language understanding (NLU) rather than their generation capabilities (NLG). This leverages the fact that LLMs tend to have good "understanding" in low-resource languages for which they cannot reliably <em>generate</em> cohesive outputs (Mahfuz et al., 2025; Luukkonen et al., 2024). As in the human setup, we sampled three scores per model and aggregated them by majority/average.</p>
+          </div>
+          <div class="zh">
+            <p>我们挑选了一组多样化的强多语言 LLM 候选,横跨多个 size 与系列(图 2):Gemma-2-9B/27B-it、Gemma-3-27B-it、Llama-3.1-8B-it、Llama-3.2-3B-it、Llama-3.3-70B-it、Mistral-3.1-24B-it、Phi-4-14B,以及 Qwen-2.5-7B/14B/32B/72B-it。为保证跨语言一致性、并发挥模型最强的英文能力,我们对所有评估都<em>统一</em>使用原始的英文 FineWeb 教育 prompt(Penedo 等,2024a)。同时我们指示模型用<em>英文</em>输出评估结果,这样就只考验它的「跨语言 NLU(理解)」,而避开「跨语言 NLG(生成)」——因为 LLM 通常在低资源语种上「能读懂但生成不稳定」(Mahfuz 等,2025;Luukkonen 等,2024),这个 trick 直接利用了这一不对称性。与人工标注一样,我们对每个模型采样 3 次分,再用 majority/average 聚合。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">3.2 Multilingual Evaluation / 多语言评估结果</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Fig. 2 reports each LLM's Spearman correlation with the human GT. We observe substantial differences in performance both across and within model families. Notably the smallest model, Llama-3.2-3B-it, performs significantly worse than all other evaluated models (avg-35 $\approx 0.462$ vs. $0.62$–$0.70$ for larger models), suggesting that effective document quality assessment may require crossing a certain parameter threshold. Except for Llama-3.1-8B-it, all models show only limited variance across languages, supporting our hypothesis that modern LLMs exhibit robust multilingual NLU even in low-resource settings. Interestingly, Gemma-3-27B-it shows relatively <em>poor</em> classification performance (App. B.3) despite the <em>strongest</em> ranking capabilities (avg-35 $= 0.699$)—a direct illustration of why ranking metrics matter more than classification accuracy for this task.</p>
+          </div>
+          <div class="zh">
+            <p>图 2 报告每个 LLM 与人工 GT 的 Spearman 相关。我们观察到<em>跨模型家族</em>与<em>同家族内部</em>都有显著差异:最小的 Llama-3.2-3B-it 明显弱于其他所有模型(avg-35 $\approx 0.462$,而其他更大模型在 $0.62$–$0.70$),提示「有效的文档质量评估可能需要模型规模过线」。除 Llama-3.1-8B-it 外,各模型在不同语种之间的方差都<em>很小</em>,验证了我们的假设——现代 LLM 即使在低资源语种上也具备稳健的<em>多语言 NLU</em>。一个有趣的发现:Gemma-3-27B-it 的分类指标相对<em>差</em>(附录 B.3),但<em>排名</em>能力最强(avg-35 $= 0.699$),直接说明「为什么这个任务上排名指标比分类准确率更要紧」。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">3.3 Top-3 Judges & Synthetic Annotations / 选出 top-3 与合成标注</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Among the evaluated models, <strong>Gemma-3-27B-it</strong>, <strong>Mistral-3.1-24B-it</strong>, and <strong>Llama-3.3-70B-it</strong> emerged as the top performers from <em>three distinct</em> model families. We therefore used these models—referred to hereafter as Gemma, Mistral, and Llama—to generate training data for distilling annotation capabilities into lightweight annotators. Specifically, we randomly sampled up to 500k documents per language across the 35 languages from the unfiltered but deduplicated FineWeb2 (FW2) dataset, and used each model to produce three predictions per document. Key insights: strong LLMs can reliably assess educational value of web documents, and using English instructions and responses lets them judge documents even in low-resource languages. Artifact: 14M documents in 35 languages annotated by the top-3 LLMs.</p>
+          </div>
+          <div class="zh">
+            <p>在所有被评估的模型中,<strong>Gemma-3-27B-it</strong>、<strong>Mistral-3.1-24B-it</strong>、<strong>Llama-3.3-70B-it</strong> 脱颖而出——而且分别来自<em>三个不同</em>模型家族(避免家族 bias)。之后我们用这三个模型(下文简称 Gemma/Mistral/Llama)生成蒸馏训练数据。具体做法:从未过滤但已去重的 <strong>FineWeb2(FW2)</strong>数据集中,每种语言随机抽样最多 500k 文档,每个模型对每个文档输出 3 次预测。<strong>核心结论</strong>:① 强 LLM 能可靠评估 web 文档的教育价值;② 用英文指令 + 英文回答这一 trick,使模型能在低资源语种上做出可靠判断。<strong>开源 artifact</strong>:35 种语言、1400 万文档的 top-3 LLM 标注。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4b"></div>
+    </details>
+
+    <details class="sec" id="sec-4c">
+      <summary>
+        <span>§4 Distilling Lightweight Annotators / 蒸馏轻量标注器<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">4.1 Architecture & Backbone / 架构与 backbone 选型</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We focused on cross-lingual embedding models with long context windows (Zhang et al., 2024; Sturua et al., 2024; Yu et al., 2024). Such models efficiently process long web documents and produce well-aligned representations that map semantically equivalent texts across languages to similar embeddings, enabling effective cross-lingual transfer to unseen languages. In preliminary analysis, <strong>Snowflake Arctic Embed v2.0</strong> (Yu et al., 2024) consistently outperformed other candidates (App. C.2), and we therefore use it as our embedding backbone. Our results further indicate that keeping the embedding weights <em>frozen</em> while training a lightweight regression head (a simple MLP with ReLU applied to the embeddings) is sufficient to produce high-quality annotations. The final setup is highly efficient: the regression head accounts for $<1\%$ of total parameters, with embedding computation being the main runtime cost. Multiple annotators (adult-content, math accuracy, code quality, etc.) can be supported in parallel by attaching different heads to a shared backbone at minimal additional cost. Throughput: roughly $11{,}000$ annotations per minute on a single A100 with an average of $690$ tokens per document.</p>
+          </div>
+          <div class="zh">
+            <p>我们专注于<em>支持长上下文</em>的跨语言 embedding 模型(Zhang 等,2024;Sturua 等,2024;Yu 等,2024)。这类模型能高效处理长 web 文档,并产出「跨语种对齐」的表示——把语义等价的不同语言文本映射到相近的 embedding,从而对未见语种实现有效的跨语言迁移。预实验中,<strong>Snowflake Arctic Embed v2.0</strong>(Yu 等,2024)稳定优于其他候选(附录 C.2),因此我们选它作为 embedding backbone。结果还表明:<em>冻住</em> embedding 权重、只训练一个轻量回归头(一个加 ReLU 的简单 MLP 接在 embedding 上)就足以产出高质量标注。最终设置非常高效:回归头参数只占总参数 $<1\%$,运行时主要开销在算 embedding。多个标注器(成人内容/数学正确性/代码质量等)可以共享 backbone、并行挂多个 head,几乎不增加额外成本。<strong>吞吐</strong>:在单卡 A100 上约 $11{,}000$ 标注/分钟(平均每文档 $690$ tokens)。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">4.2 Multilingual & Cross-Lingual Evaluation / 多语言与跨语言泛化</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Fig. 3 presents the lightweight annotators' performance. Baseline performance—training and evaluating on the same language (row 1)—is consistently strong, highlighting the robustness of our multilingual architecture. Performance only slightly decreases for checkpoints trained on all languages (last 3 rows). On average, the distilled regression heads even <em>slightly outperform</em> the LLMs from which their training annotations were derived; part of this gain comes from the shift to continuous labels, part reflects the strength of the pre-trained embedding model. Only three linguistically isolated languages—Irish, Maltese, and Basque—show notable degradation, likely due to limited representation in Snowflake's training data. Cross-lingual generalization is also robust: when training on languages from the <em>same first-order family</em> (row 2), models reliably transfer to held-out target languages; performance only slightly drops when training outside the first-order family (row 5). These results validate our motivation: aligned embedding representations enable strong cross-lingual support.</p>
+          </div>
+          <div class="zh">
+            <p>图 3 展示了轻量标注器的表现。基线(训练语种 = 评估语种,第 1 行)在所有语种上都<em>稳定地强</em>,说明这套多语言架构本身的鲁棒性;在「所有语种联训」(最后 3 行)的 checkpoint 上,性能只有<em>轻微</em>下降。平均来看,蒸馏后的回归头甚至<em>略胜</em>它训练时所依赖的 LLM——一部分增益来自「离散标签 → 连续标签」,另一部分则反映了预训练 embedding 自身的强度。只有三个孤立语种(Irish/Maltese/Basque)出现明显退化,原因可能是它们在 Snowflake 训练语料中覆盖不足。跨语言泛化同样稳健:用「同一一级语系内的其他语言」训练(第 2 行),模型也能可靠迁移到目标语种;甚至用「一级语系外」的语言训练(第 5 行),性能也只小幅下降。这些结果验证了我们的动机——<em>对齐的</em> embedding 表示是跨语言能力的根本来源。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">4.3 Building the Final Annotator / 训练最终标注器</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To systematically explore the amount of data required to train the lightweight annotators, we conducted a controlled experiment across all 35 languages. Performance <em>converged with 500k training samples</em> (App. C.4). Building on these insights, we trained the final lightweight annotator models on a frozen Snowflake Arctic Embed v2 backbone, using 500{,}000 documents sampled evenly across all 35 languages. We trained dedicated heads for each LLM annotator—Gemma, Mistral, and Llama—to facilitate targeted comparisons and flexibility. For each annotator we considered two distinct heads: one trained on samples representative of the <em>natural label distribution</em>, and one trained on samples strategically selected per language to achieve the most <em>uniform</em> label distribution possible (heavily oversampling docs with scores 4 and 5), to counteract bias toward over-represented labels. Key insights: well-calibrated multilingual embedding models serve as powerful backbones for data annotation; lightweight regression heads enable efficient annotation and zero-shot cross-lingual transfer.</p>
+          </div>
+          <div class="zh">
+            <p>为了系统探索「训练轻量标注器到底需要多少数据」,我们在全部 35 种语言上做了控制实验:<em>性能在 500k 样本处收敛</em>(附录 C.4)。基于此,我们以冻结的 Snowflake Arctic Embed v2 为 backbone,在「均匀采自 35 种语言的 50 万文档」上训练最终标注器。为每个 LLM 标注源(Gemma/Mistral/Llama)分别训练专属 head,方便对照与灵活组合。对每个 head,我们考虑<em>两种</em>变体:① 按<em>自然标签分布</em>随机采样训练;② 按语种<em>策略性</em>采样以让标签分布尽量<em>均匀</em>(实际是对 4 分、5 分文档高度过采样),用来对冲「向高频标签倾斜」的偏差。<strong>核心结论</strong>:① 校准良好的多语言 embedding 是强力 backbone;② 轻量回归头能实现高效标注 + zero-shot 跨语言迁移。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4c"></div>
+    </details>
+
+    <details class="sec" id="sec-4d">
+      <summary>
+        <span>§5 Assessing Training Data Quality / 评估数据过滤效果<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">5.1 Experimental Setup / 实验设置</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We conducted extensive ablation studies on the raw, unfiltered FW2 dataset (Penedo et al., 2024b). This dataset originates from Common Crawl WARC files and includes standard preprocessing (HTML extraction, language ID, dedup). Using the unfiltered raw data ensures that comparisons directly reflect differences introduced by our annotator-driven filtering, not preprocessing variations. We benchmark our annotation-based filters against FW2's original heuristic filtering. We selected $13$ representative European languages (bold in Tab. 1) and used dense decoder-only $2$B-parameter LLaMA-style models. Training data comprised $27$ billion monolingual tokens ($14$B for languages with limited data). To compare data quality across runs we used multilingual versions of MMLU (Hendrycks et al., 2021), HellaSwag (Zellers et al., 2019), and ARC (Clark et al., 2018), reporting token-normalized probability of the correct answer (smoother and more interpretable than raw accuracy at this scale). Experiments at this scale reliably predict which datasets perform better when scaling up (Magnusson et al., 2025).</p>
+          </div>
+          <div class="zh">
+            <p>我们在<em>未经过滤</em>的原始 FW2 数据集(Penedo 等,2024b)上做了大量消融。FW2 来自 Common Crawl 的 WARC,包含标准预处理(HTML 抽取、语种识别、去重)。用未过滤版本是为了让对照<em>只反映过滤策略本身</em>的差异,而非预处理差异。基线是 FW2 原生的启发式过滤。我们选了 $13$ 个有代表性的欧洲语种(表 1 中加粗),用 LLaMA 风格的 $2$B 参数 decoder-only 稠密模型;训练 token 数为 $27$ B(数据较少的语种用 $14$ B)。跨实验比较数据质量时,我们使用 MMLU(Hendrycks 等,2021)、HellaSwag(Zellers 等,2019)、ARC(Clark 等,2018)的<em>多语言版本</em>,并报告「正确答案的 token-normalized 概率」——在这种规模下比原始 accuracy 更平滑、更可解释。这一规模下的实验已被验证能可靠预测「scaling 到更大模型后哪份数据更好」(Magnusson 等,2025)。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">5.2 Annotation Analysis / 标注分布分析 → 为什么用百分位</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Fig. 4 shows a detailed statistical analysis of score distributions. First, the heuristically filtered subset of FW2 (orange) has notably higher average educational quality scores than the removed data (blue)—a sanity check confirming FW2's heuristics capture meaningful signal. Second, the regression heads trained on different LLMs exhibit <em>significantly different absolute score distributions</em>: Gemma-based annotators consistently assign higher scores than Mistral-based, which in turn rate higher than Llama-based. This property is inherited from the LLM annotators which use different but order-preserving scales. Despite these absolute differences, the three annotators show very high mutual agreement (Spearman's $r > 0.87$), indicating strong agreement in <em>relative ranking</em>. This highlights that <strong>absolute thresholds (e.g., scores $\geq 3$) lack general validity</strong> unless supported by extensive ablation. We therefore adopt <strong>percentile-based (relative) thresholds computed per regression head</strong>, enabling robust comparisons and direct control over the quality–quantity tradeoff.</p>
+          </div>
+          <div class="zh">
+            <p>图 4 对打分分布做了细致的统计分析。<strong>第一个观察</strong>:FW2 启发式过滤<em>保留</em>下来的子集(橙色)平均教育质量分明显高于被<em>剔除</em>的子集(蓝色)——这是一项 sanity check,说明 FW2 的启发式确实捕到了真实的质量信号。<strong>第二个观察</strong>:基于不同 LLM 训出的三个回归头,在<em>绝对分数分布</em>上<em>显著不同</em>——Gemma 一致地给出更高分数,Mistral 次之,Llama 最低。这种刻度差异是从 LLM 标注源继承下来的(原 LLM 之间也具有「序保持但刻度不同」的特性)。但尽管绝对刻度不同,三者两两之间的<em>排名</em>一致性很高(Spearman $r > 0.87$),说明它们对「谁比谁高质量」的判断高度一致。这直接意味着:<strong>「score $\geq 3$」这种绝对阈值并不通用</strong>,除非配以大量消融验证。我们因此改用 <strong>per-head percentile</strong>(每个 head 自己的百分位阈值)——既保留各自的相对排名,又能<em>直接</em>控制「质量 vs. 体量」的权衡。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">5.3 Evaluating Pre-training Data Quality / 训练效果评估</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We evaluated JQL's impact on downstream model performance by filtering pre-training data with two relative thresholds: the $0.6$ and $0.7$ percentiles per lightweight annotator head. To include a document, we required <em>ensemble agreement</em> across all three annotators (Gemma, Mistral, Llama), each rating the document above its respective percentile threshold. This ensemble approach reduces individual annotator bias and minimizes single-model noise. FW2's heuristic filter is our baseline. Fig. 5 demonstrates the effectiveness for Spanish; aggregated cross-lingual results are in Table 2. JQL-based filtering consistently outperforms FW2 in data quality, and stricter thresholds (0.7) consistently beat looser thresholds (0.6). Critically, JQL improves quality <em>without</em> excessively aggressive reduction: for Spanish, the $0.6$ threshold retains over $9\%$ <em>more</em> tokens than FW2 while still surpassing its quality—a property that matters especially in multilingual scenarios where many languages have limited data. Key insights: JQL outperforms heuristic filtering; percentile-based filtering is better than absolute thresholds; higher percentiles trade more tokens for higher quality.</p>
+          </div>
+          <div class="zh">
+            <p>我们评估了 JQL 对下游模型的影响:用两个相对阈值——每个轻量 head 各自的 $0.6$ 和 $0.7$ 百分位——来过滤预训练数据。<em>纳入</em>一个文档的条件是<strong>三 head 投票一致通过</strong>:Gemma/Mistral/Llama 都必须给它打到自己阈值之上。这种 ensemble 既降低单 head 偏差,也压制了单模型噪声。基线为 FW2 原生启发式过滤。图 5 以西班牙语为示例,跨语言聚合结果见表 2。结论很清晰:JQL 在数据<em>质量</em>上一致优于 FW2;阈值越严($0.7$)越好。关键的是,JQL 改善质量<em>并不需要</em>过激地砍数据——西班牙语上,$0.6$ 阈值比 FW2 多保留<em>超过 $9\%$</em> 的 token 还能赢过它,这点在「许多语种数据有限」的多语言场景中尤其重要。<strong>核心结论</strong>:① JQL 显著优于启发式过滤;② 百分位过滤优于绝对阈值;③ 提高百分位 = 用更少 token 换更高质量。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">Table 2 / 表 2 关键数字</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Change over FW2 baselines (aggregated over 13 languages): at quantile <strong>$0.6$</strong>, retained tokens $+4.8\%$, benchmark average $+4.27\%$, final-checkpoint metric $+4.6\%$; at quantile <strong>$0.7$</strong>, retained tokens $-15.8\%$, benchmark average $+6.70\%$, final-checkpoint metric $+7.2\%$. Percentile filtering on JQL annotations provides a reliable, tunable quality–retention tradeoff.</p>
+          </div>
+          <div class="zh">
+            <p>相对 FW2 基线的变化(13 种语言聚合):分位 <strong>$0.6$</strong> 下,保留 token 数 $+4.8\%$,benchmark 平均 $+4.27\%$,最终 checkpoint $+4.6\%$;分位 <strong>$0.7$</strong> 下,保留 token 数 $-15.8\%$,benchmark 平均 $+6.70\%$,最终 checkpoint $+7.2\%$。即:基于 JQL 标注的百分位过滤,提供了一个可调的「质量 vs. 保留量」权衡曲线。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4d"></div>
+    </details>
+
+    <details class="sec" id="sec-4e">
+      <summary>
+        <span>§6 Generalization to Unseen Languages / 未见语言泛化<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>To validate the versatile and robust cross-lingual capabilities of JQL <em>beyond European languages</em>, we conducted additional experiments on three linguistically and typologically distinct languages: <strong>Arabic, Thai, and Mandarin Chinese</strong>—language families completely <em>unseen during training</em>. We first validated the existing lightweight annotators on those languages by measuring correlation on translations of the human GT data, and observed performance similar to that on European languages (App. E.1). Consequently, we can use the existing lightweight annotators with <em>no further training required</em>. We applied the same dynamic percentile-based filtering (specifically the $0.7$ quantile threshold) that had proven effective on the European languages. Fig. 6 shows that even for these entirely unseen languages, the JQL pipeline maintains strong zero-shot performance, beating FW2's heuristic baseline on multilingual MMLU and on language-specific QA tasks (using benchmarks selected by FineWeb2 (Penedo et al., 2024b) since standard ones are limited for these languages). These findings confirm JQL's broad applicability and practical scalability, making it suitable for extending robust data curation into low-resource and underrepresented languages with minimal additional overhead.</p>
+          </div>
+          <div class="zh">
+            <p>为了验证 JQL 的跨语言能力<em>超出欧洲语种之外</em>仍然稳健,我们在三种「类型学上与训练时完全不同」的语言上做了额外实验——<strong>阿拉伯语、泰语、中文(普通话)</strong>。这三种语言所在的语系在训练期间<em>从未见过</em>。我们先在它们的 GT 翻译上度量了现有轻量标注器的相关系数,结果与欧洲语种相当(附录 E.1)。因此,可以<em>无需任何再训练</em>直接使用现成的轻量标注器。我们采用与之前相同的<em>动态百分位</em>过滤方法(具体用 $0.7$ 分位阈值),它在欧洲语种上已被验证有效。图 6 展示:即使对这些完全未见的语种,JQL 也保持了强劲的 zero-shot 表现,在多语言 MMLU 与「语种专属 QA 任务」(由 FineWeb2(Penedo 等,2024b)挑选,因为这些语种上标准 benchmark 较少)上均超过 FW2 启发式基线。这些发现确认了 JQL 的<em>广泛适用性与实际可扩展性</em>——可以以极小的额外开销,把鲁棒的数据策展能力推广到低资源与代表性不足的语种。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4e"></div>
+    </details>
+    
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§7 Related Work / 相关工作 · §8 Conclusion / 结论<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-section">7.1 Heuristic-Based Data Curation / 启发式过滤管线</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The vast majority of LLM training data is sourced from the web, with Common Crawl (CC) the most important corpus. Traditionally, many works rely heavily—sometimes exclusively—on heuristic filtering to clean and select web data (Raffel et al., 2020; Gao et al., 2020; Weber et al., 2024; Penedo et al., 2023). These heuristics typically focus on document-level syntax (removing ill-formed or overly short texts, filtering documents containing blocklisted keywords). Web corpora are often further enriched with high-quality sources such as code, academic literature, or Wikipedia articles.</p>
+          </div>
+          <div class="zh">
+            <p>LLM 训练数据的绝大部分来自 web,Common Crawl(CC)是最重要的语料。传统上,许多工作大量(甚至完全)依赖启发式过滤来清洗/挑选 web 数据(Raffel 等,2020;Gao 等,2020;Weber 等,2024;Penedo 等,2023)。这些启发式通常聚焦在<em>文档级语法层面</em>——剔除格式异常或过短的文本、过滤命中黑名单关键词的文档等。web 语料常被进一步用代码、学术文献、维基百科等高质量来源补充。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">7.2 Neural Data Curation / 神经网络过滤管线</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>A major drawback of heuristic filters is their inability to assess <em>semantic</em> quality. Recent work therefore incorporates neural networks into curation (Wettig et al., 2024; Su et al., 2024; Penedo et al., 2024a; Zhao et al., 2024; Li et al., 2024; Sachdeva et al., 2024; Korbak et al., 2023). To scale to billions of documents, small task-specific FastText classifiers (Joulin et al., 2016) are the most common choice. These quality annotators are increasingly trained on synthetic labels derived from strong general-purpose LLMs; in particular, annotations and filters judging <em>educational quality</em> have produced high-quality datasets (Su et al., 2024; Penedo et al., 2024a; Wettig et al., 2024).</p>
+          </div>
+          <div class="zh">
+            <p>启发式过滤的最大短板是<em>评估不了语义层面的</em>质量。近期工作因此把神经网络引入策展(Wettig 等,2024;Su 等,2024;Penedo 等,2024a;Zhao 等,2024;Li 等,2024;Sachdeva 等,2024;Korbak 等,2023)。为了 scale 到几十亿文档,最常见的选择是<em>小型任务特化的</em> FastText 分类器(Joulin 等,2016)。这些质量标注器越来越多地用「强通用 LLM 生成的合成标签」来训练;尤其是基于「教育价值」的标注与过滤,已经被验证能产出高质量数据集(Su 等,2024;Penedo 等,2024a;Wettig 等,2024)。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">7.3 Multilingual Data Curation / 多语言数据策展</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Despite these advances, dataset curation remains largely English-centric (with a growing body of work on Chinese). Large multilingual datasets exist, but their filtering pipelines and dataset sizes are not on par with the high-quality English ones (Kudugunta et al., 2023; Nguyen et al., 2024; Brack et al., 2024; Xue et al., 2021; Burchell et al., 2025). The best-performing large-scale multilingual dataset is <strong>FineWeb2</strong> (Penedo et al., 2024b), which relies <em>solely</em> on heuristic filtering. In this paper, we develop a data curation pipeline that provides advanced quality filtering in the multilingual setting and seamlessly transfers to unseen languages.</p>
+          </div>
+          <div class="zh">
+            <p>尽管已有上述进展,数据集策展整体上仍<em>以英文为中心</em>(中文的研究也在快速增长)。大型多语言数据集存在,但其过滤管线与数据集体量都<em>追不上</em>英文上的最高水平(Kudugunta 等,2023;Nguyen 等,2024;Brack 等,2024;Xue 等,2021;Burchell 等,2025)。当前性能最佳的大规模多语言数据集是 <strong>FineWeb2</strong>(Penedo 等,2024b),但它<em>仅</em>依赖启发式过滤。本文构建的策展管线则在多语言场景下提供了「高阶质量过滤」,并能无缝迁移到未见语种。</p>
+          </div>
+        </div>
+
+        <div class="bi-section">§8 Conclusion & Future Directions / 结论与未来方向</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We proposed <strong>JQL</strong>, a multilingual pretraining data filtering approach that requires minimal human supervision and leverages language models as judges. We systematically evaluated JQL across 35 languages for filtering educationally valuable content; experiments provide extensive evidence that JQL effectively selects high-quality multilingual pretraining data, significantly outperforming heuristic-based methods. The approach is scalable to large datasets, generalizes to unseen languages, and is easily extendable. JQL opens several promising avenues for future work: (1) it is readily applicable to arbitrary filtering criteria, including code quality, mathematical correctness, and adult-content moderation; (2) it can be used not only for curating pretraining datasets but also for selecting data in various post-training stages such as instruction tuning and alignment. Our contributions lay a rigorous foundation for improved multilingual data curation and set a new standard for leveraging language and embedding models in multilingual contexts.</p>
+          </div>
+          <div class="zh">
+            <p>我们提出了 <strong>JQL</strong>——一种依赖极少人工监督、以 LLM 为裁判的多语言预训练数据过滤方法。我们在 35 种语言上系统评估了 JQL 在「过滤教育性内容」上的表现,实验充分证明:JQL 能有效挑出高质量多语言预训练数据,显著优于启发式方法。本方法可扩展到大规模数据集、可泛化到未见语种、且易于扩展。JQL 打开了多条值得探索的未来方向:① 可<em>直接</em>套用到任意过滤准则,包括代码质量、数学正确性、成人内容审核;② 不仅能用于预训练数据策展,还可在 instruction tuning、alignment 等 post-training 阶段挑选相关数据。本文的贡献为「改进的多语言数据策展」打下了严格的基础,并为「在多语言场景下有效利用语言模型与 embedding 模型」树立了新的标准。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="5"></div>
+    </details>
+    
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>Limitations / 局限<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Despite the breadth and generalizability of our work, we acknowledge three limitations. <strong>First</strong>, due to the infeasibility of manual annotation at scale, we <em>machine-translated</em> our human-annotated English ground truth into the 35 target languages rather than manually annotating ground truth in each language directly. <strong>Second</strong>, while we demonstrated JQL's effectiveness in filtering high-quality multilingual documents <em>solely based on educational value</em>, our approach is not limited to this criterion. JQL is designed to support arbitrary filtering objectives; we chose educational value as our primary focus because it has been shown to be a strong indicator for identifying high-quality multilingual pretraining data (Wettig et al., 2024). <strong>Third</strong>, due to high computational cost, we conducted our ablation studies at a <em>single model scale</em> ($2$ billion parameters). Despite this limitation, we observed consistent improvements in downstream performance, indicating the effectiveness of JQL-filtered datasets. Given the evidence of current scaling laws (Magnusson et al., 2025), we expect equally strong performance gains at larger model scales, which we leave for future work.</p>
+          </div>
+          <div class="zh">
+            <p>尽管本工作覆盖面广、可泛化性强,我们仍承认三处局限。<strong>① 翻译 vs. 原生标注</strong>:由于在每种语言上做大规模人工标注不现实,我们将<em>人工标注的英文 GT</em>通过机器翻译扩展到 35 种目标语言,而不是在每种语言上原生采集 GT。<strong>② 仅验证「教育价值」一个准则</strong>:我们仅基于「教育价值」展示了 JQL 对高质量多语言文档的过滤效果,但这套方法本身并不局限于此准则——JQL 设计上支持任意过滤目标;之所以选教育价值,是因为它已被证明是高质量多语言预训练数据的强指示器(Wettig 等,2024)。<strong>③ 只在单一 model scale 上做消融</strong>:由于算力开销,我们的消融实验只在 $2$B 参数这一档进行。虽然如此,下游性能仍呈现一致提升,说明 JQL 过滤数据的有效性;鉴于当前 scaling laws 的证据(Magnusson 等,2025),我们预期在更大规模上仍能拿到同样显著的提升,这部分留待未来工作。</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+    
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>References<span class="sec-page">p.10</span></span>
+      </summary>
+      <div class="sec-content"><p>Julien Abadji, Pedro Javier Ortiz Suárez, Laurent Romary, and Benoît Sagot. 2022. Towards a cleaner document-oriented multilingual crawled corpus. In Proceedings of the Thirteenth Language Resources and Evaluation Conference, LREC. European Language Resources Association. Loubna Ben Allal, Anton Lozhkov, Elie Bakouch, Gabriel Martín Blázquez, Guilherme Penedo, Lewis Tunstall, Andrés Marafioti, Hynek Kydlíˇcek, Agustín Piqueres Lajarín, Vaibhav Srivastav, Joshua Lochner, Caleb Fahlgren, Xuan-Son Nguyen, Clémentine Fourrier, Ben Burtenshaw, Hugo Larcher, Haojun Zhao, Cyril Zakka, Mathieu Morlon, Colin Raffel, Leandro von Werra, and Thomas Wolf. 2025. Smollm2: When smol goes big – data-centric training of a small language model. arXiv preprint arXiv:2502.02737. Mikel Artetxe, Sebastian Ruder, and Dani Yogatama. 2019. On the cross-lingual transferability of monolingual representations. arXiv preprint arXiv1910.11856:. Manuel Brack, Malte Ostendorff, Pedro Ortiz Suarez, José Javier Saiz, Iñaki Lacunza Castilla, Jorge Palomar-Giner, Alexander Shvets, Patrick Schramowski, Georg Rehm, Marta Villegas, and Kristian Kersting. 2024. Community oscar: A community effort for multilingual web data. In Proceedings of the Fourth Workshop on Multilingual Representation Learning (MRL). Laurie Burchell, Ona de Gibert, Nikolay Arefyev, Mikko Aulamo, Marta Bañón, Pinzhen Chen, Mariia Fedorova, Liane Guillou, Barry Haddow, Jan Hajiˇc, Jindˇrich Helcl, Erik Henriksson, Mateusz Klimaszewski, Ville Komulainen, Andrey Kutuzov, Joona Kytöniemi, Veronika Laippala, Petter Mæhlum, Bhavitvya Malik, Farrokh Mehryary, Vladislav Mikhailov, Nikita Moghe, Amanda Myntti, Dayyán O’Brien, Stephan Oepen, Proyag Pal, Jousia Piha, Sampo Pyysalo, Gema Ramírez-Sánchez, David Samuel, Pavel Stepachev, Jörg Tiedemann, Dušan Variš, Tereza Vojtˇechová, and Jaume ZaragozaBernabeu. 2025. An expanded massive multilingual dataset for high-performance language technologies. arXiv preprint arXiv:2503.10267. Jonathan H. Clark, Eunsol Choi, Michael Collins, Dan Garrette, Tom Kwiatkowski, Vitaly Nikolaev, and Jennimaria Palomaki. 2020. Tydi qa: A benchmark for information-seeking question answering in typologically diverse languages. Transactions of the Association for Computational Linguistics. Peter Clark, Isaac Cowhey, Oren Etzioni, Tushar Khot, Ashish Sabharwal, Carissa Schoenick, and Oyvind Tafjord. 2018. Think you have solved question answering? try arc, the ai2 reasoning challenge. arXiv preprint arXiv:1803.05457. Yiming Cui, Ting Liu, Wanxiang Che, Li Xiao, Zhipeng Chen, Wentao Ma, Shijin Wang, and Guoping Hu. 2019. A span-extraction dataset for Chinese machine reading comprehension. In Proceedings of the Conference on Empirical Methods in Natural Language Processing and the International Joint Conference on Natural Language Processing (EMNLP-IJCNLP). Roberts Dar ‘gis, Guntis B¯arzdin, š, Inguna Skadin, a, Normunds Gr¯uz¯itis, and Baiba Saul¯ite. 2024. Evaluating open-source LLMs in low-resource languages: Insights from Latvian high school exams. In Proceedings of the 4th International Conference on Natural Language Processing for Digital Humanities. Leo Gao, Stella Biderman, Sid Black, Laurence Golding, Travis Hoppe, Charles Foster, Jason Phang, Horace He, Anish Thite, Noa Nabeshima, Shawn Presser, and Connor Leahy. 2020. The pile: An 800gb dataset of diverse text for language modeling. arXiv preprint arXiv:2101.00027. Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Ruoyu Zhang, Runxin Xu, Qihao Zhu, Shirong Ma, Peiyi Wang, Xiao Bi, et al. 2025. Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning. arXiv preprint arXiv:2501.12948. Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn Song, and Jacob Steinhardt. 2021. Measuring massive multitask language understanding. In Proceedings of the International Conference on Learning Representations (ICLR). Armand Joulin, Edouard Grave, Piotr Bojanowski, and Tomas Mikolov. 2016. Bag of tricks for efficient text classification. arXiv preprint arXiv:1607.01759. Tomasz Korbak, Kejian Shi, Angelica Chen, Rasika Vinayak Bhalerao, Christopher L. Buckley, Jason Phang, Samuel R. Bowman, and Ethan Perez. 2023. Pretraining language models with human preferences. In Proceedings of the International Conference on Machine Learning (ICML), Proceedings of Machine Learning Research. Sneha Kudugunta, Isaac Caswell, Biao Zhang, Xavier Garcia, Derrick Xin, Aditya Kusupati, Romi Stella, Ankur Bapna, and Orhan Firat. 2023. MADLAD400: A multilingual and document-level large audited dataset. In Proceedings of the Advances in Neural Information Processing Systems: Annual Conference on Neural Information Processing Systems (NeurIPS). Patrick Lewis, Barlas Oguz, Ruty Rinott, Sebastian Riedel, and Holger Schwenk. 2019. Mlqa: Evaluating cross-lingual extractive question answering. arXiv preprint arXiv:1910.07475. Jeffrey Li, Alex Fang, Georgios Smyrnis, Maor Ivgi, Matt Jordan, Samir Yitzhak Gadre, Hritik Bansal, Etash Guha, Sedrick Scott Keh, Kushal Arora, Saurabh Garg, Rui Xin, Niklas Muennighoff, Reinhard Heckel, Jean Mercat, Mayee F. Chen, Suchin Gururangan, Mitchell Wortsman, Alon Albalak, Yonatan Bitton, Marianna Nezhurina, Amro Abbas, Cheng-Yu Hsieh, Dhruba Ghosh, Josh Gardner, Maciej Kilian, Hanlin Zhang, Rulin Shao, Sarah M. Pratt, Sunny Sanyal, Gabriel Ilharco, Giannis Daras, Kalyani Marathe, Aaron Gokaslan, Jieyu Zhang, Khyathi Raghavi Chandu, Thao Nguyen, Igor Vasiljevic, Sham M. Kakade, Shuran Song, Sujay Sanghavi, Fartash Faghri, Sewoong Oh, Luke Zettlemoyer, Kyle Lo, Alaaeldin El-Nouby, Hadi Pouransari, Alexander Toshev, Stephanie Wang, Dirk Groeneveld, Luca Soldaini, Pang Wei Koh, Jenia Jitsev, Thomas Kollar, Alex Dimakis, Yair Carmon, Achal Dave, Ludwig Schmidt, and Vaishaal Shankar. 2024. Datacomp-lm: In search of the next generation of training sets for language models. In Proceedings of the Advances in Neural Information Processing Systems: Annual Conference on Neural Information Processing Systems (NeurIPS). Risto Luukkonen, Jonathan Burdge, Elaine Zosa, Aarne Talman, Ville Komulainen, Väinö Hatanpää, Peter Sarlin, and Sampo Pyysalo. 2024. Poro 34b and the blessing of multilinguality. arXiv preprint arXiv:2404.01856. Ian Magnusson, Nguyen Tai, Ben Bogin, David Heineman, Jena D. Hwang, Luca Soldaini, Akshita Bhagia, Jiacheng Liu, Dirk Groeneveld, Oyvind Tafjord, Noah A. Smith, Pang Wei Koh, and Jesse Dodge. 2025. Datadecide: How to predict best pretraining data with small experiments. arXiv preprint arXiv:2504.11393. Tamzeed Mahfuz, Satak Kumar Dey, Ruwad Naswan, Hasnaen Adil, Khondker Salman Sayeed, and Haz Sameen Shahgir. 2025. Too late to train, too early to use? a study on necessity and viability of low-resource Bengali LLMs. In Proceedings of the International Conference on Computational Linguistics (COLING). Hussein Mozannar, Elie Maamary, Karl El Hajal, and Hazem Hajj. 2019. Neural Arabic question answering. In Proceedings of the Fourth Arabic Natural Language Processing Workshop. Association for Computational Linguistics. Thuat Nguyen, Chien Van Nguyen, Viet Dac Lai, Hieu Man, Nghia Trung Ngo, Franck Dernoncourt, Ryan A. Rossi, and Thien Huu Nguyen. 2024. CulturaX: A cleaned, enormous, and multilingual dataset for large language models in 167 languages. In Proceedings of the Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING). Guilherme Penedo, Hynek Kydlícek, Loubna Ben Allal, Anton Lozhkov, Margaret Mitchell, Colin A. Raffel, Leandro von Werra, and Thomas Wolf. 2024a. The fineweb datasets: Decanting the web for the finest text data at scale. In Proceedings of the Advances in Neural Information Processing Systems: Annual Conference on Neural Information Processing Systems (NeurIPS). Guilherme Penedo, Hynek Kydlíˇcek, Vinko Sabolˇcec, Bettina Messmer, Negar Foroutan, Martin Jaggi, Leandro von Werra, and Thomas Wolf. 2024b. Fineweb2: A sparkling update with 1000s of languages. Guilherme Penedo, Quentin Malartic, Daniel Hesslow, Ruxandra Cojocaru, Hamza Alobeidli, Alessandro Cappelli, Baptiste Pannier, Ebtesam Almazrouei, and Julien Launay. 2023. The refinedweb dataset for falcon LLM: outperforming curated corpora with web data only. In Proceedings of the Advances in Neural Information Processing Systems: Annual Conference on Neural Information Processing Systems (NeurIPS). Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, and Peter J. Liu. 2020. Exploring the limits of transfer learning with a unified text-to-text transformer. Journal of Machine Learning Research (JMLR), 21. Noveen Sachdeva, Benjamin Coleman, Wang-Cheng Kang, Jianmo Ni, Lichan Hong, Ed H Chi, James Caverlee, Julian McAuley, and Derek Zhiyuan Cheng. 2024. How to train data-efficient llms. arXiv preprint arXiv:2402.09668. Saba Sturua, Isabelle Mohr, Mohammad Kalim Akram, Michael Günther, Bo Wang, Markus Krimmel, Feng Wang, Georgios Mastrapas, Andreas Koukounas, Andreas Koukounas, Nan Wang, and Han Xiao. 2024. jina-embeddings-v3: Multilingual embeddings with task lora. arXiv preprint arXiv:2409.10173. Dan Su, Kezhi Kong, Ying Lin, Joseph Jennings, Brandon Norick, Markus Kliegl, Mostofa Patwary, Mohammad Shoeybi, and Bryan Catanzaro. 2024. Nemotron-cc: Transforming common crawl into a refined long-horizon pretraining dataset. arXiv preprint arXiv:2412.02595. Gemma Team, Aishwarya Kamath, Johan Ferret, Shreya Pathak, Nino Vieillard, Ramona Merhej, Sarah Perrin, Tatiana Matejovicova, Alexandre Ramé, Morgane Rivière, Louis Rouillard, Thomas Mesnard, Geoffrey Cideron, Jean bastien Grill, Sabela Ramos, Edouard Yvinec, Michelle Casbon, Etienne Pot, Ivo Penchev, Gaël Liu, Francesco Visin, Kathleen Kenealy, Lucas Beyer, Xiaohai Zhai, Anton Tsitsulin, Robert Busa-Fekete, Alex Feng, Noveen Sachdeva, Benjamin Coleman, Yi Gao, Basil Mustafa, Iain Barr, Emilio Parisotto, David Tian, Matan Eyal, Colin Cherry, Jan-Thorsten Peter, Danila Sinopalnikov, Surya Bhupatiraju, Rishabh Agarwal, Mehran Kazemi, Dan Malkin, Ravin Kumar, David Vilar, Idan Brusilovsky, Jiaming Luo, Andreas Steiner, Abe Friesen, Abhanshu Sharma, Abheesht Sharma, Adi Mayrav Gilady, Adrian Goedeckemeyer, Alaa Saade, Alex Feng, Alexander Kolesnikov, Alexei Bendebury, Alvin Abdagic, Amit Vadi, András György, André Susano Pinto, Anil Das, Ankur Bapna, Antoine Miech, Antoine Yang, Antonia Paterson, Ashish Shenoy, Ayan Chakrabarti, Bilal Piot, Bo Wu, Bobak Shahriari, Bryce Petrini, Charlie Chen, Charline Le Lan, Christopher A. ChoquetteChoo, CJ Carey, Cormac Brick, Daniel Deutsch, Danielle Eisenbud, Dee Cattle, Derek Cheng, Dimitris Paparas, Divyashree Shivakumar Sreepathihalli, Doug Reid, Dustin Tran, Dustin Zelle, Eric Noland, Erwin Huizenga, Eugene Kharitonov, Frederick Liu, Gagik Amirkhanyan, Glenn Cameron, Hadi Hashemi, Hanna Klimczak-Pluci´nska, Harman Singh, Harsh Mehta, Harshal Tushar Lehri, Hussein Hazimeh, Ian Ballantyne, Idan Szpektor, Ivan Nardini, Jean Pouget-Abadie, Jetha Chan, Joe Stanton, John Wieting, Jonathan Lai, Jordi Orbay, Joseph Fernandez, Josh Newlan, Ju yeong Ji, Jyotinder Singh, Kat Black, Kathy Yu, Kevin Hui, Kiran Vodrahalli, Klaus Greff, Linhai Qiu, Marcella Valentine, Marina Coelho, Marvin Ritter, Matt Hoffman, Matthew Watson, Mayank Chaturvedi, Michael Moynihan, Min Ma, Nabila Babar, Natasha Noy, Nathan Byrd, Nick Roy, Nikola Momchev, Nilay Chauhan, Noveen Sachdeva, Oskar Bunyan, Pankil Botarda, Paul Caron, Paul Kishan Rubenstein, Phil Culliton, Philipp Schmid, Pier Giuseppe Sessa, Pingmei Xu, Piotr Stanczyk, Pouya Tafti, Rakesh Shivanna, Renjie Wu, Renke Pan, Reza Rokni, Rob Willoughby, Rohith Vallu, Ryan Mullins, Sammy Jerome, Sara Smoot, Sertan Girgin, Shariq Iqbal, Shashir Reddy, Shruti Sheth, Siim Põder, Sijal Bhatnagar, Sindhu Raghuram Panyam, Sivan Eiger, Susan Zhang, Tianqi Liu, Trevor Yacovone, Tyler Liechty, Uday Kalra, Utku Evci, Vedant Misra, Vincent Roseberry, Vlad Feinberg, Vlad Kolesnikov, Woohyun Han, Woosuk Kwon, Xi Chen, Yinlam Chow, Yuvein Zhu, Zichuan Wei, Zoltan Egyed, Victor Cotruta, Minh Giang, Phoebe Kirk, Anand Rao, Kat Black, Nabila Babar, Jessica Lo, Erica Moreira, Luiz Gustavo Martins, Omar Sanseviero, Lucas Gonzalez, Zach Gleicher, Tris Warkentin, Vahab Mirrokni, Evan Senter, Eli Collins, Joelle Barral, Zoubin Ghahramani, Raia Hadsell, Yossi Matias, D. Sculley, Slav Petrov, Noah Fiedel, Noam Shazeer, Oriol Vinyals, Jeff Dean, Demis Hassabis, Koray Kavukcuoglu, Clement Farabet, Elena Buchatskaya, Jean-Baptiste Alayrac, Rohan Anil, Dmitry, Lepikhin, Sebastian Borgeaud, Olivier Bachem, Armand Joulin, Alek Andreev, Cassidy Hardin, Robert Dadashi, and Léonard Hussenot. 2025. Gemma 3 technical report. arXiv preprint arXiv:2503.19786. Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine Babaei, Nikolay Bashlykov, Soumya Batra, Prajjwal Bhargava, Shruti Bhosale, Dan Bikel, Lukas Blecher, Cristian Canton Ferrer, Moya Chen, Guillem Cucurull, David Esiobu, Jude Fernandes, Jeremy Fu, Wenyin Fu, Brian Fuller, Cynthia Gao, Vedanuj Goswami, Naman Goyal, Anthony Hartshorn, Saghar Hosseini, Rui Hou, Hakan Inan, Marcin Kardas, Viktor Kerkez, Madian Khabsa, Isabel Kloumann, Artem Korenev, Punit Singh Koura, Marie-Anne Lachaux, Thibaut Lavril, Jenya Lee, Diana Liskovich, Yinghai Lu, Yuning Mao, Xavier Martinet, Todor Mihaylov, Pushkar Mishra, Igor Molybog, Yixin Nie, Andrew Poulton, Jeremy Reizenstein, Rashi Rungta, Kalyan Saladi, Alan Schelten, Ruan Silva, Eric Michael Smith, Ranjan Subramanian, Xiaoqing Ellen Tan, Binh Tang, Ross Taylor, Adina Williams, Jian Xiang Kuan, Puxin Xu, Zheng Yan, Iliyan Zarov, Yuchen Zhang, Angela Fan, Melanie Kambadur, Sharan Narang, Aurelien Rodriguez, Robert Stojnic, Sergey Edunov, and Thomas Scialom. 2023. Llama 2: Open foundation and finetuned chat models. arXiv preprint arXiv:2307.09288. Maurice Weber, Daniel Y. Fu, Quentin Anthony, Yonatan Oren, Shane Adams, Anton Alexandrov, Xiaozhong Lyu, Huu Nguyen, Xiaozhe Yao, Virginia Adams, Ben Athiwaratkun, Rahul Chalamala, Kezhen Chen, Max Ryabinin, Tri Dao, Percy Liang, Christopher Ré, Irina Rish, and Ce Zhang. 2024. Redpajama: an open dataset for training large language models. In Proceedings of the Advances in Neural Information Processing Systems: Annual Conference on Neural Information Processing Systems (NeurIPS). Alexander Wettig, Aatmik Gupta, Saumya Malik, and Danqi Chen. 2024. Qurating: Selecting high-quality data for training language models. In Forty-first International Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024. OpenReview.net. Linting Xue, Noah Constant, Adam Roberts, Mihir Kale, Rami Al-Rfou, Aditya Siddhant, Aditya Barua, and Colin Raffel. 2021. mt5: A massively multilingual pre-trained text-to-text transformer. In Proceedings of the Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL-HLT). Puxuan Yu, Luke Merrick, Gaurav Nuti, and Daniel Campos. 2024. Arctic-embed 2.0: Multilingual retrieval without compromise. arXiv preprint arXiv:2412.04506. Rowan Zellers, Ari Holtzman, Yonatan Bisk, Ali Farhadi, and Yejin Choi. 2019. Hellaswag: Can a machine really finish your sentence? In Proceedings of the Annual Meeting of the Association for Computational Linguistics (ACL). Xin Zhang, Yanzhao Zhang, Dingkun Long, Wen Xie, Ziqi Dai, Jialong Tang, Huan Lin, Baosong Yang, Pengjun Xie, Fei Huang, et al. 2024. mgte: Generalized long-context text representation and reranking models for multilingual text retrieval. In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing: Industry Track, pages 1393–1412. Ranchi Zhao, Zhen Leng Thai, Yifan Zhang, Shengding Hu, Jie Zhou, Yunqi Ba, Jie Cai, Zhiyuan Liu, and Maosong Sun. 2024. Decoratelm: Data engineering through corpus rating, tagging, and editing with language models. In EMNLP, pages 1401–1418. Association for Computational Linguistics. A Human Annotation Study A.1 Annotator Background and Study Protocol For our human annotation study, we used the prompt introduced by Penedo et al. (2024b), which was reviewed and discussed with all annotators during a dedicated training session. Annotations were conducted using a web interface built with Argilla8, which displayed the document text, annotation guidelines, and the 0–5 rating scale. Our annotators are colleagues from our lab, and there is an overlap between the authors of this work and the annotation team. The majority of annotators have a technical background. Additional information on annotators is provided in Table 3. Prior to the study, we informed participants about the purpose of the annotation task and obtained their consent to use the resulting annotations, along with anonymized information about the annotators, for subsequent analysis and anonymized public release. No ethics review board approval was sought, as the study did not fall under institutional requirements for ethical review. Annotator (Anonymized) Background Age Group Annotator 1 MSc. in Computer Science 20-30 Annotator 2 MSc. in Data and Knowledge Engineering 30-40 Annotator 3 PhD in Computer Science 30-40 Annotator 4 M.A. English/American Studies and German Studies 30-40 Annotator 5 M.Sc. in Mathematics 30-40 Annotator 6 PhD in Computer Science 30-40 Annotator 7 M.Sc. in Artificial Intelligence 20-30 Annotator 8 PhD in Computer Science 30-40 Annotator 9 MSc. in Computer Science 30-40 Annotator 10 MSc. in Computer Science 30-30 Annotator 11 PhD in Theoretical Physics 30-40 Annotator 12 MSc. in Autonomous Systems 30.40 Annotator 13 PhD in Computer Science 30-40 Annotator 14 MSc. in Autonomous Systems 30-40 Annotator 15 MSc. in Computer Science 30-40 Table 3: Backgrounds of the human annotators (anonymized). A.2 Human Annotations Evaluation In this section, we provide additional details about the human-annotated ground truth dataset introduced in Section 2. Score Distribution of Annotations Annotator Agreement and Annotation Spread. To further analyze the variation in human annotations, we present the cumulative distribution of annotation spread in Figure 8. The plot shows that over 60% of the samples have a maximum spread of 1, and more than 85% have a maximum spread of 2, indicating strong agreement among annotators. 8https://argilla.io/ 0 1 2 3 4 5 Score 0 25 50 75 100 125 150 175 200 Frequency 186 100 106 104 13 2 Figure 7: Histogram on the distribution of the document scores judged by the human annotators. 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 Spread 0 20 40 60 80 100 Cumulative Percentage (%) Figure 8: Cumulative distribution of spread within annotations. Aligned with the majority agreement of 78.5% and an interrating standard deviation of 0.56, (see Sec. 2), also the spread analysis reveals high interrater consistency with a spread of ≤2 for 86% of the documents. bg de el es fi fr hu it lt nb pl tr uk avg-13 avg-35 0.4 0.0 0.4 0.0 0.0 0.0 0.4 0.2 0.6 0.2 0.0 0.2 0.4 0.2 0.2 0.2 0.2 0.6 0.4 0.6 0.2 0.6 0.2 0.6 0.2 0.2 0.2 0.4 0.3 0.4 0.0 0.0 0.0 0.0 0.4 0.2 0.4 0.0 0.0 0.0 0.2 0.0 0.2 0.1 0.1 7.8 7.8 8.4 12.5 8.6 6.7 5.3 10.0 4.7 9.0 10.0 8.8 7.0 8.2 8.4 38.7 51.7 52.6 42.5 56.0 61.8 46.4 47.7 44.2 65.0 57.7 50.9 52.3 51.3 50.5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 1.8 0.2 0.2 0.0 0.0 0.0 0.0 0.0 0.2 0.1 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 Gemma-2-27B-it Gemma-2-9B-it Gemma-3-27B-it Llama-3.1-8B-it Llama-3.2-3B-it Llama-3.3-70B-it Mistral-3.1-24B-it Phi-4-14B Qwen-2.5-14B-it Qwen-2.5-32B-it Qwen-2.5-72B-it Qwen-2.5-7B-it 0 10 20 30 40 50 60 Figure 9: Invalid scores predictions (in percent) B LLM Based Annotator Evaluation In this Section we provide further details and ablations on our LLM based annotators discussed in Section 3. B.1 Invalid Predictions Similar to the human annotators, we prompted the LLM-based annotators to assess the educational value of documents on a scale from 0 to 5, where 0 indicates the lowest quality and 5 the highest. For each model and document, we collected three predictions. A prediction is considered invalid if it does not fall within the specified integer range. If all three predictions for a document are invalid, the entire annotation is marked as invalid. When evaluating LLM performance, it is crucial to analyze the distribution of valid and invalid predictions to not obtain distorted conclusions. Figure 9 shows the proportion of invalid predictions across different languages. While our selected models, LLaMA-3-70B-IT, Mistral-3.1-24B-IT, and Gemma-3-27B-IT, exhibit few or no invalid predictions, LLaMA-3-8B-IT produces a noticeably higher rate of invalid outputs, and LLaMA-3-3B-IT shows a substantial fraction of invalid predictions. Based on these observations, we suggest that a consistently low rate of invalid predictions should be considered a necessary condition for further use as LLM-based annotator. Otherwise, annotating data at scale will result in a large number of invalid predictions, leading to wasted computational resources. B.2 Statistical Significance of Correlations Between Human Annotations and LLM Predictions. To assess the statistical significance of the correlations presented in Fig.11, we perform two-sided Student’s t-tests and compute the corresponding p-values separately for each model and language. Summary statistics, i.e., average, minimum, and maximum p-values, across the 35 languages are shown in Fig.4. Notably, the highest p-value observed across all models and languages is 4.49e-07, indicating a consistently high level of statistical significance throughout our analysis. B.3 Classification Based Evaluation As discussed in Sec. 2.4, we use the Spearman correlation between the LLMs’ predictions and the human ground truth to evaluate the annotator capabilities of the models. This metric is preferred because it effectively captures the models’ ability to rank document quality, which is central to our task. Here, we illustrate the limitations of traditional classification metrics for assessing LLM annotator performance. The figures 11 and 13 show the F1 scores of the LLMs when predicting the correct quality classes (0 to 5). Notably, Gemma-3-27B-IT appears among the worst-performing models in terms of F1 score, suggesting a limited ability to classify document quality. This stands in contrast to its relatively strong performance when evaluated using Spearman correlation (see Sec. 3.2). This discrepancy can be explained by examining the confusion matrices in Fig. 14. While Mistral-3.124B tends to predict more reliably within the central quality classes (1 to 3), Gemma-3-27B-IT shows a LLM avg min max Gemma-2-27B-it 1.51e-52 5.76e-68 5.38e-51 Gemma-2-9B-it 1.43e-61 2.77e-76 5.16e-60 Gemma-3-27B-it 8.38e-65 1.09e-85 3.02e-63 Llama-3.1-8B-it 8.90e-51 3.22e-73 3.01e-49 Llama-3.2-3B-it 2.04e-08 6.42e-27 4.49e-07 Llama-3.3-70B-it 4.06e-66 3.54e-76 1.07e-64 Mistral-3.1-24B-it 4.59e-62 2.89e-81 1.61e-60 Phi-4-14B 4.26e-46 2.02e-65 1.53e-44 Qwen-2.5-14B-it 1.73e-37 1.88e-56 6.22e-36 Qwen-2.5-32B-it 4.12e-54 1.68e-68 1.48e-52 Qwen-2.5-72B-it 4.18e-53 7.90e-64 1.39e-51 Qwen-2.5-7B-it 1.24e-43 4.28e-68 4.46e-42 Table 4: p-value analysis on the Spearman correlation scores in Figure 11. The p-values were calculated using a two-sided Student’s t-test and indicate the statistical significance of the measured correlations (lower is better). Across all models and languages, even the highest p-values are extremely small. This underpins the statistical significance of our results. tendency to shift predictions across the scale, particularly within these same classes. As a result, its F1 scores are low due to class misalignment, but its Spearman correlation remains high because it preserves the relative ranking of document quality. B.4 Predicted Annotation Distributions Across LLM Based Annotators In Sec. B.3, we showed using predictions from Gemma-3-27B-IT that different models can shift their predictions across the quality scale. This has important implications for selecting thresholds when filtering documents based on predicted quality. Figure 15 shows the cumulative distribution of predicted scores for annotated training datasets (approximately 450k documents per language) by Gemma-3-27B-IT, LLaMA-3.3-70B, and Mistral-Small-3.1-24B. We observe that, for a fixed filtering threshold, different models yield varying amounts of retained data. For example, with a threshold of ≥3, Gemma-3-27B-IT retains more data than the other two models, while LLaMA-3.3-70B retains more than Mistral-Small-3.1-24B. This highlights that the threshold is model-specific, effectively determining how much data is preserved and raising questions about the quality–quantity trade-off. To address this, we advocate using the p-quantile rather than a fixed absolute threshold, ensuring consistent data retention across models. The high Spearman correlation (0.83) between the predicted scores of the three models indicates that, despite differences in absolute scoring, all models are capable of ranking documents by quality reliably. Language Code Translator #Testsamples #Trainsamples Bulgarian bg DeepL 511 499.799 Czech cs DeepL 511 496.428 Croatian hr ChatGPT 502 497.692 Macedonian mk ChatGPT 509 499.446 Polish pl DeepL 511 487.150 Slovak sk DeepL 511 478.122 Slovenian sl DeepL 511 475.949 Serbian sr ChatGPT 509 496.172 Serbian Cyrillic sr-cyrl ChatGPT 511 499.691 Ukrainian uk DeepL 511 499.376 Catalan ca ChatGPT 511 488.937 Spanish es DeepL 511 499.260 French fr DeepL 511 499.642 Galician gl ChatGPT 511 493.112 Italian it DeepL 511 478.998 Portuguese pt ChatGPT 509 486.995 Romanian ro DeepL 511 499.733 Danish da DeepL 511 459.948 German de DeepL 511 498.699 Icelandic is ChatGPT 508 495.902 Dutch nl DeepL 511 495.574 Norwegian (Bokmål) nb DeepL 511 493.847 Norwegian (Nynorsk) nn ChatGPT 505 304.239 Swedish sv DeepL 511 491.974 Lithuanian lt DeepL 511 488.415 Latvian lv DeepL 511 438.257 Greek el DeepL 511 499.270 Irish ga ChatGPT 505 390.309 Estonian et DeepL 511 458.828 Finnish fi DeepL 511 490.227 Hungarian hu DeepL 511 496.488 Basque eu ChatGPT 508 486.467 Maltese mt ChatGPT 510 327.441 Turkish tr DeepL 511 495.888 Albanian sq ChatGPT 510 499.536 Armenian hy ChatGPT 508 498.795 Table 5: Number of samples for each language contained in the test set and the regressor training set, including their language codes. Gemma-2-27B-it Gemma-2-9B-it Gemma-3-27B-it Llama-3.1-8B-it Llama-3.2-3B-it Llama-3.3-70B-it Mistral-3.1-24B-it Phi-4-14B Qwen-2.5-14B-it Qwen-2.5-32B-it Qwen-2.5-72B-it Qwen-2.5-7B-it 0.4 0.2 0.0 7.8 38.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.2 0.0 12.9 39.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.0 10.4 28.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.4 12.1 61.3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.0 7.8 51.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.6 0.0 8.4 52.6 0.0 0.0 0.0 0.2 0.2 0.2 0.2 0.0 0.4 0.0 12.5 42.5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.6 0.0 9.2 60.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.0 7.3 40.9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.6 0.4 8.6 56.0 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.0 0.2 0.2 6.7 61.8 0.0 0.0 1.8 0.0 0.0 0.0 0.0 0.0 0.0 0.2 6.3 29.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 7.6 55.8 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.8 0.4 8.4 51.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.6 0.4 5.3 46.4 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.0 0.2 0.0 4.3 50.6 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.2 8.1 54.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.2 0.0 10.0 47.7 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.6 0.6 0.0 4.7 44.2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.6 0.4 7.4 49.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.0 6.1 61.5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.6 0.0 6.9 37.3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.2 0.0 9.0 65.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.4 0.2 7.2 49.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.2 8.3 65.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.2 10.0 57.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.6 12.8 52.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.4 0.4 8.6 48.7 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.6 0.0 8.2 38.6 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.2 0.4 0.0 9.0 45.6 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.6 0.8 0.0 7.6 50.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.6 0.4 8.8 54.0 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.2 0.6 0.0 5.7 63.6 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.2 13.1 63.2 0.0 0.0 0.2 0.0 0.0 0.0 0.0 0.2 0.2 0.0 8.8 50.9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.4 0.4 0.2 7.0 52.3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 bg ca cs da de el es et eu fi fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sk sl sq sr sr-cyrl sv tr uk 0 10 20 30 40 50 60 Figure 10: Percentages of invalid scores (aggregated) for each model across all languages. An aggregated score (majority voted) is counted as invalid, if all three predictions for a document are invalid. bg de el es fi fr hu it lt nb pl tr uk avg-13 avg-35 Evaluation language 0.197 0.212 0.198 0.232 0.209 0.229 0.221 0.198 0.206 0.208 0.196 0.221 0.214 0.211 0.207 0.254 0.252 0.233 0.263 0.225 0.262 0.269 0.255 0.222 0.243 0.267 0.225 0.225 0.246 0.237 0.131 0.107 0.119 0.086 0.146 0.091 0.091 0.136 0.081 0.100 0.084 0.105 0.082 0.105 0.111 0.256 0.312 0.206 0.303 0.264 0.237 0.239 0.285 0.264 0.280 0.269 0.308 0.268 0.269 0.257 0.088 0.146 0.102 0.111 0.080 0.116 0.115 0.137 0.129 0.131 0.128 0.052 0.073 0.108 0.111 0.284 0.307 0.272 0.279 0.309 0.279 0.307 0.299 0.309 0.320 0.307 0.325 0.286 0.299 0.301 0.277 0.284 0.261 0.300 0.265 0.264 0.282 0.284 0.290 0.296 0.297 0.307 0.282 0.284 0.277 0.301 0.289 0.341 0.289 0.308 0.256 0.346 0.386 0.284 0.321 0.278 0.387 0.401 0.322 0.307 0.279 0.209 0.275 0.217 0.216 0.211 0.262 0.211 0.234 0.218 0.220 0.253 0.260 0.236 0.233 0.374 0.256 0.345 0.247 0.241 0.243 0.320 0.238 0.254 0.251 0.265 0.359 0.272 0.282 0.258 0.129 0.134 0.130 0.112 0.122 0.123 0.126 0.124 0.112 0.129 0.120 0.119 0.117 0.123 0.125 0.114 0.095 0.056 0.094 0.083 0.126 0.106 0.106 0.074 0.079 0.078 0.073 0.114 0.092 0.093 Gemma-2-27B-it Gemma-2-9B-it Gemma-3-27B-it Llama-3.1-8B-it Llama-3.2-3B-it Llama-3.3-70B-it Mistral-3.1-24B-it Phi-4-14B Qwen-2.5-14B-it Qwen-2.5-32B-it Qwen-2.5-72B-it Qwen-2.5-7B-it 0.10 0.15 0.20 0.25 0.30 0.35 0.40 Figure 11: Multilingual LLM classification performance (macro F1-score) on human-annotated ground truth. Scores are reported individually for the 13 languages subset, as well as averaged across these 13 languages (avg-13) and across all 35 evaluated languages. Gemma-2-27B-it Gemma-2-9B-it Gemma-3-27B-it Llama-3.1-8B-it Llama-3.2-3B-it Llama-3.3-70B-it Mistral-3.1-24B-it Phi-4-14B Qwen-2.5-14B-it Qwen-2.5-32B-it Qwen-2.5-72B-it Qwen-2.5-7B-it 0.662 0.691 0.713 0.672 0.456 0.689 0.707 0.631 0.587 0.648 0.601 0.585 0.634 0.689 0.690 0.645 0.488 0.690 0.689 0.611 0.595 0.628 0.623 0.572 0.670 0.688 0.729 0.663 0.455 0.684 0.697 0.636 0.593 0.649 0.636 0.644 0.615 0.677 0.707 0.638 0.532 0.679 0.680 0.630 0.590 0.663 0.627 0.659 0.620 0.688 0.678 0.619 0.597 0.689 0.703 0.623 0.582 0.634 0.644 0.617 0.650 0.690 0.702 0.652 0.483 0.683 0.699 0.615 0.582 0.624 0.610 0.637 0.653 0.659 0.698 0.643 0.553 0.696 0.679 0.637 0.605 0.659 0.641 0.618 0.656 0.691 0.703 0.630 0.359 0.698 0.663 0.649 0.589 0.645 0.610 0.667 0.644 0.697 0.699 0.690 0.324 0.701 0.676 0.618 0.573 0.674 0.618 0.586 0.614 0.679 0.695 0.639 0.399 0.686 0.679 0.634 0.569 0.638 0.639 0.654 0.640 0.685 0.696 0.667 0.498 0.693 0.676 0.612 0.617 0.625 0.631 0.582 0.618 0.642 0.671 0.628 0.263 0.694 0.682 0.625 0.517 0.609 0.616 0.555 0.624 0.699 0.707 0.665 0.561 0.684 0.683 0.634 0.581 0.653 0.640 0.580 0.665 0.687 0.700 0.645 0.472 0.682 0.701 0.665 0.589 0.646 0.630 0.618 0.635 0.692 0.702 0.665 0.477 0.685 0.677 0.647 0.564 0.626 0.615 0.609 0.652 0.660 0.709 0.616 0.363 0.661 0.657 0.567 0.534 0.623 0.609 0.566 0.616 0.694 0.654 0.618 0.340 0.686 0.676 0.639 0.576 0.622 0.615 0.623 0.632 0.672 0.702 0.669 0.472 0.678 0.665 0.617 0.577 0.661 0.625 0.611 0.656 0.682 0.704 0.657 0.474 0.690 0.685 0.634 0.581 0.636 0.650 0.632 0.629 0.679 0.716 0.678 0.508 0.692 0.665 0.661 0.582 0.653 0.626 0.643 0.660 0.689 0.696 0.691 0.449 0.682 0.683 0.613 0.586 0.649 0.627 0.609 0.648 0.655 0.671 0.644 0.384 0.666 0.655 0.605 0.552 0.653 0.622 0.589 0.609 0.695 0.696 0.631 0.476 0.685 0.675 0.650 0.595 0.657 0.618 0.625 0.629 0.677 0.697 0.626 0.552 0.672 0.689 0.596 0.614 0.645 0.636 0.642 0.601 0.658 0.692 0.660 0.452 0.678 0.644 0.621 0.578 0.646 0.626 0.603 0.630 0.693 0.721 0.652 0.445 0.684 0.664 0.646 0.582 0.631 0.621 0.600 0.665 0.682 0.679 0.662 0.619 0.679 0.649 0.608 0.621 0.640 0.618 0.592 0.646 0.673 0.710 0.686 0.530 0.692 0.677 0.641 0.592 0.652 0.625 0.626 0.636 0.692 0.711 0.644 0.468 0.658 0.684 0.631 0.615 0.666 0.626 0.671 0.659 0.682 0.723 0.658 0.455 0.686 0.684 0.660 0.624 0.658 0.626 0.628 0.628 0.682 0.689 0.673 0.366 0.688 0.665 0.616 0.604 0.654 0.638 0.617 0.639 0.670 0.691 0.713 0.371 0.679 0.692 0.651 0.621 0.660 0.637 0.626 0.626 0.710 0.707 0.701 0.395 0.666 0.700 0.636 0.598 0.639 0.619 0.592 0.654 0.683 0.713 0.624 0.543 0.686 0.686 0.641 0.584 0.661 0.655 0.657 0.658 0.694 0.686 0.644 0.484 0.689 0.715 0.651 0.613 0.647 0.631 0.643 0.659 0.689 0.706 0.674 0.563 0.677 0.662 0.636 0.602 0.635 0.617 0.628 bg ca cs da de el es et eu fi fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sk sl sq sr sr-cyrl sv tr uk 0.3 0.4 0.5 0.6 0.7 Figure 12: Ranking performance in terms of Spearman correlation for each model across all languages. Gemma-2-27B-it Gemma-2-9B-it Gemma-3-27B-it Llama-3.1-8B-it Llama-3.2-3B-it Llama-3.3-70B-it Mistral-3.1-24B-it Phi-4-14B Qwen-2.5-14B-it Qwen-2.5-32B-it Qwen-2.5-72B-it Qwen-2.5-7B-it 0.197 0.254 0.131 0.256 0.088 0.284 0.277 0.301 0.279 0.374 0.129 0.114 0.206 0.240 0.093 0.289 0.135 0.283 0.270 0.261 0.224 0.223 0.114 0.091 0.204 0.227 0.096 0.267 0.124 0.299 0.315 0.339 0.237 0.277 0.136 0.087 0.210 0.255 0.145 0.299 0.231 0.343 0.284 0.275 0.233 0.252 0.133 0.077 0.212 0.252 0.107 0.312 0.146 0.307 0.284 0.289 0.209 0.256 0.134 0.095 0.198 0.233 0.119 0.206 0.102 0.272 0.261 0.341 0.275 0.345 0.130 0.056 0.232 0.263 0.086 0.303 0.111 0.279 0.300 0.289 0.217 0.247 0.112 0.094 0.183 0.225 0.090 0.223 0.119 0.312 0.255 0.315 0.232 0.222 0.128 0.068 0.202 0.250 0.166 0.246 0.041 0.277 0.235 0.206 0.235 0.216 0.097 0.079 0.209 0.225 0.146 0.264 0.080 0.309 0.265 0.308 0.216 0.241 0.122 0.083 0.229 0.262 0.091 0.237 0.116 0.279 0.264 0.256 0.211 0.243 0.123 0.126 0.190 0.201 0.175 0.208 0.068 0.308 0.264 0.301 0.205 0.233 0.112 0.209 0.201 0.260 0.145 0.258 0.109 0.293 0.288 0.280 0.224 0.236 0.096 0.114 0.211 0.233 0.076 0.258 0.131 0.299 0.284 0.269 0.228 0.248 0.222 0.089 0.221 0.269 0.091 0.239 0.115 0.307 0.282 0.346 0.262 0.320 0.126 0.106 0.195 0.216 0.097 0.214 0.092 0.242 0.242 0.294 0.222 0.265 0.126 0.097 0.199 0.232 0.102 0.220 0.069 0.315 0.276 0.355 0.242 0.275 0.132 0.094 0.198 0.255 0.136 0.285 0.137 0.299 0.284 0.386 0.211 0.238 0.124 0.106 0.206 0.222 0.081 0.264 0.129 0.309 0.290 0.284 0.234 0.254 0.112 0.074 0.184 0.210 0.150 0.238 0.084 0.331 0.273 0.368 0.251 0.258 0.116 0.082 0.232 0.240 0.123 0.238 0.115 0.298 0.266 0.354 0.240 0.246 0.124 0.097 0.224 0.231 0.102 0.232 0.081 0.321 0.259 0.220 0.241 0.219 0.118 0.093 0.208 0.243 0.100 0.280 0.131 0.320 0.296 0.321 0.218 0.251 0.129 0.079 0.198 0.270 0.144 0.229 0.176 0.319 0.283 0.321 0.236 0.225 0.136 0.085 0.204 0.235 0.103 0.250 0.156 0.326 0.267 0.303 0.220 0.236 0.126 0.084 0.196 0.267 0.084 0.269 0.128 0.307 0.297 0.278 0.220 0.265 0.120 0.078 0.195 0.247 0.091 0.253 0.113 0.282 0.246 0.295 0.211 0.262 0.128 0.104 0.233 0.226 0.087 0.239 0.129 0.298 0.289 0.314 0.229 0.239 0.135 0.090 0.219 0.225 0.131 0.322 0.115 0.299 0.274 0.321 0.217 0.268 0.115 0.081 0.207 0.205 0.116 0.270 0.068 0.308 0.287 0.272 0.241 0.235 0.120 0.072 0.174 0.226 0.097 0.239 0.134 0.287 0.260 0.321 0.235 0.221 0.121 0.059 0.198 0.222 0.085 0.274 0.109 0.308 0.311 0.313 0.222 0.242 0.122 0.083 0.206 0.239 0.118 0.220 0.102 0.296 0.292 0.297 0.256 0.275 0.131 0.120 0.236 0.236 0.107 0.289 0.091 0.315 0.271 0.289 0.230 0.250 0.117 0.084 0.221 0.225 0.105 0.308 0.052 0.325 0.307 0.387 0.253 0.359 0.119 0.073 0.214 0.225 0.082 0.268 0.073 0.286 0.282 0.401 0.260 0.272 0.117 0.114 bg ca cs da de el es et eu fi fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sk sl sq sr sr-cyrl sv tr uk 0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40 Figure 13: Classification performance in terms of macro F1 score for each model across all languages. invalid 0 1 2 3 4 5 Predicted 0 1 2 3 4 5 True 0.00 0.00 0.47 0.33 0.17 0.02 0.01 0.01 0.00 0.08 0.22 0.50 0.17 0.02 0.00 0.00 0.01 0.12 0.54 0.30 0.03 0.00 0.00 0.01 0.00 0.38 0.60 0.02 0.00 0.00 0.00 0.00 0.46 0.54 0.00 0.00 0.00 0.00 0.00 0.00 0.50 0.50 0.0 0.1 0.2 0.3 0.4 0.5 (a) Gemma-3-27B-it invalid 0 1 2 3 4 5 Predicted 0 1 2 3 4 5 True 0.00 0.51 0.33 0.09 0.03 0.02 0.02 0.00 0.06 0.40 0.25 0.07 0.15 0.07 0.00 0.02 0.18 0.29 0.20 0.24 0.08 0.00 0.00 0.08 0.11 0.12 0.58 0.12 0.00 0.00 0.00 0.00 0.31 0.54 0.15 0.00 0.00 0.00 0.00 0.00 0.00 1.00 0.0 0.2 0.4 0.6 0.8 1.0 (b) Llama-3.3-70B-it invalid 0 1 2 3 4 5 Predicted 0 1 2 3 4 5 True 0.00 0.26 0.57 0.14 0.01 0.03 0.00 0.00 0.00 0.41 0.39 0.15 0.05 0.00 0.00 0.00 0.15 0.54 0.25 0.06 0.00 0.00 0.00 0.04 0.34 0.48 0.14 0.00 0.00 0.00 0.00 0.38 0.46 0.15 0.00 0.00 0.00 0.00 0.00 0.50 0.50 0.00 0.0 0.1 0.2 0.3 0.4 0.5 (c) Mistral-3.1-24B-it Figure 14: Confusion matrices of the three ablated LLMs on the 511 human annotated ground truth documents in English. Note that Gemma-3-27B-IT predictions tend to be shifted by 1 to the right which degrades the classification accuracy but does not influence the ranking performance. Both LLama-3.3-70B and Mistral-Small-3.1-24B are well aligned with the human annotations, explaining the high classification accuracy. 0 1 2 3 4 5 Score 0.0 0.2 0.4 0.6 0.8 1.0 Number of Scores Score Turkish Norwegian Bulgarian Hungarian Spanish Lithuanian Finnish Greek Ukrainian Polish French Italian German (a) Gemma-3-27B-it 0 1 2 3 4 5 Score 0.0 0.2 0.4 0.6 0.8 1.0 Number of Scores Score Spanish Hungarian French Finnish Greek Lithuanian Ukrainian Norwegian Turkish Polish Italian Bulgarian German (b) LLama-3.3-70B-it 0 1 2 3 4 5 Score 0.0 0.2 0.4 0.6 0.8 1.0 Number of Scores Score Spanish Italian Greek Ukrainian Turkish German Finnish Norwegian Bulgarian French Hungarian Polish Lithuanian (c) Mistral-3.1-24B-it Figure 15: Right cumulative distribution of the scores predicted by the three ablated models. Alternatively, the curves can be interpreted as the number of documents whose scores is greater or equal to the given score. Note that the differences in the monotonously decreasing curves between models, motivates the model-specific threshold for pre-training data sampling. Notably, we found a Spearman correlation of 0.83 between the three models, indicating similar ranking orders despite the scale shifts. embedder gte-multilingual-base jina-embeddings-v3 snowflake-arctic-embed-m-v2 annotator + balancing Gemma-3-27B-it bal. 0.697 ± 0.013 0.722 ± 0.018 0.720 ± 0.021 Gemma-3-27B-it 0.708 ± 0.014 0.734 ± 0.020 0.737 ± 0.028 Llama-3.3-70B-it bal. 0.693 ± 0.012 0.712 ± 0.010 0.716 ± 0.014 Llama-3.3-70B-it 0.695 ± 0.011 0.716 ± 0.009 0.724 ± 0.016 Mistral-3.1-24B-it bal. 0.707 ± 0.011 0.735 ± 0.011 0.744 ± 0.016 Mistral-3.1-24B-it 0.687 ± 0.011 0.722 ± 0.017 0.736 ± 0.024 Table 6: Mean and standard deviation of the Spearman correlation on all 35 testing languages. Each cell corresponds to a training setup combining an annotating model (with either raw or class-balanced annotations) and an embedding model. The best result per row is highlighted in bold. Overall best result underlined. C Lightweight Annotators C.1 Experimental Setup and Parameter Choice To reduce computational overhead and accelerate development, we precomputed and cached all document embeddings prior to training. Since the embedding models remain frozen throughout training and account for over 99% of the total parameter count, this approach significantly reduces iteration time. The regression head is implemented as a lightweight neural network: a single-layer multilayer perceptron (MLP) with ReLU activation and a final linear output layer producing a scalar prediction score. We performed a hyperparameter sweep over the hidden dimension of the MLP, exploring values from 10 to 10k. Based on this search, we selected a hidden size of 1k as a robust default. Depending on the input embedding dimension, the regression head comprises approximately 770k to 1.03M trainable parameters. We trained the regression heads using the AdamW optimizer with a cosine annealing learning rate schedule, which consistently outperformed constant and linearly decaying alternatives in our experiments. The initial learning rate was set to 5 × 10−4, based on a sweep over values from 10−2 to 10−6. We also tested batch sizes from 16 to 4096 (in powers of two) and found a batch size of 1024 to offer the best balance between convergence speed and computational efficiency. We trained annotators for up to 20 epochs. To monitor generalization performance, 10% of the training data is held out for validation. We applied early stopping if the validation Spearman rank correlation fails to improve by at least 10−3 over five consecutive epochs. C.2 Backbone Selection We conducted an ablation study comparing three multilingual embedding models as potential backbones for our lightweight JQL annotators: gte-multilingual-base (Zhang et al., 2024), jina-embeddings-v3 (Sturua et al., 2024), and snowflake-arctic-embed-m-v2.0 (Yu et al., 2024). We trained a total of 18 regression heads, covering all combinations of the three embedding models and three annotation models used to generate the ground truth scores. Each combination is trained twice: once on a randomly sampled training set, and once on a class-balanced variant to mitigate the skewed distribution of education scores. Training data is sampled uniformly across all 35 languages The training setup—including hyperparameters and early stopping criteria—follows the procedure described in the previous section. Results are presented in Tab. 6. The Snowflake embedding model consistently outperforms the other backbones across annotators and training set variants. Its best configuration—combined with the Mistral3.1 annotation model and class-balanced training—yields the highest overall correlation (0.744 ± 0.016). C.3 End-to-End Training: Embedder and Regression Head While the regression head alone already yields strong performance when trained on frozen embeddings, we further investigate whether end-to-end training of the full model — including both the embedding 0 100k 200k 300k 400k 500k 600k 700k 800k 900k 1000k 1100k 1200k 1300k 1400k 1500k # text docs processed 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 Spearman correlation (Validation Set) epoch 0 epoch 1 epoch 2 epoch 3 epoch 0 epoch 1 Spearman correlation vs. # Train Samples Training Strategy end-to-end only regression-head Figure 16: Validation performance (Spearman correlation) as a function of the number of processed training samples, comparing two training strategies. The end-to-end model (blue) jointly trains both the embedding backbone and the regression head, while the regression-head model (orange) fine-tunes only the regression layer on top of a frozen embedder. Performance is evaluated on a held-out validation set, and both models are trained with early stopping. Epoch boundaries are marked with dashed lines. While both models show rapid initial gains, especially during the first 100k samples, the full end-to-end model converges to a significantly lower final correlation, suggesting limited benefit from updating the embedding backbone under the given supervision signal. model and the regression head — can lead to improved results. To this end, we integrate the embedding model into the training loop. This end-to-end setup comes with substantially increased memory and computational requirements. First, the embedding model accounts for over 99% of the total parameter count. Second, the model input now consists of full-text documents instead of precomputed embeddings, resulting in significantly larger input data. These factors necessitate a reduction in batch size, which, in combination with the increased parameter count, further increases overall training time. To conduct the end-to-end experiment, we adopted the learning-rate schedule and effective batch size (via gradient accumulation) recommended in the Snowflake technical report (Yu et al., 2024). With these settings, a single epoch on an NVIDIA A100-SXM4-80GB GPU takes multiple hours, whereas updating only the regression head completes an epoch in about a minute. This stark contrast quantifies the computational advantage of training only the regression head while keeping the embedding model frozen. Due to these substantially higher runtime and memory demands, we restricted end-to-end training to the best-performing combination of Mistral annotations and Snowflake embeddings. Additionally, we observed that the model could only be trained reliably using float32 precision, as attempts with brainfloat16 led to numerical instability. This further increased the memory footprint compared to our default setup. Figure 16 illustrates the training progress of both setups: the end-to-end strategy, where the embedding model is fine-tuned alongside the regression head, and the regression-head-only setup, which keeps the embedding model fixed. The figure plots the Spearman correlation on the validation set against the number of processed training samples. While both models quickly begin to converge, the performance plateau of the end-to-end model is substantially lower than that of the regression-head-only variant. Despite the additional degrees of freedom introduced by updating the full model. This suggests that fine-tuning the embedding model does not offer any additional benefit in our setup and may even hinder performance—likely due to overfitting or insufficient optimization stability under the increased complexity. bg de el es ﬁ fr hu it lt nb pl tr uk avg-13 avg-35 10000@20 20000@20 50000@18 100000@19 200000@20 500000@16 1000000@10 2000000@11 5000000@07 10000000@09 # Samples @ # Epochs 0.647 0.611 0.655 0.604 0.635 0.616 0.637 0.619 0.613 0.639 0.615 0.631 0.639 0.628 0.622 0.718 0.696 0.708 0.686 0.700 0.694 0.717 0.700 0.679 0.713 0.697 0.697 0.711 0.701 0.695 0.754 0.738 0.735 0.726 0.744 0.732 0.750 0.736 0.724 0.741 0.734 0.728 0.742 0.737 0.733 0.755 0.752 0.742 0.747 0.755 0.748 0.753 0.749 0.739 0.743 0.750 0.735 0.743 0.747 0.742 0.756 0.749 0.738 0.745 0.753 0.748 0.755 0.747 0.751 0.748 0.750 0.738 0.737 0.747 0.745 0.760 0.747 0.742 0.739 0.756 0.745 0.755 0.745 0.755 0.741 0.743 0.732 0.741 0.746 0.745 0.753 0.735 0.737 0.731 0.754 0.737 0.750 0.738 0.754 0.739 0.730 0.734 0.742 0.741 0.740 0.756 0.736 0.747 0.739 0.761 0.728 0.752 0.739 0.754 0.749 0.734 0.744 0.735 0.744 0.743 0.763 0.745 0.748 0.751 0.756 0.743 0.754 0.744 0.762 0.746 0.748 0.742 0.746 0.750 0.748 0.757 0.742 0.746 0.739 0.761 0.735 0.752 0.743 0.743 0.741 0.740 0.733 0.747 0.745 0.742 0.5 0.6 0.7 0.8 Spearman r Figure 17: Ten training runs (one per row), utilizing between 10k and 10M training samples (text documents). The number of samples and corresponding training epochs are shown on the y-axis. Training is capped at 20 epochs, with early stopping based on Spearman correlation monitored on a held-out validation set. Each resulting model is evaluated in terms of Spearman correlation across all 35 test languages. C.4 Training Data Amount We conduct an ablation study to determine the minimum amount of training data required for our lightweight JQL annotators. To this end, we perform multiple training runs using varying amounts of data, randomly sampled from all 35 languages. The remainder of the experimental setup, including all hyperparameters, remains unchanged and is as described in C. As shown in Figure 17, using fewer than 50k training samples results in noticeably lower Spearman correlations. Performance continues to improve modestly up to approximately 500k samples. Beyond this point, adding more data does not yield significant gains, suggesting that training progress begins to converge. As expected, the number of training epochs required until early stopping decreases with larger training volumes. One advantage of using smaller training set sizes is improved class balance. Since our dataset exhibits a highly imbalanced distribution of education scores—with high and very high scores being strongly underrepresented—we do not sample randomly but instead enforce approximate class balance during data selection. Achieving this balance becomes increasingly difficult as the total number of training samples increases. Based on these considerations, we select a training set size of 500k samples. C.5 Detailed results. We here provide additional details complementing the main results. Specifically, Fig 18 shows the full matrix of cross-lingual transfer performance across all languages considered in our study. Each row corresponds to a regression head trained solely on one specific language, while each column represents the test language. The values in each cell indicate the Spearman correlation between the model’s predictions and humanannotated scores. This exhaustive view highlights the generalization capability of the model across language boundaries. bg ca cs da de el es et eu ﬁ fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sh sk sl sq sv tr uk avg-35 Test Language bg ca cs da de el es eu ﬁ fr ga gl hr hu hy is it lt mk mt nb nl nn pl pt ro sk sl sr sv tr uk Train Language 0.764 0.724 0.771 0.740 0.696 0.734 0.703 0.717 0.658 0.736 0.703 0.533 0.731 0.724 0.735 0.706 0.712 0.708 0.729 0.729 0.759 0.579 0.736 0.745 0.694 0.708 0.713 0.772 0.739 0.768 0.748 0.711 0.760 0.692 0.728 0.717 0.747 0.746 0.752 0.726 0.697 0.706 0.714 0.703 0.669 0.713 0.710 0.519 0.743 0.728 0.738 0.685 0.709 0.716 0.714 0.730 0.742 0.575 0.715 0.734 0.677 0.716 0.720 0.755 0.736 0.753 0.731 0.687 0.742 0.693 0.718 0.710 0.741 0.731 0.766 0.721 0.690 0.709 0.710 0.693 0.650 0.697 0.700 0.533 0.733 0.722 0.734 0.670 0.683 0.707 0.709 0.714 0.744 0.608 0.711 0.730 0.682 0.717 0.711 0.756 0.732 0.761 0.742 0.697 0.741 0.697 0.715 0.707 0.736 0.712 0.735 0.758 0.702 0.710 0.697 0.738 0.683 0.721 0.704 0.539 0.708 0.719 0.723 0.698 0.722 0.703 0.702 0.709 0.727 0.564 0.755 0.736 0.718 0.714 0.701 0.754 0.725 0.737 0.737 0.705 0.763 0.713 0.693 0.710 0.741 0.725 0.744 0.711 0.752 0.705 0.743 0.677 0.634 0.699 0.745 0.506 0.742 0.705 0.700 0.652 0.672 0.751 0.679 0.680 0.727 0.573 0.705 0.728 0.667 0.747 0.745 0.746 0.711 0.739 0.699 0.693 0.726 0.674 0.707 0.701 0.739 0.705 0.743 0.700 0.699 0.740 0.699 0.720 0.652 0.736 0.707 0.511 0.713 0.699 0.689 0.691 0.677 0.705 0.720 0.702 0.723 0.504 0.708 0.720 0.661 0.707 0.706 0.745 0.714 0.733 0.716 0.663 0.722 0.691 0.707 0.696 0.752 0.726 0.747 0.712 0.742 0.715 0.749 0.714 0.662 0.717 0.747 0.534 0.746 0.714 0.712 0.656 0.692 0.752 0.677 0.686 0.737 0.579 0.718 0.728 0.679 0.749 0.747 0.751 0.720 0.737 0.710 0.695 0.736 0.698 0.715 0.710 0.739 0.710 0.730 0.715 0.658 0.729 0.676 0.741 0.731 0.744 0.668 0.532 0.704 0.723 0.743 0.648 0.711 0.676 0.713 0.737 0.738 0.579 0.706 0.706 0.683 0.693 0.674 0.759 0.726 0.734 0.717 0.688 0.731 0.722 0.690 0.702 0.733 0.710 0.735 0.700 0.671 0.704 0.678 0.729 0.691 0.751 0.674 0.521 0.703 0.690 0.717 0.640 0.694 0.676 0.723 0.730 0.723 0.575 0.701 0.709 0.673 0.688 0.687 0.728 0.707 0.736 0.712 0.665 0.730 0.670 0.707 0.694 0.728 0.711 0.730 0.704 0.717 0.694 0.724 0.665 0.630 0.668 0.723 0.547 0.732 0.691 0.677 0.625 0.660 0.731 0.647 0.655 0.712 0.533 0.705 0.717 0.671 0.730 0.727 0.740 0.691 0.716 0.695 0.664 0.715 0.665 0.681 0.686 0.656 0.650 0.675 0.644 0.633 0.621 0.639 0.643 0.615 0.677 0.633 0.662 0.659 0.657 0.646 0.581 0.616 0.644 0.656 0.663 0.660 0.594 0.654 0.665 0.627 0.652 0.641 0.673 0.665 0.676 0.650 0.602 0.667 0.628 0.622 0.644 0.750 0.721 0.746 0.726 0.727 0.723 0.724 0.716 0.672 0.715 0.722 0.531 0.725 0.724 0.724 0.682 0.690 0.728 0.699 0.708 0.728 0.626 0.723 0.733 0.688 0.731 0.723 0.757 0.729 0.740 0.725 0.709 0.740 0.695 0.717 0.712 0.763 0.731 0.777 0.743 0.717 0.737 0.723 0.750 0.699 0.738 0.719 0.561 0.744 0.752 0.756 0.713 0.721 0.730 0.756 0.747 0.756 0.633 0.738 0.759 0.697 0.738 0.731 0.773 0.766 0.785 0.767 0.729 0.771 0.710 0.737 0.733 0.730 0.717 0.747 0.720 0.681 0.723 0.684 0.707 0.691 0.720 0.684 0.541 0.710 0.712 0.749 0.665 0.700 0.685 0.697 0.716 0.738 0.616 0.722 0.740 0.688 0.702 0.693 0.747 0.723 0.752 0.730 0.678 0.741 0.702 0.706 0.704 0.758 0.710 0.760 0.710 0.696 0.733 0.689 0.701 0.679 0.726 0.690 0.533 0.717 0.724 0.718 0.737 0.711 0.687 0.687 0.679 0.739 0.459 0.713 0.723 0.677 0.708 0.692 0.738 0.724 0.751 0.730 0.690 0.737 0.694 0.739 0.702 0.711 0.697 0.727 0.712 0.653 0.707 0.652 0.736 0.666 0.726 0.652 0.557 0.684 0.697 0.721 0.684 0.736 0.664 0.721 0.720 0.713 0.627 0.722 0.718 0.698 0.670 0.665 0.726 0.709 0.726 0.712 0.676 0.733 0.690 0.678 0.694 0.753 0.736 0.756 0.733 0.748 0.739 0.745 0.726 0.685 0.730 0.748 0.541 0.750 0.719 0.733 0.692 0.696 0.753 0.713 0.716 0.741 0.589 0.728 0.743 0.696 0.748 0.751 0.759 0.731 0.756 0.731 0.710 0.751 0.704 0.735 0.722 0.739 0.730 0.750 0.714 0.683 0.743 0.693 0.740 0.649 0.742 0.696 0.515 0.719 0.730 0.718 0.701 0.702 0.693 0.761 0.744 0.738 0.552 0.718 0.725 0.684 0.708 0.700 0.764 0.742 0.764 0.741 0.695 0.736 0.686 0.711 0.709 0.769 0.733 0.763 0.735 0.693 0.731 0.706 0.718 0.681 0.737 0.700 0.533 0.737 0.737 0.739 0.722 0.723 0.700 0.723 0.712 0.764 0.627 0.741 0.729 0.715 0.712 0.718 0.754 0.743 0.768 0.757 0.701 0.766 0.687 0.741 0.720 0.734 0.713 0.730 0.705 0.705 0.708 0.709 0.698 0.671 0.705 0.697 0.525 0.716 0.712 0.710 0.691 0.700 0.711 0.697 0.695 0.723 0.701 0.704 0.714 0.685 0.722 0.713 0.737 0.715 0.734 0.715 0.694 0.719 0.707 0.699 0.703 0.732 0.726 0.751 0.763 0.697 0.702 0.708 0.749 0.681 0.727 0.713 0.563 0.726 0.724 0.738 0.674 0.722 0.714 0.732 0.730 0.732 0.637 0.758 0.744 0.729 0.721 0.714 0.764 0.728 0.755 0.748 0.709 0.763 0.704 0.716 0.720 0.745 0.737 0.749 0.747 0.698 0.724 0.705 0.719 0.692 0.710 0.705 0.525 0.727 0.707 0.720 0.668 0.722 0.710 0.711 0.721 0.744 0.639 0.749 0.757 0.707 0.708 0.709 0.764 0.721 0.736 0.731 0.700 0.760 0.686 0.707 0.713 0.723 0.710 0.732 0.723 0.677 0.709 0.680 0.718 0.661 0.719 0.683 0.543 0.700 0.701 0.716 0.685 0.697 0.680 0.704 0.709 0.723 0.635 0.717 0.716 0.702 0.695 0.689 0.724 0.702 0.736 0.721 0.675 0.728 0.677 0.702 0.697 0.761 0.734 0.754 0.727 0.743 0.712 0.749 0.709 0.666 0.712 0.748 0.500 0.753 0.731 0.700 0.678 0.691 0.749 0.685 0.707 0.746 0.544 0.715 0.738 0.673 0.755 0.751 0.759 0.737 0.754 0.739 0.700 0.742 0.687 0.727 0.714 0.760 0.744 0.760 0.726 0.756 0.730 0.762 0.706 0.672 0.720 0.757 0.546 0.761 0.718 0.715 0.680 0.701 0.762 0.701 0.707 0.742 0.557 0.717 0.738 0.678 0.756 0.758 0.765 0.723 0.750 0.723 0.688 0.743 0.700 0.725 0.719 0.709 0.703 0.737 0.693 0.655 0.681 0.685 0.691 0.669 0.659 0.670 0.546 0.711 0.694 0.683 0.642 0.668 0.681 0.680 0.687 0.706 0.535 0.683 0.710 0.649 0.685 0.689 0.768 0.710 0.733 0.713 0.659 0.722 0.681 0.679 0.682 0.738 0.708 0.750 0.706 0.693 0.697 0.704 0.693 0.647 0.685 0.696 0.502 0.715 0.712 0.720 0.648 0.668 0.708 0.697 0.692 0.731 0.550 0.697 0.718 0.654 0.711 0.713 0.749 0.722 0.751 0.722 0.679 0.725 0.678 0.714 0.694 0.738 0.713 0.749 0.705 0.691 0.702 0.702 0.701 0.649 0.710 0.697 0.499 0.714 0.720 0.707 0.662 0.677 0.713 0.698 0.712 0.733 0.585 0.701 0.719 0.658 0.716 0.710 0.760 0.734 0.750 0.742 0.700 0.732 0.682 0.707 0.700 0.733 0.695 0.758 0.715 0.679 0.716 0.677 0.702 0.674 0.713 0.679 0.512 0.706 0.727 0.726 0.696 0.704 0.684 0.710 0.714 0.730 0.572 0.714 0.714 0.684 0.699 0.690 0.740 0.741 0.759 0.745 0.678 0.726 0.695 0.714 0.701 0.738 0.719 0.751 0.751 0.708 0.716 0.707 0.710 0.665 0.714 0.698 0.492 0.724 0.708 0.732 0.655 0.714 0.723 0.700 0.713 0.733 0.588 0.742 0.739 0.711 0.713 0.710 0.745 0.717 0.749 0.730 0.707 0.769 0.711 0.703 0.709 0.719 0.697 0.722 0.733 0.672 0.707 0.676 0.698 0.672 0.711 0.674 0.539 0.693 0.688 0.733 0.663 0.711 0.674 0.682 0.696 0.712 0.602 0.720 0.712 0.698 0.677 0.677 0.746 0.707 0.714 0.709 0.695 0.742 0.741 0.687 0.694 0.779 0.737 0.781 0.726 0.719 0.746 0.718 0.677 0.647 0.709 0.718 0.495 0.735 0.737 0.734 0.699 0.702 0.722 0.735 0.737 0.769 0.554 0.720 0.734 0.683 0.734 0.727 0.763 0.742 0.778 0.752 0.696 0.756 0.699 0.750 0.717 Metric: Spearman corr, Annotator: Gemma-3-27B-it w/ score balancing 0.50 0.55 0.60 0.65 0.70 0.75 0.80 Spearman r bg ca cs da de el es et eu ﬁ fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sh sk sl sq sv tr uk avg-35 Test Language bg ca cs da de el es eu ﬁ fr ga gl hr hu hy is it lt mk mt nb nl nn pl pt ro sk sl sr sv tr uk Train Language 0.744 0.723 0.750 0.726 0.719 0.727 0.712 0.722 0.675 0.736 0.716 0.598 0.721 0.724 0.727 0.709 0.699 0.712 0.736 0.725 0.740 0.685 0.721 0.733 0.703 0.714 0.716 0.751 0.735 0.754 0.739 0.723 0.747 0.702 0.729 0.720 0.709 0.729 0.735 0.706 0.706 0.699 0.716 0.692 0.660 0.709 0.711 0.601 0.732 0.704 0.696 0.674 0.715 0.713 0.689 0.701 0.710 0.667 0.699 0.704 0.686 0.715 0.717 0.724 0.710 0.723 0.713 0.692 0.729 0.663 0.694 0.701 0.713 0.716 0.735 0.703 0.688 0.689 0.689 0.688 0.630 0.701 0.686 0.604 0.720 0.706 0.727 0.681 0.687 0.686 0.700 0.707 0.706 0.647 0.689 0.710 0.682 0.703 0.695 0.733 0.721 0.738 0.721 0.689 0.719 0.681 0.710 0.697 0.705 0.717 0.721 0.733 0.687 0.697 0.686 0.716 0.668 0.706 0.684 0.584 0.711 0.705 0.722 0.676 0.713 0.681 0.694 0.698 0.712 0.650 0.719 0.708 0.709 0.681 0.695 0.733 0.712 0.720 0.715 0.724 0.736 0.700 0.687 0.700 0.722 0.712 0.715 0.703 0.734 0.700 0.722 0.713 0.657 0.716 0.725 0.596 0.721 0.699 0.695 0.678 0.708 0.727 0.679 0.691 0.717 0.668 0.703 0.699 0.701 0.725 0.726 0.728 0.706 0.713 0.692 0.713 0.728 0.671 0.699 0.703 0.705 0.691 0.714 0.682 0.692 0.714 0.685 0.710 0.637 0.708 0.687 0.586 0.697 0.691 0.703 0.672 0.681 0.685 0.699 0.682 0.699 0.642 0.678 0.689 0.675 0.689 0.686 0.735 0.698 0.704 0.690 0.679 0.701 0.669 0.693 0.687 0.711 0.715 0.716 0.700 0.730 0.697 0.727 0.705 0.661 0.714 0.728 0.595 0.728 0.691 0.699 0.674 0.697 0.727 0.678 0.693 0.712 0.628 0.698 0.706 0.695 0.725 0.728 0.734 0.701 0.712 0.694 0.709 0.720 0.682 0.693 0.701 0.698 0.705 0.688 0.697 0.664 0.694 0.671 0.731 0.716 0.727 0.662 0.578 0.694 0.680 0.710 0.679 0.700 0.668 0.702 0.695 0.697 0.622 0.704 0.671 0.704 0.681 0.680 0.723 0.685 0.682 0.682 0.699 0.711 0.692 0.686 0.688 0.696 0.701 0.699 0.684 0.661 0.679 0.667 0.716 0.665 0.741 0.663 0.568 0.690 0.669 0.716 0.662 0.686 0.665 0.699 0.705 0.701 0.602 0.690 0.682 0.661 0.673 0.670 0.707 0.684 0.701 0.686 0.672 0.716 0.664 0.692 0.681 0.719 0.719 0.723 0.697 0.734 0.689 0.725 0.707 0.658 0.697 0.730 0.607 0.729 0.697 0.697 0.664 0.670 0.727 0.666 0.678 0.711 0.641 0.690 0.706 0.684 0.729 0.728 0.736 0.699 0.721 0.692 0.701 0.720 0.675 0.696 0.699 0.617 0.649 0.641 0.640 0.616 0.615 0.613 0.676 0.591 0.655 0.603 0.659 0.642 0.647 0.641 0.608 0.608 0.615 0.623 0.642 0.622 0.631 0.633 0.629 0.632 0.612 0.601 0.668 0.647 0.644 0.633 0.638 0.630 0.620 0.615 0.630 0.730 0.723 0.727 0.719 0.721 0.709 0.714 0.728 0.668 0.734 0.718 0.619 0.727 0.719 0.722 0.693 0.707 0.720 0.703 0.696 0.715 0.690 0.716 0.715 0.704 0.719 0.722 0.742 0.726 0.727 0.713 0.718 0.727 0.690 0.716 0.713 0.721 0.716 0.731 0.723 0.698 0.710 0.705 0.738 0.684 0.734 0.701 0.602 0.724 0.728 0.734 0.700 0.706 0.701 0.722 0.726 0.720 0.677 0.717 0.716 0.706 0.709 0.710 0.741 0.736 0.736 0.737 0.713 0.738 0.702 0.712 0.714 0.678 0.690 0.696 0.680 0.644 0.662 0.647 0.686 0.664 0.691 0.644 0.584 0.679 0.669 0.723 0.642 0.670 0.647 0.666 0.686 0.690 0.650 0.678 0.693 0.658 0.663 0.655 0.709 0.684 0.699 0.679 0.669 0.699 0.679 0.666 0.672 0.692 0.668 0.695 0.659 0.672 0.682 0.664 0.642 0.620 0.670 0.677 0.532 0.674 0.656 0.658 0.697 0.665 0.667 0.657 0.630 0.678 0.561 0.659 0.669 0.643 0.686 0.670 0.684 0.660 0.685 0.656 0.669 0.684 0.650 0.700 0.661 0.679 0.688 0.686 0.677 0.635 0.683 0.628 0.711 0.641 0.692 0.623 0.608 0.664 0.678 0.712 0.690 0.732 0.626 0.701 0.685 0.681 0.650 0.693 0.671 0.688 0.641 0.636 0.688 0.674 0.692 0.691 0.672 0.702 0.666 0.672 0.673 0.722 0.723 0.730 0.715 0.737 0.708 0.729 0.726 0.676 0.727 0.730 0.598 0.732 0.710 0.715 0.675 0.699 0.733 0.699 0.708 0.720 0.649 0.718 0.712 0.710 0.734 0.732 0.743 0.712 0.736 0.716 0.717 0.737 0.685 0.703 0.712 0.668 0.679 0.683 0.687 0.635 0.652 0.633 0.693 0.632 0.705 0.636 0.611 0.668 0.681 0.682 0.639 0.665 0.633 0.727 0.694 0.675 0.597 0.679 0.668 0.672 0.649 0.641 0.719 0.692 0.689 0.689 0.666 0.701 0.637 0.659 0.667 0.734 0.721 0.730 0.731 0.705 0.702 0.696 0.718 0.674 0.724 0.702 0.592 0.722 0.713 0.728 0.703 0.728 0.702 0.715 0.704 0.733 0.661 0.730 0.724 0.716 0.706 0.712 0.736 0.719 0.736 0.732 0.716 0.749 0.691 0.725 0.712 0.706 0.691 0.701 0.689 0.693 0.690 0.688 0.716 0.677 0.719 0.689 0.552 0.703 0.694 0.708 0.675 0.686 0.697 0.700 0.694 0.705 0.696 0.688 0.699 0.683 0.696 0.698 0.720 0.692 0.703 0.698 0.690 0.707 0.680 0.693 0.692 0.725 0.733 0.738 0.738 0.707 0.721 0.705 0.749 0.695 0.744 0.710 0.599 0.719 0.719 0.737 0.695 0.728 0.706 0.732 0.730 0.719 0.670 0.732 0.729 0.722 0.717 0.712 0.751 0.724 0.746 0.731 0.734 0.744 0.704 0.719 0.719 0.734 0.736 0.735 0.730 0.714 0.716 0.709 0.733 0.697 0.724 0.715 0.613 0.719 0.713 0.734 0.709 0.727 0.712 0.710 0.727 0.733 0.696 0.716 0.730 0.702 0.711 0.715 0.747 0.718 0.736 0.729 0.714 0.743 0.690 0.724 0.717 0.728 0.718 0.741 0.723 0.703 0.716 0.697 0.727 0.691 0.733 0.702 0.628 0.717 0.714 0.726 0.705 0.712 0.699 0.710 0.718 0.726 0.684 0.717 0.712 0.712 0.711 0.710 0.729 0.724 0.743 0.727 0.714 0.735 0.693 0.725 0.713 0.732 0.729 0.731 0.718 0.740 0.703 0.733 0.729 0.687 0.718 0.733 0.600 0.742 0.723 0.728 0.697 0.710 0.730 0.704 0.718 0.724 0.676 0.711 0.720 0.714 0.736 0.738 0.744 0.729 0.735 0.724 0.734 0.745 0.698 0.719 0.719 0.726 0.727 0.737 0.713 0.743 0.711 0.740 0.717 0.679 0.718 0.740 0.605 0.741 0.715 0.718 0.674 0.689 0.739 0.684 0.697 0.715 0.635 0.706 0.719 0.700 0.741 0.741 0.744 0.718 0.733 0.712 0.711 0.736 0.684 0.705 0.712 0.677 0.701 0.692 0.696 0.657 0.665 0.668 0.696 0.684 0.682 0.663 0.575 0.696 0.687 0.680 0.651 0.689 0.668 0.670 0.683 0.684 0.614 0.689 0.688 0.678 0.667 0.664 0.741 0.698 0.694 0.689 0.681 0.710 0.667 0.665 0.677 0.711 0.702 0.729 0.709 0.687 0.680 0.684 0.703 0.660 0.707 0.676 0.565 0.707 0.710 0.724 0.666 0.710 0.680 0.706 0.707 0.705 0.676 0.695 0.718 0.683 0.691 0.690 0.744 0.722 0.732 0.718 0.692 0.729 0.675 0.698 0.697 0.704 0.707 0.716 0.693 0.676 0.690 0.668 0.707 0.636 0.699 0.670 0.500 0.696 0.711 0.715 0.669 0.683 0.671 0.700 0.701 0.711 0.623 0.689 0.700 0.677 0.681 0.680 0.729 0.718 0.715 0.723 0.704 0.715 0.684 0.694 0.687 0.699 0.686 0.712 0.703 0.670 0.678 0.663 0.705 0.671 0.708 0.663 0.490 0.691 0.715 0.716 0.678 0.718 0.665 0.700 0.686 0.693 0.615 0.704 0.692 0.687 0.680 0.677 0.727 0.719 0.709 0.724 0.695 0.715 0.677 0.691 0.686 0.702 0.722 0.715 0.722 0.694 0.703 0.686 0.706 0.668 0.721 0.687 0.599 0.710 0.699 0.719 0.665 0.714 0.693 0.701 0.701 0.708 0.675 0.718 0.716 0.697 0.697 0.696 0.723 0.699 0.714 0.706 0.705 0.740 0.689 0.687 0.700 0.685 0.690 0.686 0.694 0.662 0.688 0.657 0.677 0.668 0.665 0.657 0.583 0.685 0.675 0.704 0.658 0.703 0.663 0.694 0.685 0.690 0.632 0.684 0.683 0.671 0.664 0.672 0.713 0.682 0.688 0.695 0.702 0.716 0.717 0.677 0.679 0.735 0.732 0.742 0.721 0.705 0.714 0.697 0.696 0.668 0.714 0.698 0.562 0.725 0.714 0.719 0.672 0.725 0.698 0.725 0.716 0.731 0.634 0.722 0.723 0.702 0.705 0.700 0.753 0.726 0.745 0.731 0.712 0.743 0.694 0.726 0.709 Metric: Spearman corr, Annotator: Llama-3.3-70B-it w/ score balancing 0.50 0.55 0.60 0.65 0.70 0.75 0.80 Spearman r bg ca cs da de el es et eu ﬁ fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sh sk sl sq sv tr uk avg-35 Test Language bg ca cs da de el es eu ﬁ fr ga gl hr hu hy is it lt mk mt nb nl nn pl pt ro sk sl sr sv tr uk Train Language 0.765 0.739 0.763 0.740 0.737 0.759 0.731 0.734 0.671 0.755 0.738 0.587 0.735 0.734 0.736 0.727 0.718 0.733 0.738 0.730 0.760 0.656 0.735 0.748 0.700 0.744 0.737 0.766 0.748 0.764 0.748 0.725 0.757 0.698 0.747 0.731 0.747 0.754 0.760 0.726 0.729 0.749 0.730 0.711 0.676 0.731 0.732 0.600 0.754 0.729 0.725 0.704 0.729 0.733 0.710 0.718 0.740 0.646 0.718 0.723 0.687 0.743 0.738 0.763 0.740 0.751 0.737 0.708 0.742 0.691 0.728 0.723 0.743 0.735 0.755 0.704 0.706 0.722 0.705 0.702 0.640 0.730 0.708 0.608 0.740 0.722 0.753 0.711 0.708 0.701 0.706 0.715 0.736 0.606 0.699 0.714 0.672 0.723 0.707 0.750 0.736 0.761 0.738 0.706 0.727 0.684 0.731 0.712 0.746 0.740 0.750 0.750 0.717 0.726 0.708 0.742 0.695 0.727 0.711 0.587 0.734 0.731 0.753 0.731 0.741 0.707 0.712 0.731 0.743 0.626 0.744 0.738 0.719 0.716 0.717 0.764 0.733 0.758 0.753 0.742 0.756 0.716 0.719 0.725 0.733 0.726 0.737 0.700 0.752 0.718 0.740 0.711 0.641 0.720 0.744 0.604 0.742 0.713 0.694 0.688 0.709 0.745 0.681 0.681 0.722 0.611 0.695 0.715 0.671 0.751 0.744 0.745 0.717 0.743 0.717 0.709 0.719 0.653 0.717 0.709 0.729 0.736 0.742 0.710 0.720 0.754 0.717 0.711 0.654 0.722 0.720 0.551 0.730 0.717 0.686 0.705 0.690 0.719 0.710 0.705 0.725 0.539 0.700 0.731 0.679 0.726 0.722 0.742 0.727 0.723 0.716 0.679 0.724 0.691 0.714 0.705 0.741 0.732 0.744 0.713 0.755 0.727 0.752 0.713 0.671 0.728 0.751 0.568 0.755 0.713 0.714 0.697 0.704 0.752 0.693 0.702 0.731 0.586 0.715 0.720 0.686 0.761 0.756 0.757 0.721 0.740 0.721 0.715 0.730 0.698 0.728 0.717 0.681 0.682 0.681 0.666 0.637 0.714 0.640 0.733 0.738 0.746 0.640 0.518 0.680 0.671 0.720 0.664 0.685 0.642 0.726 0.714 0.675 0.569 0.666 0.670 0.661 0.665 0.644 0.722 0.682 0.677 0.664 0.677 0.700 0.687 0.647 0.674 0.726 0.709 0.722 0.690 0.665 0.709 0.674 0.723 0.682 0.752 0.664 0.560 0.698 0.705 0.720 0.681 0.704 0.671 0.715 0.705 0.722 0.550 0.689 0.702 0.656 0.697 0.683 0.727 0.712 0.731 0.724 0.689 0.721 0.667 0.705 0.693 0.742 0.730 0.743 0.711 0.747 0.724 0.745 0.707 0.676 0.733 0.744 0.597 0.745 0.718 0.717 0.696 0.696 0.743 0.679 0.698 0.729 0.586 0.708 0.733 0.681 0.756 0.749 0.745 0.722 0.754 0.732 0.707 0.734 0.678 0.718 0.715 0.653 0.661 0.653 0.658 0.664 0.631 0.657 0.664 0.603 0.669 0.656 0.671 0.660 0.645 0.665 0.614 0.617 0.660 0.620 0.631 0.653 0.591 0.665 0.663 0.642 0.659 0.655 0.653 0.641 0.656 0.630 0.623 0.662 0.624 0.639 0.646 0.732 0.723 0.726 0.710 0.722 0.711 0.712 0.707 0.659 0.713 0.713 0.600 0.726 0.723 0.713 0.702 0.706 0.720 0.678 0.695 0.719 0.638 0.712 0.719 0.687 0.724 0.722 0.736 0.726 0.733 0.713 0.708 0.723 0.676 0.719 0.707 0.757 0.748 0.760 0.736 0.720 0.745 0.727 0.739 0.672 0.750 0.722 0.571 0.752 0.742 0.749 0.730 0.711 0.729 0.733 0.732 0.743 0.628 0.730 0.737 0.689 0.747 0.731 0.770 0.751 0.767 0.758 0.735 0.753 0.709 0.746 0.729 0.687 0.707 0.716 0.681 0.636 0.713 0.646 0.688 0.675 0.713 0.647 0.559 0.691 0.674 0.748 0.670 0.662 0.635 0.693 0.698 0.692 0.548 0.680 0.700 0.641 0.667 0.646 0.722 0.690 0.718 0.698 0.664 0.717 0.676 0.674 0.676 0.729 0.693 0.722 0.686 0.686 0.721 0.687 0.684 0.645 0.713 0.700 0.560 0.705 0.699 0.675 0.727 0.692 0.692 0.692 0.673 0.720 0.508 0.691 0.675 0.660 0.703 0.694 0.713 0.707 0.726 0.711 0.675 0.716 0.662 0.729 0.688 0.687 0.704 0.695 0.705 0.658 0.708 0.646 0.721 0.664 0.710 0.650 0.589 0.675 0.696 0.708 0.698 0.749 0.646 0.692 0.690 0.693 0.560 0.716 0.697 0.696 0.661 0.656 0.715 0.698 0.697 0.701 0.688 0.720 0.676 0.670 0.684 0.754 0.742 0.755 0.725 0.762 0.744 0.750 0.726 0.680 0.748 0.759 0.596 0.756 0.716 0.723 0.700 0.692 0.753 0.713 0.714 0.745 0.595 0.723 0.729 0.692 0.764 0.757 0.756 0.730 0.758 0.735 0.720 0.745 0.680 0.737 0.725 0.704 0.682 0.711 0.693 0.654 0.700 0.656 0.719 0.624 0.730 0.650 0.601 0.682 0.694 0.709 0.685 0.681 0.654 0.744 0.723 0.699 0.581 0.698 0.680 0.675 0.678 0.662 0.742 0.717 0.725 0.715 0.679 0.729 0.657 0.699 0.687 0.763 0.752 0.763 0.746 0.710 0.748 0.712 0.745 0.688 0.759 0.714 0.580 0.746 0.744 0.758 0.753 0.736 0.708 0.748 0.744 0.763 0.647 0.746 0.742 0.715 0.728 0.724 0.765 0.752 0.773 0.762 0.724 0.762 0.713 0.754 0.734 0.712 0.708 0.715 0.704 0.697 0.701 0.691 0.715 0.677 0.724 0.692 0.580 0.711 0.708 0.720 0.675 0.717 0.694 0.710 0.696 0.714 0.704 0.701 0.707 0.689 0.697 0.700 0.727 0.711 0.715 0.707 0.709 0.723 0.688 0.707 0.701 0.765 0.757 0.757 0.758 0.740 0.752 0.736 0.764 0.688 0.753 0.737 0.590 0.748 0.740 0.749 0.738 0.743 0.739 0.755 0.743 0.754 0.658 0.756 0.741 0.723 0.756 0.736 0.781 0.742 0.769 0.760 0.751 0.765 0.720 0.761 0.741 0.749 0.751 0.761 0.740 0.715 0.746 0.723 0.742 0.705 0.741 0.721 0.597 0.744 0.738 0.758 0.721 0.750 0.720 0.725 0.737 0.750 0.670 0.732 0.757 0.701 0.737 0.727 0.770 0.744 0.760 0.756 0.728 0.753 0.707 0.747 0.732 0.735 0.732 0.747 0.729 0.712 0.729 0.706 0.731 0.687 0.735 0.712 0.612 0.726 0.721 0.739 0.731 0.724 0.710 0.717 0.727 0.743 0.670 0.726 0.723 0.713 0.719 0.719 0.755 0.731 0.754 0.746 0.718 0.740 0.704 0.736 0.722 0.741 0.736 0.741 0.715 0.747 0.716 0.751 0.700 0.656 0.708 0.753 0.590 0.753 0.719 0.714 0.689 0.716 0.750 0.680 0.703 0.730 0.567 0.708 0.714 0.680 0.755 0.752 0.755 0.724 0.745 0.725 0.723 0.735 0.694 0.730 0.715 0.753 0.741 0.752 0.718 0.763 0.735 0.763 0.710 0.683 0.731 0.762 0.593 0.761 0.731 0.710 0.698 0.702 0.758 0.701 0.701 0.742 0.604 0.720 0.731 0.693 0.763 0.764 0.763 0.738 0.752 0.736 0.726 0.743 0.700 0.738 0.725 0.715 0.727 0.720 0.711 0.667 0.706 0.676 0.695 0.666 0.701 0.675 0.606 0.720 0.698 0.716 0.687 0.705 0.672 0.681 0.692 0.714 0.578 0.698 0.711 0.664 0.688 0.669 0.767 0.717 0.727 0.722 0.698 0.724 0.685 0.694 0.694 0.732 0.722 0.747 0.708 0.696 0.707 0.701 0.705 0.673 0.729 0.697 0.556 0.731 0.723 0.733 0.692 0.716 0.699 0.713 0.721 0.725 0.630 0.698 0.720 0.671 0.712 0.708 0.751 0.728 0.749 0.736 0.708 0.735 0.687 0.715 0.708 0.733 0.710 0.742 0.691 0.681 0.729 0.686 0.727 0.639 0.744 0.689 0.555 0.720 0.720 0.725 0.699 0.666 0.695 0.733 0.708 0.729 0.589 0.688 0.705 0.649 0.711 0.697 0.755 0.736 0.743 0.747 0.713 0.726 0.677 0.720 0.702 0.710 0.690 0.729 0.702 0.661 0.687 0.655 0.705 0.660 0.704 0.663 0.518 0.703 0.708 0.714 0.655 0.702 0.662 0.693 0.697 0.707 0.548 0.705 0.705 0.673 0.673 0.676 0.738 0.723 0.720 0.725 0.678 0.723 0.667 0.696 0.685 0.734 0.744 0.753 0.733 0.718 0.730 0.716 0.717 0.682 0.741 0.709 0.558 0.737 0.724 0.732 0.708 0.722 0.721 0.709 0.714 0.736 0.624 0.727 0.726 0.695 0.726 0.720 0.751 0.725 0.758 0.733 0.720 0.759 0.708 0.725 0.718 0.722 0.718 0.718 0.732 0.694 0.729 0.687 0.709 0.701 0.723 0.682 0.562 0.717 0.708 0.729 0.706 0.719 0.698 0.708 0.714 0.720 0.639 0.718 0.717 0.698 0.696 0.691 0.738 0.723 0.724 0.733 0.736 0.748 0.741 0.707 0.709 0.756 0.753 0.761 0.720 0.720 0.743 0.717 0.702 0.639 0.722 0.715 0.576 0.738 0.732 0.723 0.705 0.703 0.719 0.737 0.717 0.757 0.578 0.713 0.736 0.677 0.730 0.720 0.780 0.739 0.766 0.750 0.690 0.742 0.682 0.747 0.717 Metric: Spearman corr, Annotator: Mistral-3.1-24B-it w/ score balancing 0.50 0.55 0.60 0.65 0.70 0.75 0.80 Spearman r Figure 18: Full cross-lingual transfer; One plot per Annotation model (balanced); training/evaluation setup is otherwise identical to the best performing setup. Rows represent the only training language of a regression head, while columns indicate the testing language. Each cell reports the Spearman correlation between predicted and human-annotated scores. D Assessing Training Data Quality In this Section, we provide further details and ablations on our lightweight annotators discussed in Section 5. D.1 Experimental Setup We here provide further details on experimental setup and hyperparameter for our LLM training ablations. Architecture. • 262144 vocab size SentencePiece tokenizer from Gemma-3 (Team et al., 2025). • Dense Llama architecture • 2048 hidden dimension • 24 hidden layers • 32 attention heads • Silu activation • Root Mean Square Layer Normalization (RMSNorm) with ϵ = 1.0e −05 • Rotary Position Embeddings (RoPE) with θ = 130000 • Weight tying for embedding and LM head is customary for small LLMs (Allal et al., 2025) Training. • Nanotron9 as training framework with tokenization using Datatrove10 • 2048 sequence length • Simple document concatenation as Datatrove does not support advanced packing algorithms • AdamW optimizer with β1 = 0.9, β2 = 0.95, ϵ = 1.0e −8 • cosine learning rate decay, peak lr = 1.5e −4, decay to lr = 1.5e −5 • linear warmup for 150 steps • global batch size 960 with micro-batch size 3 and gradient accumulation 5. • 1,966,080 tokens per step • Training on 64 NVIDIA A100-SXM4-80GB with full data parallelism and no tensor or pipeline parallelism Data Curation. Our custom data curation data pipeline for annotation, filtering and tokenization builds on Datatrove. We use the transformers implementation with a batch size of 1000 documents per GPU for embedding calculation. Surprisingly, we observed no speedup when using torch compile. Benchmarks. In order to conduct our benchmarks, we utilize custom Lighteval11 tasks. To provide a unified interface, we reformatted ArcX and MMMLU sources and repacked them to maintain a coherent structure. For MMMLU, we used off-the-shelf HF-datasets. In all our selected sources, we considered the highest-quality translations available, such as human translations from openai/mmmlu, and only resorted to automatic translations if necessary. The mapping of the different languages to sources is provided in Tab. 7. 9https://github.com/huggingface/nanotron 10https://github.com/huggingface/datatrove 11https://github.com/huggingface/lighteval Language Code ArcX Source MMMLU Source HellaSwag Source Bulgarian bg openGPT-X/arcx openGPT-X/mmlux openGPT-X/hellaswagX German de openGPT-X/arcx openai/MMMLU openGPT-X/hellaswagX Greek el openGPT-X/arcx CohereLabs/GlobalMMLU openGPT-X/hellaswagX Spanish es openGPT-X/arcx openai/MMMLU openGPT-X/hellaswagX Finnish fi openGPT-X/arcx openGPT-X/mmlux openGPT-X/hellaswagX French fr openGPT-X/arcx openai/MMMLU openGPT-X/hellaswagX Hungarian hu openGPT-X/arcx openGPT-X/mmlux openGPT-X/hellaswagX Italian it openGPT-X/arcx openai/MMMLU openGPT-X/hellaswagX Lithuanian lt openGPT-X/arcx CohereLabs/GlobalMMLU openGPT-X/hellaswagX Norwegian nb alexandrainst/m_arc NbAiLab/nb-globalmmlu alexandrainst/m_hellaswag Polish pl openGPT-X/arcx CohereLabs/GlobalMMLU openGPT-X/hellaswagX Turkish tr malhajar/arc-tr CohereLabs/GlobalMMLU malhajar/hellaswag-tr Ukrainian uk alexandrainst/m_arc CohereLabs/GlobalMMLU alexandrainst/m_hellaswag Table 7: Mapping of language to corresponding ArcX, MMMLU, and HellaSwag sources. D.2 Details on Annotation Distribution Subsequently, we provide a more detailed insights beyond the annotation distribution analyzed in Sec. 5.2. In Fig. 19, we visualize the downstream impact of balancing the training data of lightweight annotation heads. Training heads on balanced labels produces slightly smoother distributions, which makes dynamic thresholding less volatile. Additionally, we show the difference in label distributions per language in Fig, 20. The results demonstrate that the heuristic FW-2 filters doe not uniformly produce similar document quality levels. For example, the average educational value of retained documents in Lithuanian is significantly higher than in other languages. Further, we can see a significant overlap in scores within the filtered and removed subsets. These results further highlight the difficulty of constructing heuristic filters that generalize well to different languages. Instead, approaches like JQL that use document semantics extracted from cross-lingually aligned embeddings tend to generalize better. D.3 Further Results. We provide more details of the results shown in the main body. Specifically, we depict the results for all languages under consideration in Fig. 21-Fig. 33. For almost all languages, we observe significant improvements over the FW2 baseline, especially on MMLU and Hellaswag. Additionally, we see higher retention rates for many languages. For example, in Polish (see Fig. 31), our lightweight edu annotation model with a dynamic threshold of 0.6 outperforms FW2 while retaining 16% more tokens. The only two languages with no clear improvements are Lithuanian (Fig. 29) and Ukranian (Fig. 33). However, in these cases, we maintain comparable performance while retaining up to 23% and 33% more tokens, respectively. 0.0 2.5 5.0 Edu-Score 0 2 4 6 Percent JQL-Gemma 0.0 2.5 5.0 Edu-Score JQL-Mistral 0.0 2.5 5.0 Edu-Score JQL-Llama Data Split Unbalanced Training Labels Balanced Training Labels Figure 19: Distribution of different lightweight annotation heads on CC release 2024-14 over 13 languages. Training heads on balanced labels produces slightly smoother distributions. Figure 20: Distribution of edu score annotations by language. Dotted lines represent the respective mean. 2 4 6 8 10 12 Training Tokens in Billion 4 6 8 10 12 14 16 Gold Label Prop. (%) Bulgarian Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +9.94% Tokens JQL-Edu-0.7 (Ours) −8.32% Tokens Figure 21: Dataset training performance for Bulgarian. 5 10 15 20 25 Training Tokens in Billion 4 6 8 10 12 Gold Label Prop. (%) German Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) −1.93% Tokens JQL-Edu-0.7 (Ours) −20.96% Tokens Figure 22: Dataset training performance for German. 5 10 15 20 25 Training Tokens in Billion 10.0 12.5 15.0 17.5 20.0 22.5 25.0 Gold Label Prop. (%) Greek Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +14.79% Tokens JQL-Edu-0.7 (Ours) −9.08% Tokens Figure 23: Dataset training performance for Greek. 5 10 15 20 25 Training Tokens in Billion 4 6 8 10 Gold Label Prop. (%) Spanish Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +9.15% Tokens JQL-Edu-0.7 (Ours) −13.96% Tokens Figure 24: Dataset training performance for Spanish. 5 10 15 20 25 Training Tokens in Billion 6 8 10 12 14 16 Gold Label Prop. (%) Finnish Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) −12.91% Tokens JQL-Edu-0.7 (Ours) −28.69% Tokens Figure 25: Dataset training performance for Finnish. 5 10 15 20 25 Training Tokens in Billion 4 6 8 10 12 14 Gold Label Prop. (%) French Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +9.02% Tokens JQL-Edu-0.7 (Ours) −15.10% Tokens Figure 26: Dataset training performance for French. 5 10 15 20 25 Training Tokens in Billion 6 8 10 12 14 16 Gold Label Prop. (%) Hungarian Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +1.78% Tokens JQL-Edu-0.7 (Ours) −16.59% Tokens Figure 27: Dataset training performance for Hungarian. 5 10 15 20 25 Training Tokens in Billion 4 6 8 10 12 Gold Label Prop. (%) Italian Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) −10.83% Tokens JQL-Edu-0.7 (Ours) −30.92% Tokens Figure 28: Dataset training performance for Italian. 2 4 6 8 10 12 Training Tokens in Billion 4 6 8 10 12 14 16 Gold Label Prop. (%) Lithuanian Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +22.88% Tokens JQL-Edu-0.7 (Ours) +3.96% Tokens Figure 29: Dataset training performance for Lithuanian. 5 10 15 20 25 Training Tokens in Billion 4 6 8 10 12 Gold Label Prop. (%) Norwegian Bokm˚al Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) −35.02% Tokens JQL-Edu-0.7 (Ours) −47.65% Tokens Figure 30: Dataset training performance for Norwegian (Bokmål). 5 10 15 20 25 Training Tokens in Billion 6 8 10 12 14 16 Gold Label Prop. (%) Polish Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +16.25% Tokens JQL-Edu-0.7 (Ours) −12.64% Tokens Figure 31: Dataset training performance for Polish. 5 10 15 20 25 Training Tokens in Billion 5 6 7 8 9 10 Gold Label Prop. (%) Turkish Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +6.39% Tokens JQL-Edu-0.7 (Ours) −15.99% Tokens Figure 32: Dataset training performance for Turkish. 5 10 15 20 25 Training Tokens in Billion 6 8 10 12 Gold Label Prop. (%) Ukrainian Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.6 (Ours) +33.40% Tokens JQL-Edu-0.7 (Ours) +10.15% Tokens Figure 33: Dataset training performance for Ukrainian. 2 4 6 8 10 Training Tokens in Billion 4.0 4.5 5.0 5.5 6.0 6.5 MMLU – Gold Label Prop. (%) Arabic 5 10 15 20 25 30 35 QA Tasks – Gold Label Prop. (%) Benchmark MMLU TyDi QA ARCD MLQA Quality Filter FW2 JQL-Edu-0.7 (Ours) +2.45% Tokens Figure 34: Dataset training performance for Arabic. 5 10 15 20 25 Training Tokens in Billion 20 25 30 35 QA Tasks – Gold Label Prop. (%) Thai Benchmark ThaiQA XQuAD Quality Filter FW2 JQL-Edu-0.7 (Ours) −42.00% Tokens Figure 35: Dataset training performance for Thai. 5 10 15 20 25 Training Tokens in Billion 2.0 2.5 3.0 3.5 4.0 4.5 MMLU – Gold Label Prop. (%) Chinese 20 30 40 50 QA Tasks – Gold Label Prop. (%) Benchmark MMLU CMRC 2018 Chinese SQuAD Quality Filter FW2 JQL-Edu-0.7 (Ours) −11.39% Tokens Figure 36: Dataset training performance for Chinese. E Generalization to Unseen languages In this Section, we provide further details and ablations on our generalization experiment on Arabic, Thai, and Chinese in Section 6. E.1 Evaluation of Lightweight PQL-Annotator We first translated our ground truth documents in the 3 new target languages. The zero-shot performance of our previously trained lightweight annotators is depicted in Fig. 37. For these three topologically new languages, we can see the same level of performance as for the European languages. For Thai, we even observed better performance than the European language average across all annotators. Consequently, JQL generalizes well to new languages (families). E.2 Further Results In Figs. 34, 35 and 36, we compare the training curves of Arabic, Thai, and Chinese, respectively. Since we only found high-quality MMLU versions for Arabic and Chinese, we additionally evaluated the benchmarks proposed by the Fineweb team (Penedo et al., 2024b). Specifically, we extend our evaluation with the following QA benchmarks: avg-EU-35 ar th zh JQL-Gemma JQL-Mistral JQL-Llama Joint Train 0.720 0.714 0.726 0.748 0.745 0.732 0.748 0.740 0.716 0.702 0.736 0.709 0.6 0.8 Spearman r Figure 37: Strong cross-lingual performance of our lightweight JQL annotators on unseen languages (Arabic, Thai, and Chinese). Compared to the average performance of the European languages on which the annotators are trained, we observe an even better correlation with human GT for some languages. 5 10 15 20 25 Training Tokens in Billion 4 6 8 10 Gold Label Prop. (%) Benchmark MMLU Hellaswag ARC Quality Filter FW2 JQL-Edu-0.7 (Ours) JQL-Edu-0.7 (Gemma) JQL-Edu-0.7 (Llama) Figure 38: Direct comparison of Gemma and Llama as annotators. • XQuAD (google/xquad) – 1.190 English QA pairs professionally translated into 10 languages (Artetxe et al., 2019). We report results for Thai. • MLQA (facebook/mlqa) – 5.000 + extractive QA instances across seven languages (Lewis et al., 2019). We report results for Arabic. • TyDi QA (google-research-datasets/tydiqa) – 204 k questions covering 11 languages (Clark et al., 2020). We include Arabic. • ARCD – The Arabic Reading Comprehension Dataset. 1.395 crowd-sourced Arabic questions on Wikipedia articles (Mozannar et al., 2019). • CMRC 2018 – Chinese machine reading comprehension task (Cui et al., 2019). ∼20.000 Chinese span-extraction QA pairs from Wikipedia. • Chinese-SQuAD – a machine-translated and manually corrected Chinese version of SQuAD v1.1/2.0. • ThaiQA-SQuAD – 4.074 Thai questions released in SQuAD format. The results show strong improvements using the JQL filters instead of FW2 across all languages. Interestingly, though, we can see heavily diverging impacts on document retention. While our JQL-Edu filters (at the 0.7 percentile threshold) retain 2% more tokens for Arabic, we see a drop in retained tokens of 40% for Thai. F Additional Ablations F.1 Ablation on Long Context Documents Contrary to previous works (Penedo et al., 2024a), JQL leverages embedding models with long context windows (i.e., 8k). Penedo et al. (2024a), for example, only considered the initial 512 tokens of any document when assigning educational scores. Fig. 39 highlights that a meaningful portion of documents is indeed longer then 512 tokens. Consequently, we observe a significant performance improvement of about 7 percentage points on average when using the lightweight annotator at 8192 tokens context length. For low-resource languages like Irish or Maltese, improvement increases up to 12 percentage points. bg ca cs da de el es et eu ﬁ fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sh sk sl sq sv tr uk avg-35 Gemma-3-27B-it - balanced Gemma-3-27B-it - unbalanced Llama-3.3-70B-it - balanced Llama-3.3-70B-it - unbalanced Mistral-3.1-24B-it - balanced Mistral-3.1-24B-it - unbalanced Annotator + Balancing 0.67 0.64 0.67 0.66 0.63 0.63 0.64 0.66 0.65 0.68 0.63 0.51 0.65 0.65 0.64 0.65 0.64 0.65 0.65 0.67 0.65 0.54 0.65 0.65 0.63 0.64 0.65 0.68 0.66 0.66 0.64 0.66 0.67 0.65 0.64 0.64 0.69 0.68 0.69 0.68 0.64 0.66 0.66 0.69 0.64 0.69 0.64 0.48 0.68 0.67 0.66 0.66 0.67 0.67 0.67 0.68 0.67 0.55 0.68 0.68 0.66 0.66 0.66 0.7 0.68 0.69 0.67 0.68 0.7 0.66 0.67 0.66 0.67 0.67 0.67 0.67 0.67 0.61 0.67 0.64 0.65 0.67 0.67 0.54 0.68 0.66 0.65 0.64 0.64 0.67 0.65 0.65 0.67 0.56 0.67 0.66 0.64 0.67 0.68 0.68 0.67 0.66 0.65 0.66 0.67 0.65 0.65 0.65 0.68 0.67 0.67 0.68 0.67 0.63 0.68 0.67 0.67 0.69 0.67 0.54 0.68 0.67 0.67 0.65 0.65 0.67 0.66 0.66 0.67 0.56 0.68 0.67 0.65 0.67 0.68 0.69 0.68 0.67 0.66 0.66 0.7 0.65 0.66 0.66 0.69 0.67 0.67 0.68 0.68 0.65 0.67 0.67 0.68 0.69 0.67 0.54 0.68 0.67 0.68 0.67 0.66 0.68 0.68 0.68 0.69 0.56 0.67 0.68 0.65 0.68 0.68 0.7 0.69 0.67 0.68 0.67 0.69 0.66 0.67 0.67 0.69 0.67 0.68 0.69 0.67 0.66 0.67 0.67 0.67 0.69 0.66 0.49 0.68 0.67 0.67 0.66 0.65 0.67 0.67 0.66 0.69 0.54 0.68 0.68 0.65 0.68 0.67 0.7 0.68 0.68 0.68 0.67 0.71 0.65 0.68 0.67 Embedder: snowﬂake-arctic-embed-m-v2.0 0.5 0.6 0.7 0.8 Spearman Correlation (a) Spearman correlation on test set with 512 tokens context length. bg ca cs da de el es et eu ﬁ fr ga gl hr hu hy is it lt lv mk mt nb nl nn pl pt ro sh sk sl sq sv tr uk avg-35 Gemma-3-27B-it - balanced Gemma-3-27B-it - unbalanced Llama-3.3-70B-it - balanced Llama-3.3-70B-it - unbalanced Mistral-3.1-24B-it - balanced Mistral-3.1-24B-it - unbalanced Annotator + Balancing 0.74 0.71 0.74 0.73 0.71 0.72 0.71 0.74 0.72 0.74 0.71 0.62 0.73 0.72 0.72 0.72 0.72 0.72 0.73 0.74 0.73 0.68 0.73 0.73 0.71 0.71 0.72 0.75 0.73 0.73 0.72 0.71 0.74 0.72 0.7 0.72 0.76 0.74 0.76 0.76 0.72 0.74 0.73 0.76 0.71 0.76 0.72 0.62 0.75 0.73 0.74 0.73 0.74 0.73 0.75 0.75 0.75 0.66 0.76 0.75 0.73 0.73 0.73 0.77 0.74 0.76 0.75 0.73 0.77 0.73 0.74 0.74 0.72 0.72 0.73 0.72 0.72 0.7 0.72 0.72 0.7 0.73 0.72 0.65 0.73 0.71 0.72 0.7 0.71 0.72 0.72 0.72 0.72 0.7 0.72 0.72 0.7 0.71 0.72 0.74 0.72 0.71 0.71 0.72 0.73 0.72 0.7 0.72 0.73 0.73 0.73 0.73 0.73 0.71 0.73 0.73 0.72 0.75 0.73 0.66 0.73 0.72 0.74 0.7 0.72 0.73 0.73 0.72 0.73 0.69 0.73 0.72 0.72 0.72 0.73 0.75 0.73 0.73 0.73 0.72 0.75 0.71 0.71 0.72 0.76 0.75 0.75 0.75 0.75 0.74 0.74 0.75 0.74 0.76 0.74 0.67 0.76 0.73 0.75 0.74 0.75 0.74 0.75 0.75 0.76 0.71 0.74 0.75 0.72 0.74 0.75 0.77 0.75 0.75 0.75 0.75 0.76 0.73 0.74 0.74 0.75 0.75 0.75 0.75 0.73 0.75 0.73 0.75 0.73 0.76 0.73 0.62 0.75 0.73 0.74 0.72 0.73 0.73 0.74 0.74 0.76 0.68 0.74 0.74 0.72 0.74 0.74 0.76 0.74 0.75 0.75 0.74 0.76 0.72 0.74 0.74 Embedder: snowﬂake-arctic-embed-m-v2.0 0.5 0.6 0.7 0.8 Spearman Correlation (b) Spearman correlation improves when using full 8192 tokens context length. 0 1000 2000 3000 4000 5000 6000 7000 8000 # tokens 512 tokens (c) Token Counts across all Test Languages. We observe a meaningful percentage of documents longer then 512 tokens. Figure 39: Increased context length of lightweight JQL-annotators improved performance. F.2 Influence of Ranking Performance and Ensembles on Data Quality In Sec. 3, we observed that Mistral achieves higher classification accuracy against human ground truth compared to Gemma, while both models exhibit similarly strong ranking capabilities. To systematically evaluate the impact of this distinction, we conducted a controlled ablation study using the Spanish subset. Specifically, we compared data filtering outcomes using single annotator models—from Gemma and Llama labels—each applying their respective 0.7 percentile thresholds independently. Additionally, this setup simultaneously allows us to assess the value of ensemble-based annotations. The results in Fig. 38 clearly indicate that the datasets filtered individually by Gemma and Llama yield very similar downstream training performance. Consequently, we can conclude that strong ranking performance is substantially more relevant than classification accuracy for the task of selecting high-quality training data. Furthermore, we observed that both single-model-filtered datasets performed worse than the dataset selected through ensemble-based annotation, thereby underscoring the robustness provided by ensemble consensus filtering. These findings emphasize the limited practical importance of absolute classification accuracy when compared to our design pipeline, which focuses on ranking capabilities and uses an ensemble to enhance annotation robustness. G Datasets Tab. 5 presents the dataset statistics for our training and human-annotated test sets across all 35 languages included in our study. For all languages except Norwegian (Nynorsk; 304.2k), Irish (390.3k), Latvian (438.3k), and Maltese (327.4k), we have at least 450k training annotations. In some cases, the test set contains fewer than 511 samples due to the removal of incorrectly translated documents. H License of Used Artifacts Table 8 summarizes the licenses of the artifacts used in the context of our work. The majority of artifacts are shared under permissive license (e.g., CC, MIT, or Apache). The custom license agreements of the two LLMs we used12 (Llama-3.3-70B-it and Gemma-2-27b-it) specifically allow for the use of generated outputs as conducted in our work. The only non-commercial licenses occurred for some of the benchmark datasets, which we solely used for academic evaluation. Consequently, our usage aligns with the terms and intended scope of all respective licenses. I Data Containing Personally Identifiable Information or Offensive Content In this work, we introduce JQL, a method designed to enhance the quality of raw pre-training data by filtering out low-quality content. As part of this effort, we necessarily engage with data that may contain personally identifiable information (PII) or offensive material, as such content is commonly found in large-scale web corpora. While we do not explicitly quantify JQL’s effectiveness in isolating PII or offensive content, we assume that its JQL in general is capable in identifying such content. J Infrastructure &amp; Compute Requirements In Table 9, we provide a summary of our compute requirements. To generate the LLM training annotations, we leveraged a large-scale compute cluster equipped with thousands of H100 GPUs, enabling efficient processing at scale. ll tasks involving the lightweight annotators and downstream model training were performed on a cluster equipped with several hundreds of A100 GPUs. K Usage of AI Tools We made use of AI-assisted tools such as ChatGPT and GitHub Copilot to support writing and coding tasks. All AI-generated outputs were thoroughly validated to ensure their correctness. 12Note that Mistral is shared under Apache License Artifacts License Pre-trained Models: Gemma-2-27B-it gemma Gemma-2-9B-it gemma Gemma-3-27B-it gemma Llama-3.1-8B-it Llama 3.1 Community License Agreement Llama-3.2-3B-it Llama 3.2 Community License Agreement Llama-3.3-70B-it Llama 3.3 Community License Agreement Mistral-3.1-24B-it Apache 2.0 License Phi-4-14B MIT License Qwen-2.5-14B-it Apache 2.0 License Qwen-2.5-32B-it Apache 2.0 License Qwen-2.5-72B-it Qwen License Agreement Qwen-2.5-7B-it Apache 2.0 License Snowflake-arctic-embed-v2.0 Apache-2.0 License Libraries: Nanotron Apache-2.0 License Datatrove Apache-2.0 License Lighteval MIT License Transformers Apache-2.0 License Pre-training Artifacts: Fineweb-Edu ODC-BY Fineweb-2 ODC-BY Benchmarks: Open-AI-MMMLU MIT License Cohere-GLobal-MMLU Apache-2.0 License openGPT-X-arcx Creative Commons Attribution Share Alike 4.0 openGPT-X-hellaswag-x MIT License alexandrainst-m_arc Creative Commons Attribution Non Commercial 4.0 NbAiLab-nb-global-mmlu Apache-2.0 License alexandrainst-m_hellaswag Creative Commons Attribution Non Commercial 4.0 malhajar-arc-tr MIT License malhajar-hellaswag-tr MIT License google-xQuAD Creative Commons Attribution Share Alike 4.0 facebook-mlqa Creative Commons Attribution Share Alike 3.0 google-tydiqa Apache-2.0 License arcd MIT License cmrc-2028 Creative Commons Attribution Share Alike 4.0 chinese-squad No license information available thaiQA-squad Creative Commons Attribution Non Commercial Share Alike 3.0 Table 8: Overview of used artifacts and their licenses. Model Task GPU Type GPU Hours Gemma-3-27B-IT Annotation Generation H100 9072 Mistral-3.1-24B-IT Annotation Generation H100 4464 Llama-3.3-70B-IT Annotation Generation H100 10944 Lightweight Annotators Embedding Training Data A100 200 Lightweight Annotators Ablations A100 300 Lightweight Annotators Web Corpus Annotation A100 23000 Custom LLMs (2B) Downstream Training A100 52000 Custom LLMs (2B) Evaluation A100 720 Table 9: Estimate of total compute requirements (in GPU hours) across different stages of the pipeline, including annotation generation and model training.</p></div>
+      <div class="sec-claude-note" data-sec-idx="7"></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1112 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimi k1.5: Scaling Reinforcement Learning with LLMs · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2501.12599 · 25 页 · 5 张图</div>
+    <h1>Kimi k1.5: Scaling Reinforcement Learning with LLMs</h1>
+    <div class="meta-bar">
+      <span class="track-B">轨道 B</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W7</span>
+      <span>Tech Report</span><span>Long Context RL</span>
+      <span><a href="https://arxiv.org/abs/2501.12599" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2501.12599.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>Kimi k1.5 用 <strong>大规模 long-context RL</strong>(上下文窗口拉到 128k)把 LLM 推理能力推到对标 OpenAI o1 的水平,关键工程手段是 <strong>partial rollouts</strong>——把超长 CoT 轨迹切片跨迭代复用,使长 CoT 训练在算力上可行;算法侧用 online mirror descent 变体 + length penalty + curriculum/prioritized sampling,刻意<em>不</em>用 MCTS / value network / process reward model。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>Policy Optimization 推导:</strong>相对熵正则的 RL 目标
+          $$\max_\theta \mathbb{E}_{(x,y^*)\sim\mathcal{D}}\bigl[\mathbb{E}_{(y,z)\sim\pi_\theta}[r(x,y,y^*)] - \tau\,\mathrm{KL}(\pi_\theta(x)\,\|\,\pi_{\theta_i}(x))\bigr]$$
+          闭式解 $\pi^*(y,z|x) \propto \pi_{\theta_i}(y,z|x)\exp(r/\tau)$,取对数得到 off-policy 约束 $r(x,y,y^*) - \tau\log Z = \tau\log\frac{\pi^*}{\pi_{\theta_i}}$,代入得替代损失,梯度形式上像"以平均奖励为基线的 REINFORCE + $l_2$ 正则"——<strong>没有 value network,没有 GAE</strong>。
+        </li>
+        <li>
+          <strong>Length Penalty 公式(必默写):</strong>对每条问题 $x$ 的 $k$ 个采样 $(y_i,z_i)$,令 $\ell_i=\mathrm{len}(i)$,$\ell_{\min}=\min_i\ell_i$,$\ell_{\max}=\max_i\ell_i$,先算
+          $$\lambda = 0.5 - \frac{\ell_i - \ell_{\min}}{\ell_{\max} - \ell_{\min}},$$
+          再得 length reward
+          $$\mathrm{len\_reward}(i) = \begin{cases}\lambda & \text{若 } r(x,y_i,y^*)=1 \\ \min(0,\lambda) & \text{若 } r(x,y_i,y^*)=0\end{cases}$$
+          含义:答对时给短的奖、给长的罚(但仍在 $[-0.5,0.5]$ 区间);答错时只罚长、不奖短。训练前期不开 length penalty,后期常数开启——避免抑制初期探索。
+        </li>
+        <li>
+          <strong>Partial Rollouts(本文最重要的工程 trick):</strong>对每条 rollout 设 token 预算;超长轨迹的尾巴存进 replay buffer,下一轮 iter 继续生成。好处:① 长尾轨迹不再霸占整个 rollout worker;② worker 异步并行,长短轨迹可同时在跑;③ 只有当前 iter 那一段是真正 on-policy,前 iter 的段可直接复用(损失上可选剔除非当前段);④ 系统侧检测重复并提前终止 + 加额外惩罚。这是 long-context RL 之所以能跑动的根因。
+        </li>
+        <li>
+          <strong>Curriculum + Prioritized Sampling:</strong>① 数据集自带难度标签,先简后难暖身;② 训练过程中跟踪每题成功率 $s_i$,按 $\propto (1-s_i)$ 重采样,把算力集中在模型最弱的题上。比 "RL 自带的 hard-problem 大梯度" 收敛更快。
+        </li>
+        <li>
+          <strong>SFT 与 RL 的衔接(long-CoT SFT warm-up):</strong>先做精挑细选的小规模 long-CoT SFT,把 planning / evaluation / reflection / exploration 四种认知模式"灌"进模型,再上 RL。<em>没有 SFT 暖身,RL 直接探不出长链推理。</em>
+        </li>
+        <li>
+          <strong>vs DeepSeek-R1:</strong>同期工作。R1 走 rule-based reward + GRPO + 显式 R1-Zero 实验,无 SFT 暖身也能涌现 reasoning;k1.5 强调 long-context scaling + partial rollouts + 长短 CoT 同时打,加 long2short 蒸馏出 short-CoT 模型(60.8 AIME / 94.6 MATH500,显著高于 GPT-4o / Claude 3.5)。两条路线的共识:<strong>scale 上下文 + 简单 RL > 复杂的 MCTS / PRM</strong>。
+        </li>
+        <li>
+          <strong>Long2Short 四件套:</strong>① model merging(长 + 短模型权重平均,免训练);② shortest rejection sampling(同题采 8 次取最短正确);③ DPO(最短正确作 positive,所有更长的作 negative);④ long2short RL(在长 RL 之后再开一阶段、把 max rollout length 砍短 + 强制 length penalty)。论文的结论:long2short RL 的 token efficiency 最高。
+        </li>
+        <li>
+          <strong>对工业大规模 RL 的启示:</strong>① RM 用 CoT RM(98.5% 准)替代 classic RM(84.4% 准),否则 reward hacking 飞起;② Megatron / vLLM 通过 checkpoint-engine 同 pod 部署(Sidecar 共享 GPU),从训到推 < 1 min;③ Code RL 必须配 sandbox(crun + cgroup 复用 + tmpfs,容器启动 0.04s vs Docker 0.12s);④ <em>不要 value network</em>——对长 CoT 中"先错后改"的 trial-and-error 路径,credit assignment 反而会扼杀探索。
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      long context RL,和 R1 同期对标
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-4a">§2.1–2.2 Prompt Set &amp; Long-CoT SFT / 数据与 SFT 暖身</a><span class="toc-page">p.3</span></li>
+      <li><a href="#sec-4b">§2.3.1–2.3.2 Policy Optimization / RL 训练目标</a><span class="toc-page">p.4</span></li>
+      <li><a href="#sec-4c">§2.3.3 Length Penalty / 长度惩罚</a><span class="toc-page">p.5</span></li>
+      <li><a href="#sec-4d">§2.3.4–2.3.5 Sampling &amp; Training Recipe / 采样与训练细节</a><span class="toc-page">p.6</span></li>
+      <li><a href="#sec-4e">§2.4 Long2Short / 长链转短链</a><span class="toc-page">p.7</span></li>
+      <li><a href="#sec-4f">§2.5 Pretraining &amp; Vanilla SFT / 预训练与基础 SFT</a><span class="toc-page">p.8</span></li>
+      <li><a href="#sec-4g">§2.6 RL Infrastructure &amp; Partial Rollouts / RL 基础设施</a><span class="toc-page">p.8</span></li>
+      <li><a href="#sec-6">§3 Experiments / 实验</a><span class="toc-page">p.11</span></li>
+      <li><a href="#sec-7">§4 Conclusions / 结论</a><span class="toc-page">p.15</span></li>
+      <li><a href="#sec-8">References(略)</a><span class="toc-page">p.16</span></li>
+      <li><a href="#sec-9">Appendix(略)</a><span class="toc-page">p.20</span></li>
+    </ul>
+  </div>
+  
+
+  <!-- 章节正文 -->
+  
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(英文,按章节折叠)</h2>
+    
+    <details class="sec" id="sec-1" open>
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p>arXiv:2501.12599v4 [cs.AI] 3 Jun 2025. <strong>Kimi k1.5: Scaling Reinforcement Learning with LLMs.</strong> Technical Report of Kimi k1.5. Kimi Team.</p>
+          </div>
+          <div class="zh">
+            <p>arXiv:2501.12599v4 [cs.AI] 2025 年 6 月 3 日。<strong>Kimi k1.5:用大语言模型扩展强化学习。</strong>Kimi k1.5 技术报告。Kimi 团队。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="1"></div>
+    </details>
+    
+    <details class="sec" id="sec-2" open>
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p>Pretraining language models with next-token prediction has been an effective way to scale compute, but it is bottlenecked by the amount of available high-quality training data. Scaling reinforcement learning (RL) unlocks a new axis for continued improvement: an LLM can extend its training data by learning to explore with rewards. Yet prior published work in this direction has not produced competitive results. Against this background, we report the training practice of <strong>Kimi k1.5</strong>—our latest multi-modal LLM trained with RL—covering RL techniques, multi-modal data recipes and infrastructure.</p>
+            <p>The two key ingredients of our approach are <strong>long context scaling</strong> and <strong>improved policy optimization</strong>. Together they form a simple, effective RL framework that does <em>not</em> rely on Monte Carlo tree search, value functions, or process reward models. Notably, our system achieves state-of-the-art reasoning across modalities—<strong>77.5</strong> on AIME, <strong>96.2</strong> on MATH-500, <strong>94-th percentile</strong> on Codeforces, <strong>74.9</strong> on MathVista—matching OpenAI o1. We further present effective <strong>long2short</strong> methods that transfer long-CoT priors to short-CoT models, yielding state-of-the-art short-CoT results—<strong>60.8</strong> on AIME, <strong>94.6</strong> on MATH-500, <strong>47.3</strong> on LiveCodeBench—outperforming existing short-CoT models such as GPT-4o and Claude 3.5 Sonnet by up to +550%.</p>
+          </div>
+          <div class="zh">
+            <p>用 next-token prediction 做语言模型预训练能很好地扩展算力,但被"可用高质量训练数据的总量"卡住了天花板。扩展强化学习(RL)打开了"继续改进"的新坐标轴:LLM 可以靠"用奖励来学探索"自己产出训练数据。然而,以往公开发表的工作还没有产出可比拟的结果。在此背景下,我们汇报 <strong>Kimi k1.5</strong> 的训练实践——我们最新的、用 RL 训练的多模态 LLM——内容覆盖 RL 训练技巧、多模态数据配方和基础设施优化。</p>
+            <p>我们方法的两个关键要素是 <strong>long-context 扩展</strong> 与 <strong>更优的策略优化</strong>。两者结合,构成一个简洁、有效的 RL 框架——<em>不</em>依赖蒙特卡洛树搜索、value function、process reward model 等更复杂的技术。值得注意的是,我们的系统在多个基准与多模态上取得 SOTA 推理性能:AIME <strong>77.5</strong>、MATH-500 <strong>96.2</strong>、Codeforces <strong>94 分位</strong>、MathVista <strong>74.9</strong>,与 OpenAI o1 持平。我们还提出有效的 <strong>long2short</strong> 方法,把长 CoT 的"思考先验"迁移到短 CoT 模型上,得到 SOTA 短 CoT 结果:AIME <strong>60.8</strong>、MATH-500 <strong>94.6</strong>、LiveCodeBench <strong>47.3</strong>,大幅领先 GPT-4o、Claude 3.5 Sonnet 等现有短 CoT 模型(相对提升最高达 +550%)。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="2"></div>
+    </details>
+    
+    <details class="sec" id="sec-3" open>
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.2</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p>Next-token-prediction pretraining is governed by scaling laws: with proportional scaling of parameters and data, intelligence keeps improving. But this paradigm is fundamentally bounded by the supply of high-quality data. We report the training recipe of <strong>Kimi k1.5</strong>, our latest multi-modal LLM trained with RL—aimed at exploring a new axis of scaling: with rewards in the loop, the model is no longer chained to a static pre-existing dataset and can <em>learn to explore</em>.</p>
+            <p>Four design pillars of k1.5:</p>
+            <ul>
+              <li><strong>Long context scaling.</strong> We scale the RL context window to <strong>128k</strong> and observe continued performance gains as context grows. The key idea is <em>partial rollouts</em>: sample new trajectories by <em>reusing a large chunk of previous trajectories</em>, avoiding the cost of regenerating from scratch. Context length emerges as a key dimension for the continued scaling of RL with LLMs.</li>
+              <li><strong>Improved policy optimization.</strong> We formulate RL with long CoT and use a variant of <em>online mirror descent</em> for robust policy optimization, further sharpened by an effective sampling strategy, length penalty, and data-recipe optimization.</li>
+              <li><strong>Simplistic framework.</strong> Long-context scaling + improved policy optimization gives a minimal RL framework. Because we can scale context, the learned CoT spontaneously exhibits planning / reflection / correction&mdash;longer context behaves like more search steps. Hence we achieve strong performance <em>without</em> MCTS, value functions, or process reward models.</li>
+              <li><strong>Multimodality.</strong> Joint training on text + vision yields cross-modal reasoning.</li>
+            </ul>
+            <p>We also present <strong>long2short</strong> methods that distil long-CoT priors into short-CoT models via length-penalty activation and model merging. The long-CoT version matches o1 (AIME 77.5, MATH-500 96.2, Codeforces 94 pct, MathVista 74.9); the short-CoT version is SOTA among short-CoT models (AIME 60.8, MATH-500 94.6, LiveCodeBench 47.3), beating GPT-4o / Claude 3.5 Sonnet by up to +550%.</p>
+            <p><strong>Development pipeline of k1.5</strong> = pretraining &rarr; vanilla SFT &rarr; long-CoT SFT &rarr; RL. This report focuses on RL. &sect;2.1 covers RL <em>prompt-set curation</em>; &sect;2.2 long-CoT SFT; &sect;2.3 RL training strategies; &sect;2.5 pretraining and vanilla SFT.</p>
+          </div>
+          <div class="zh">
+            <p>"用 next-token-prediction 做预训练"由 scaling law 主导:模型参数与数据按比例同步放大,智能持续提升。但这条路线被"可用高质量数据总量"硬卡死。本报告呈现 <strong>Kimi k1.5</strong> 的训练菜谱——我们最新的、用 RL 训练的多模态 LLM——目标是探索"继续 scale"的新坐标轴:把奖励放进训练循环,模型就不再被一份静态数据集锁死,而可以<em>学会探索</em>。</p>
+            <p>k1.5 的四块设计基石:</p>
+            <ul>
+              <li><strong>Long context scaling。</strong>我们把 RL 上下文窗口扩到 <strong>128k</strong>,并观察到上下文越长、性能越好。背后的核心想法是 <em>partial rollouts</em>:通过<em>复用前一段轨迹的大块内容</em>来采新轨迹,避免从头重生成的开销。我们发现"上下文长度"是 RL × LLM 继续 scale 的关键维度之一。</li>
+              <li><strong>Improved policy optimization。</strong>我们推导 long-CoT 下的 RL 公式,采用 <em>online mirror descent</em> 的一个变体做鲁棒的策略优化;再用有效的采样策略、length penalty、数据配方优化进一步打磨。</li>
+              <li><strong>Simplistic framework。</strong>long-context + 上述策略优化构成一个极简 RL 框架。由于能 scale 上下文,模型学到的 CoT 自发表现出 planning / reflection / correction——上下文越长,等价于"搜索步数"越多。因此,<em>不需要</em>蒙特卡洛树搜索、value function、process reward model,也能跑出强性能。</li>
+              <li><strong>Multimodality。</strong>文本 + 视觉联合训练,具备跨模态推理能力。</li>
+            </ul>
+            <p>我们还提出 <strong>long2short</strong> 方法,把 long-CoT 模型的"思考先验"通过 length penalty 激活 + model merging 蒸馏到 short-CoT 模型。Long-CoT 版本对标 o1(AIME 77.5、MATH-500 96.2、Codeforces 94 分位、MathVista 74.9);short-CoT 版本是同类 SOTA(AIME 60.8、MATH-500 94.6、LiveCodeBench 47.3),相对 GPT-4o / Claude 3.5 Sonnet 最高 +550%。</p>
+            <p><strong>k1.5 的训练流水线</strong> = 预训练 → 普通 SFT → long-CoT SFT → RL。本报告聚焦 RL 部分。§2.1 介绍 RL <em>prompt 集筛选</em>;§2.2 long-CoT SFT;§2.3 RL 训练策略;§2.5 预训练与普通 SFT 的细节。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="3"></div>
+    </details>
+
+    <details class="sec" id="sec-4a" open>
+      <summary>
+        <span>§2.1–2.2 Prompt Set &amp; Long-CoT SFT / 数据与 SFT 暖身<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>RL prompt-set curation.</strong> A high-quality RL prompt set has three desiderata: <em>diverse coverage</em> across STEM / coding / general reasoning; <em>balanced difficulty</em> spanning easy / moderate / hard; <em>accurate evaluability</em> by verifiers (objective and reliable). We use automatic filters to keep questions that demand rich reasoning and are easy to evaluate, plus a tagging system to balance disciplines.</p>
+            <p>For <strong>difficulty estimation</strong>, we use a <em>model-based</em> approach: for every prompt, the SFT model generates 10 answers at a relatively high temperature; pass rate becomes the difficulty proxy (lower pass rate = harder). This aligns difficulty with the model's own capability and lets us pre-filter trivial cases plus drive sampling strategies during RL.</p>
+            <p>To <strong>avoid reward hacking</strong>, the reasoning <em>process</em> and the final <em>answer</em> must both be accurately verifiable. We drop multiple-choice / true-false / proof problems (which can be "guessed" with a wrong reasoning chain). For general QA we add an easy-to-hack filter: prompt a model to guess answers <em>without CoT</em>; if it gets it right within $N=8$ attempts, the prompt is deemed too hackable and removed.</p>
+            <p><strong>Long-CoT SFT.</strong> Over the curated RL prompt set, we use prompt engineering to build a <em>small but high-quality</em> long-CoT warm-up dataset with verified reasoning paths for both text and image inputs (resembling rejection sampling, but the focus is on prompt-engineered long CoT). The warm-up data deliberately encodes four cognitive primitives—<strong>planning</strong> (lay out steps before execution), <strong>evaluation</strong> (critique intermediate steps), <strong>reflection</strong> (reconsider and refine), <strong>exploration</strong> (consider alternatives). A lightweight SFT on this data primes the model with these reasoning strategies and produces more detailed, logically coherent responses.</p>
+          </div>
+          <div class="zh">
+            <p><strong>RL prompt 集筛选。</strong>高质量 RL prompt 集要满足三个条件:① <em>覆盖广</em>——STEM、代码、通用推理;② <em>难度均衡</em>——简单 / 中等 / 困难分布合理;③ <em>可靠可评</em>——能被 verifier 客观判定。我们用自动过滤器留下"推理量大且易于评估"的题目,并用打标签系统平衡各学科占比。</p>
+            <p>对于<strong>难度评估</strong>,我们用<em>基于模型</em>的方法:对每个 prompt,SFT 模型用较高温采样 10 次,通过率即作为难度代理(通过率越低、越难)。这种做法把"难度"与模型自身能力对齐,既能预过滤过于简单的题,又能在 RL 训练中驱动不同的采样策略。</p>
+            <p>为了<strong>规避 reward hacking</strong>,必须保证推理<em>过程</em>与<em>最终答案</em>都能被准确验证。所以我们剔除选择题 / 判断题 / 证明题(这类题可以"瞎猜对答案 + 错的推理")。对一般问答任务,我们再加一道"易猜过滤":让一个模型<em>不写 CoT</em> 直接猜答案,如果它在 $N=8$ 次内猜对,该 prompt 即视为"太容易 hack",剔除。</p>
+            <p><strong>Long-CoT SFT。</strong>在精选 RL prompt 集之上,我们靠 prompt engineering 构建一个<em>小而精</em>的 long-CoT 暖身数据集,带"已验证的推理路径"(覆盖文本与图像输入)。这个流程类似 rejection sampling,但重点是用 prompt engineering 生成 long-CoT。暖身数据有意编码四种认知原语——<strong>planning</strong>(动笔前先列大纲)、<strong>evaluation</strong>(对中间步骤做批判性评估)、<strong>reflection</strong>(重新审视并改进思路)、<strong>exploration</strong>(考虑替代方案)。在这份数据上做轻量 SFT,就把这些推理策略"植入"模型,使其能生成更细致、更连贯的响应。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4a"></div>
+    </details>
+
+    <details class="sec" id="sec-4b" open>
+      <summary>
+        <span>§2.3.1–2.3.2 Policy Optimization / RL 训练目标<span class="sec-page">p.4</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Problem setting.</strong> Given training data $\mathcal{D}=\{(x_i, y_i^*)\}_{i=1}^n$, the goal is to train policy $\pi_\theta$ to solve test problems. CoT inserts intermediate thoughts $z=(z_1,\dots,z_m)$ between $x$ and final answer $y$: thoughts are sampled auto-regressively $z_t\sim\pi_\theta(\cdot|x,z_{1:t-1})$, then $y\sim\pi_\theta(\cdot|x,z)$. We write $y,z\sim\pi_\theta$ for the joint sampling.</p>
+            <p>Planning algorithms over thoughts (Tree-of-Thoughts etc.) explicitly build a search tree of partial solutions $s=(x,z_{1:|s|})$ with a critic $v$. Algorithmically a planner is a mapping $A(\cdot|z_1,z_2,\dots)$ acting on a sequence of reasoning steps; <em>thoughts and feedbacks alike are just language tokens</em>. This invites a clean perspective: instead of <em>building</em> a search tree + planner, <em>train a model to approximate this process</em>. Number of thoughts = compute budget; long context enables both training-time and test-time scalability. The model thus runs an <em>implicit search</em> via auto-regressive prediction.</p>
+            <p>We train CoT generation with RL. The reward $r(x,y,y^*)\in\{0,1\}$ checks correctness against ground truth $y^*$: rule-based for verifiable tasks (e.g. code test cases), learned for free-form answers. The objective:</p>
+            <div class="bi-eq">$$\max_\theta\; \mathbb{E}_{(x,y^*)\sim\mathcal{D},\,(y,z)\sim\pi_\theta}\bigl[r(x,y,y^*)\bigr]. \quad (1)$$</div>
+            <p>The model still autoregressively samples at inference (no parallel planning needed), but learns critical planning skills—<em>error identification, backtracking, solution refinement</em>—by leveraging the entire explored thought set as context.</p>
+          </div>
+          <div class="zh">
+            <p><strong>问题设定。</strong>给定训练集 $\mathcal{D}=\{(x_i, y_i^*)\}_{i=1}^n$,目标是训练策略 $\pi_\theta$ 解决测试题。CoT 在 $x$ 与最终答案 $y$ 之间插入中间思考 $z=(z_1,\dots,z_m)$:思考被自回归采样 $z_t\sim\pi_\theta(\cdot|x,z_{1:t-1})$,然后 $y\sim\pi_\theta(\cdot|x,z)$。我们用 $y,z\sim\pi_\theta$ 表示这一联合采样。</p>
+            <p>基于思考的 planning 算法(Tree-of-Thoughts 等)显式建一棵"部分解 $s=(x,z_{1:|s|})$"的搜索树,并用 critic $v$ 打分。算法上 planner 是一个映射 $A(\cdot|z_1,z_2,\dots)$,作用在推理步骤序列上;<em>"思考"和"反馈"本质上都是语言 token</em>。由此得到一个清爽的视角:与其<em>外部构造</em>搜索树 + planner,不如<em>训练一个模型去近似这个过程</em>。思考的数量 = 计算预算;long context 让这一过程在训练与推理阶段都可 scale。模型于是通过自回归预测,跑一种<em>隐式搜索</em>。</p>
+            <p>因此我们用 RL 训练 CoT 生成。奖励 $r(x,y,y^*)\in\{0,1\}$ 用真值 $y^*$ 判断对错:可验证任务用规则(如代码测试用例),自由形式答案则训练奖励模型。优化目标是公式 (1)。</p>
+            <p>模型在推理阶段仍是自回归采样(无需 planning 那样的并行化),但通过把"已探索的全部思考"作为上下文,学会关键的 planning 能力——<em>错误识别、回溯、解的精炼</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Policy optimization.</strong> We apply a variant of <em>online policy mirror descent</em>. At the $i$-th iteration, with $\pi_{\theta_i}$ as reference, solve the relative-entropy-regularized policy optimization:</p>
+            <div class="bi-eq">$$\max_\theta\;\mathbb{E}_{(x,y^*)\sim\mathcal{D}}\Bigl[\,\mathbb{E}_{(y,z)\sim\pi_\theta}[r(x,y,y^*)] - \tau\,\mathrm{KL}(\pi_\theta(x)\,\|\,\pi_{\theta_i}(x))\Bigr], \quad (2)$$</div>
+            <p>where $\tau&gt;0$ controls the regularization strength. The closed-form solution is</p>
+            <div class="bi-eq">$$\pi^*(y,z|x) = \pi_{\theta_i}(y,z|x)\,\exp\!\bigl(r(x,y,y^*)/\tau\bigr)/Z,$$</div>
+            <p>with $Z=\sum_{y',z'}\pi_{\theta_i}(y',z'|x)\exp(r(x,y',y^*)/\tau)$. Taking logs, for any $(y,z)$ the following holds—<em>this is what enables off-policy data</em>:</p>
+            <div class="bi-eq">$$r(x,y,y^*) - \tau\log Z = \tau\log\frac{\pi^*(y,z|x)}{\pi_{\theta_i}(y,z|x)}.$$</div>
+            <p>This motivates the squared surrogate loss</p>
+            <div class="bi-eq">$$L(\theta) = \mathbb{E}_{(x,y^*)\sim\mathcal{D}}\!\left[\,\mathbb{E}_{(y,z)\sim\pi_{\theta_i}}\!\left[\left(r(x,y,y^*) - \tau\log Z - \tau\log\frac{\pi_\theta(y,z|x)}{\pi_{\theta_i}(y,z|x)}\right)^2\right]\right].$$</div>
+            <p>We approximate $\tau\log Z$ by samples $(y_1,z_1),\dots,(y_k,z_k)\sim\pi_{\theta_i}$: $\tau\log Z \approx \tau\log\frac{1}{k}\sum_{j=1}^k\exp(r(x,y_j,y^*)/\tau)$. In practice the <em>empirical mean</em> $\bar r=\mathrm{mean}(r(x,y_1,y^*),\dots,r(x,y_k,y^*))$ works just as well (it equals the expected reward under $\pi_{\theta_i}$ as $\tau\to\infty$). The final gradient, with $k$ responses sampled from $\pi_{\theta_i}$:</p>
+            <div class="bi-eq">$$\frac{1}{k}\sum_{j=1}^k\!\left(\nabla_\theta\log\pi_\theta(y_j,z_j|x)(r(x,y_j,y^*)-\bar r) - \frac{\tau}{2}\nabla_\theta\!\left(\log\frac{\pi_\theta(y_j,z_j|x)}{\pi_{\theta_i}(y_j,z_j|x)}\right)^2\right). \quad (3)$$</div>
+            <p>To readers familiar with policy gradient: this looks like the policy gradient of (2) with the <em>mean of sampled rewards as the baseline</em>, except (i) responses come from $\pi_{\theta_i}$ rather than on-policy, and (ii) an $\ell_2$ regularization is added. So this is the natural off-policy extension of regularized policy gradient. After each iteration we update $\theta\to\theta_{i+1}$, which becomes the next reference; we also <em>reset the optimizer</em> at each iteration since the regularization target changes.</p>
+            <p><strong>No value network.</strong> We deliberately exclude a value network. Beyond efficiency, we argue classical credit assignment <em>hurts</em> long-CoT learning: imagine a partial CoT $(z_1,\dots,z_t)$ with two candidates $z_{t+1}$ (leads to correct answer) and $z_{t+1}'$ (contains errors). An oracle value would penalize $z_{t+1}'$ as low-advantage, but <em>exploring $z_{t+1}'$ is valuable</em>—as long as the model recovers and reaches the right answer, it learns the trial-and-error pattern. The final-answer-based reward is enough; we want to encourage <em>diverse</em> reasoning paths, not punish "mistakes" mid-stream.</p>
+          </div>
+          <div class="zh">
+            <p><strong>策略优化。</strong>我们采用 <em>online policy mirror descent</em> 的一个变体。第 $i$ 轮迭代以 $\pi_{\theta_i}$ 为参考策略,求解带相对熵正则的目标——见公式 (2),其中 $\tau&gt;0$ 控制正则强度。该目标有闭式解</p>
+            <div class="bi-eq">$$\pi^*(y,z|x) = \pi_{\theta_i}(y,z|x)\,\exp\!\bigl(r(x,y,y^*)/\tau\bigr)/Z,$$</div>
+            <p>其中 $Z=\sum_{y',z'}\pi_{\theta_i}(y',z'|x)\exp(r(x,y',y^*)/\tau)$。对两边取对数,对任意 $(y,z)$ 都成立:</p>
+            <div class="bi-eq">$$r(x,y,y^*) - \tau\log Z = \tau\log\frac{\pi^*(y,z|x)}{\pi_{\theta_i}(y,z|x)}.$$</div>
+            <p>——<em>这个等式正是允许"off-policy 数据"的关键</em>。它启发我们写出平方代理损失:</p>
+            <div class="bi-eq">$$L(\theta) = \mathbb{E}_{(x,y^*)\sim\mathcal{D}}\!\left[\,\mathbb{E}_{(y,z)\sim\pi_{\theta_i}}\!\left[\left(r(x,y,y^*) - \tau\log Z - \tau\log\frac{\pi_\theta(y,z|x)}{\pi_{\theta_i}(y,z|x)}\right)^2\right]\right].$$</div>
+            <p>我们用 $(y_1,z_1),\dots,(y_k,z_k)\sim\pi_{\theta_i}$ 估计 $\tau\log Z\approx\tau\log\frac{1}{k}\sum_{j=1}^k\exp(r(x,y_j,y^*)/\tau)$。实践中也可以直接用采样奖励的<em>均值</em> $\bar r$ 作近似(当 $\tau\to\infty$ 时,$\tau\log Z$ 趋于 $\pi_{\theta_i}$ 下的期望奖励,所以合理)。最终梯度形式见公式 (3),每条题 $x$ 用 $\pi_{\theta_i}$ 采 $k$ 条响应。</p>
+            <p>熟悉 policy gradient 的读者会发现:这个梯度像是把"采样奖励均值作为基线"的 (2) 的 policy gradient,差别只在于:① 响应是从 $\pi_{\theta_i}$ 采样(off-policy),而不是 on-policy;② 多了一个 $\ell_2$ 正则项。所以它是"on-policy 正则化 policy gradient"在 off-policy 情形下的自然推广。每轮迭代后把 $\theta$ 更新为 $\theta_{i+1}$ 作为下一轮的参考策略;由于每轮要解的优化问题在变,<em>每轮开头都重置 optimizer</em>。</p>
+            <p><strong>不带 value network。</strong>我们刻意不要 value network。除了效率原因外,我们认为经典的 credit assignment 反而<em>有害</em>于 long-CoT 学习:设想已有部分 CoT $(z_1,\dots,z_t)$,候选下一步 $z_{t+1}$(直通正确答案)和 $z_{t+1}'$(含错)。理论上 oracle value 会把 $z_{t+1}'$ 视为负 advantage 而惩罚;但<em>探索 $z_{t+1}'$ 是有价值的</em>——只要模型最终能纠错并到达正解,这正是 trial-and-error 的学习样本。<em>用最终答案为奖励信号</em>就够了,我们要鼓励<em>多样的推理路径</em>,而不是惩罚途中的"小错"。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4b"></div>
+    </details>
+
+    <details class="sec" id="sec-4c" open>
+      <summary>
+        <span>§2.3.3 Length Penalty / 长度惩罚<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p>We observe an <strong>overthinking phenomenon</strong>: response length blows up during RL training. Although longer often = better accuracy, excessive chains are expensive at train/inference time and humans don't enjoy reading them. We introduce a length reward to curb this growth.</p>
+            <p>For each problem $x$ with true answer $y^*$, draw $k$ responses $(y_1,z_1),\dots,(y_k,z_k)$. Let $\mathrm{len}(i) = $ length of $(y_i,z_i)$, $\mathrm{min\_len}=\min_i \mathrm{len}(i)$, $\mathrm{max\_len}=\max_i \mathrm{len}(i)$. If $\mathrm{max\_len}=\mathrm{min\_len}$, set the length reward to 0 for all (they're identical in length). Otherwise:</p>
+            <div class="bi-eq">$$\lambda = 0.5 - \frac{\mathrm{len}(i) - \mathrm{min\_len}}{\mathrm{max\_len} - \mathrm{min\_len}}, \qquad \mathrm{len\_reward}(i) = \begin{cases}\lambda &amp; \text{if } r(x,y_i,y^*) = 1\\ \min(0,\lambda) &amp; \text{if } r(x,y_i,y^*) = 0\end{cases}$$</div>
+            <p>In essence: among correct responses, <em>reward the short ones, punish the long ones</em>; among incorrect responses, <em>only the long ones get punished</em>. This length reward is added to the original reward with a weighting parameter.</p>
+            <p><strong>Warm-up.</strong> In pilots, applying length penalty too early slows training. So we ramp it gradually: do standard policy optimization first <em>without</em> length penalty, then switch on a constant length penalty for the rest of training.</p>
+          </div>
+          <div class="zh">
+            <p>我们观察到 <strong>overthinking 现象</strong>:RL 训练过程中响应长度会显著爆涨。虽然"长 ≈ 准"——但过长的推理链在训练与推理阶段都昂贵,人类也不喜欢读。为此我们加入一个 length reward 来抑制这种长度疯长。</p>
+            <p>对每条问题 $x$(真值 $y^*$),采 $k$ 条响应 $(y_1,z_1),\dots,(y_k,z_k)$;记 $\mathrm{len}(i)$ 为 $(y_i,z_i)$ 的长度,$\mathrm{min\_len}=\min_i \mathrm{len}(i)$,$\mathrm{max\_len}=\max_i \mathrm{len}(i)$。若 $\mathrm{max\_len}=\mathrm{min\_len}$(长度都一样),length reward 全置 0;否则:</p>
+            <div class="bi-eq">$$\lambda = 0.5 - \frac{\mathrm{len}(i) - \mathrm{min\_len}}{\mathrm{max\_len} - \mathrm{min\_len}}, \qquad \mathrm{len\_reward}(i) = \begin{cases}\lambda &amp; \text{若 } r(x,y_i,y^*) = 1\\ \min(0,\lambda) &amp; \text{若 } r(x,y_i,y^*) = 0\end{cases}$$</div>
+            <p>本质上:在<em>答对</em>的响应里,"短的奖、长的罚";在<em>答错</em>的响应里,<em>只惩罚长的</em>。最后用一个加权系数把 length reward 叠加到原奖励上。</p>
+            <p><strong>暖启动。</strong>预实验里我们发现一上来就开 length penalty 会拖慢训练。所以分两段:先做标准的 policy optimization <em>不带</em> length penalty;之后再切到"常数 length penalty"跑完剩余训练。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4c"></div>
+    </details>
+
+    <details class="sec" id="sec-4d" open>
+      <summary>
+        <span>§2.3.4–2.3.5 Sampling &amp; Training Recipe / 采样与训练细节<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Curriculum Sampling.</strong> RL self-naturally puts more gradient on hard problems, but training efficiency is still bottlenecked. We start on easier tasks and gradually move to harder ones: early RL models can hardly solve hard problems, so spending compute on them yields few correct samples. Our data already comes with grade / difficulty labels, making this trivial to set up.</p>
+            <p><strong>Prioritized Sampling.</strong> On top of curriculum, we track per-problem success rate $s_i$ during training and sample problem $i$ with probability $\propto (1-s_i)$. The model gets more practice where it's weakest, accelerating learning.</p>
+            <p><strong>Test-case generation for coding.</strong> Many web coding problems have no public test cases. We auto-generate them using <em>CYaRon</em>: feed CYaRon's usage spec + problem statement into our base Kimi k1.5 to produce 50 test cases per problem; sample 10 ground-truth submissions; a test case is <em>valid</em> if $\geq 7/10$ submissions agree on its output; a problem enters the training set if $\geq 9/10$ submissions pass <em>all</em> selected test cases. Out of 1,000 contest problems, ~614 need no special judge, we built 463 generators producing $\geq 40$ valid cases each, finally including 323 problems.</p>
+            <p><strong>Reward modelling for math.</strong> Math answers have many equivalent forms (e.g. $a^2-4 = (a+2)(a-2)$). Two RMs:</p>
+            <ul>
+              <li><strong>Classic RM</strong>: InstructGPT-style value-head RM, ~800k training pairs; input = (question, reference answer, response), output = scalar.</li>
+              <li><strong>Chain-of-Thought RM</strong>: ~800k CoT-labelled examples; the RM <em>generates a step-by-step rationale</em> and a final JSON correctness verdict.</li>
+            </ul>
+            <p>Spot-check accuracy: <em>Classic RM ≈ 84.4%, CoT RM ≈ 98.5%</em>. We use the <strong>CoT RM</strong> in RL training&mdash;much cleaner feedback.</p>
+            <p><strong>Vision data.</strong> Vision-RL data has three sources: ① real-world (graded science questions, location-guessing, chart analysis); ② synthetic (procedurally generated images, e.g. spatial / geometric / object-interaction); ③ text-rendered (text documents / code / structured data rendered as images, so the model is consistent across pure-text and image-rendered inputs).</p>
+          </div>
+          <div class="zh">
+            <p><strong>Curriculum Sampling(课程采样)。</strong>RL 本身在难题上自带较大梯度,但训练效率仍受限。我们先训简单、再逐渐过渡到难题:RL 初期模型解不动难题,把算力丢去也只能得到很少的正样本。我们的数据天然带年级 / 难度标签,这个采样改造起来不要太轻松。</p>
+            <p><strong>Prioritized Sampling(优先采样)。</strong>在课程采样之外,我们追踪每道题的成功率 $s_i$,以正比 $(1-s_i)$ 的概率重采样,把算力倾向"模型最弱的地方"。</p>
+            <p><strong>Coding 自动造测试用例。</strong>很多网上代码题没有公开测试用例。我们用 <em>CYaRon</em> 自动生成:把 CYaRon 的用法说明 + 题面喂给 base Kimi k1.5,每题先生成 50 个测试用例;再随机抽 10 份 ground-truth 提交;若 $\geq 7/10$ 份输出一致则该测试用例<em>有效</em>;若 $\geq 9/10$ 份提交能通过所有筛选后的测试用例,则该题入选训练集。统计:1,000 道竞赛题里约 614 道不需要 special judge,我们做出 463 个每生成 $\geq 40$ 个有效用例的生成器,最终训练集纳入 323 道题。</p>
+            <p><strong>数学 reward modeling。</strong>同一答案常有多种等价写法(如 $a^2-4 = (a+2)(a-2)$)。我们做了两种 RM:</p>
+            <ul>
+              <li><strong>Classic RM</strong>:InstructGPT 风格的 value-head RM,约 80 万对数据;输入 = (题目、参考答案、响应),输出 = 标量。</li>
+              <li><strong>Chain-of-Thought RM</strong>:约 80 万带 CoT 标注的样本;RM <em>先生成一步步推理</em>,再以 JSON 格式给最终对错判定。</li>
+            </ul>
+            <p>人工抽检准确率:<em>Classic RM ≈ 84.4%,CoT RM ≈ 98.5%</em>。RL 训练采用 <strong>CoT RM</strong>——反馈干净得多。</p>
+            <p><strong>视觉数据。</strong>Vision-RL 数据三类:① 真实世界(分年级的理科题、定位猜地、图表分析);② 合成(程序化生成图像,如空间关系、几何图案、物体交互);③ text-rendered(把文本 / 代码 / 结构化数据渲染成图,让模型在"纯文本输入"与"图像化文本输入"之间响应一致)。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4d"></div>
+    </details>
+
+    <details class="sec" id="sec-4e" open>
+      <summary>
+        <span>§2.4 Long2Short / 长链转短链<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p>Long-CoT models burn more test-time tokens than vanilla short-CoT LLMs. But the <em>thinking priors</em> learned in a long-CoT model are transferable: a short-CoT model can be improved even under a limited token budget. We present four approaches:</p>
+            <ul>
+              <li><strong>Model Merging.</strong> Average the weights of a long-CoT model and a short-CoT model—no training. Empirically this preserves generalization and improves token efficiency.</li>
+              <li><strong>Shortest Rejection Sampling.</strong> For each prompt, sample $n=8$ responses and keep the <em>shortest correct</em> one for SFT. Leverages the large length variance of our model.</li>
+              <li><strong>DPO.</strong> Same setup as above—<em>shortest correct</em> = positive; longer responses = negative (both wrong-and-longer, and correct-but-$1.5\times$-longer-than-the-chosen-positive). These pairs form the preference data for DPO training.</li>
+              <li><strong>Long2Short RL.</strong> After standard RL, pick the model with best performance / token-efficiency trade-off as base, then run a <em>separate</em> long2short RL phase—apply the §2.3.3 length penalty and <em>cut max rollout length significantly</em> to additionally punish over-long but possibly correct responses.</li>
+            </ul>
+          </div>
+          <div class="zh">
+            <p>Long-CoT 模型推理时烧的 token 比普通 short-CoT 多。但 long-CoT 模型学到的<em>"思考先验"</em>是可迁移的:在有限 token 预算下,短 CoT 模型也能因此变强。我们给出四种 long2short 方法:</p>
+            <ul>
+              <li><strong>Model Merging。</strong>把一个 long-CoT 模型与一个 short-CoT 模型的权重<em>平均</em>——免训练。经验上既保留了泛化能力,又改善了 token 效率。</li>
+              <li><strong>Shortest Rejection Sampling。</strong>每道题采 $n=8$ 条响应,只留下<em>最短的正确响应</em>用于 SFT。这种方法吃的就是"我们模型对同一题的长度方差很大"这一观察。</li>
+              <li><strong>DPO。</strong>同样的多次采样设定下,<em>最短正确答案</em> = positive;更长的响应都作 negative(包括答错的长响应,以及"答对但比 chosen 正样本长 $1.5\times$"的响应)。由此构成 DPO 训练所需的 preference 对。</li>
+              <li><strong>Long2Short RL。</strong>在标准 RL 训练之后,挑一个"性能-token 效率"权衡最好的模型作为基础,然后<em>另起一段</em> long2short RL 阶段:开启 §2.3.3 的 length penalty,并<em>大幅压低 max rollout length</em>,以进一步惩罚"答对但太长"的响应。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4e"></div>
+    </details>
+
+    <details class="sec" id="sec-4f">
+      <summary>
+        <span>§2.5 Pretraining &amp; Vanilla SFT / 预训练与基础 SFT<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Pretraining.</strong> The Kimi k1.5 base model is trained on a diverse, high-quality multimodal corpus. Language data covers five domains—English / Chinese / Code / Mathematics Reasoning / Knowledge. Multimodal data spans captioning, image-text interleaving, OCR, knowledge, QA. Three-stage pretraining: ① <em>vision-language pretraining</em>—establish a strong language foundation, then gradually integrate multimodal data; ② <em>cooldown</em>—consolidate via curated + synthetic data (especially reasoning / knowledge); ③ <em>long-context activation</em>—extend sequence processing to <strong>131,072 tokens</strong>. Details in Appendix B.</p>
+            <p><strong>Vanilla SFT.</strong> For non-reasoning tasks (QA, writing, text processing) we build a seed dataset via human annotation, train a seed model, sample multiple responses per prompt, then have annotators rank and refine the top one. For reasoning (math, coding), where rule-based or RM-based verification beats human judgment, we use <em>rejection sampling</em> to scale up SFT data.</p>
+            <p>Vanilla SFT corpus ≈ <strong>1M text</strong> (500k general QA, 200k coding, 200k math/science, 5k creative writing, 20k long-context summarization/doc-QA/translation/writing) + <strong>1M text-vision</strong> (chart, OCR, image-grounded dialogue, visual coding, visual reasoning, vision-aided math/science). Training: 1 epoch at seq-len <strong>32k</strong> (LR $2\!\times\!10^{-5}\to 2\!\times\!10^{-6}$), then 1 epoch at seq-len <strong>128k</strong> (re-warm-up to $1\!\times\!10^{-5}$, decay to $1\!\times\!10^{-6}$). Examples are packed into single training sequences for efficiency.</p>
+          </div>
+          <div class="zh">
+            <p><strong>预训练。</strong>Kimi k1.5 基模型在多样且高质量的多模态语料上训练。语言数据覆盖五大域——英文 / 中文 / 代码 / 数学推理 / 知识。多模态数据覆盖 caption、图文交错、OCR、知识、QA。三阶段预训练:① <em>vision-language pretraining</em>——先打牢语言能力,再逐步混入多模态;② <em>cooldown</em>——用精选 + 合成数据巩固(尤其是推理 / 知识);③ <em>long-context activation</em>——将序列处理能力扩展到 <strong>131,072 tokens</strong>。细节见附录 B。</p>
+            <p><strong>Vanilla SFT。</strong>对于非推理任务(问答、写作、文本处理),我们先人工标注一份种子数据,训出种子模型;再用该种子模型对一批多样 prompt 各生成多条响应,由标注员排序并修整 top-1 得到最终版。对于数学 / 代码等推理任务,规则 / RM 验证比人工判断更准更快,我们用 <em>rejection sampling</em> 扩充 SFT 数据。</p>
+            <p>Vanilla SFT 语料 ≈ <strong>100 万文本</strong>(50 万通用问答 / 20 万代码 / 20 万数学&amp;科学 / 5k 创意写作 / 2 万长文摘要+doc-QA+翻译+写作)+ <strong>100 万文本-视觉</strong>(图表、OCR、图文对话、视觉代码、视觉推理、带图的数学&amp;科学题)。训练:先在 seq-len <strong>32k</strong> 上跑 1 个 epoch(LR $2\!\times\!10^{-5}\to 2\!\times\!10^{-6}$),再在 seq-len <strong>128k</strong> 上跑 1 个 epoch(重新 warm-up 到 $1\!\times\!10^{-5}$,然后衰减到 $1\!\times\!10^{-6}$)。为提升效率,把多条样本打包到同一训练序列里。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4f"></div>
+    </details>
+
+    <details class="sec" id="sec-4g" open>
+      <summary>
+        <span>§2.6 RL Infrastructure &amp; Partial Rollouts / RL 基础设施<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Iterative synchronous RL system.</strong> Inspired by AlphaGo / AlphaStar / OpenAI Dota Five, k1.5's RL training is an iterative synchronous loop: each iteration = rollout phase + training phase. A central <em>master</em> coordinates <em>rollout workers</em> (generate trajectories), <em>trainer workers</em> (gradient updates), <em>reward models</em> (Code, Math, K-12, Vision domains) and the <em>replay buffer</em>. A dedicated <em>code-execution service</em> validates code outputs in real environments. Figure 3a shows the topology.</p>
+            <p><strong>Partial Rollouts—the core trick for long-CoT RL.</strong> We set a fixed output-token budget per rollout. If a trajectory exceeds the cap, the unfinished portion is saved to the replay buffer and <em>continued in the next iteration</em>. Three benefits:</p>
+            <ul>
+              <li>No single mega-trajectory monopolizes the system's compute.</li>
+              <li>Rollout workers operate <em>asynchronously</em>&mdash;while some chew on long trajectories, others process new, short tasks; everyone stays busy.</li>
+              <li>Only the <em>current</em> segment (iter $n$) needs on-policy compute; previous segments (iter $n{-}m$ to $n{-}1$) are reused straight from the buffer. During training, some segments can even be excluded from the loss to further reduce off-policy bias.</li>
+            </ul>
+            <p>Partial rollouts also include <em>repeat detection</em>: identify and early-terminate repeated sequences; detected repetitions get extra penalties to discourage redundant generation in the prompt set.</p>
+            <p><strong>Hybrid deployment of training &amp; inference.</strong> The training process has three phases:</p>
+            <ul>
+              <li><em>Training phase</em>: Megatron and vLLM run in separate containers wrapped by a shim <em>checkpoint-engine</em>. Megatron trains; when done, it offloads GPU memory and prepares to ship weights to vLLM.</li>
+              <li><em>Inference phase</em>: vLLM starts with dummy weights, then pulls the latest weights from Megatron via <strong>Mooncake</strong>. After rollout, checkpoint-engine halts vLLM.</li>
+              <li><em>Next training phase</em>: vLLM's memory released; Megatron onloads and trains again.</li>
+            </ul>
+            <p>We use Kubernetes <em>Sidecar</em> containers to share all available GPUs and co-locate training + inference in one pod. Benefits: no train-side idling while waiting for inference nodes; train/infer images iterate independently; framework-agnostic (not tied to vLLM). End-to-end transition: <strong>&lt;1 min train&rarr;infer, ~10 s infer&rarr;train</strong>.</p>
+            <p><strong>Checkpoint Engine.</strong> Manages vLLM's lifecycle via HTTP APIs; consistency is broadcast through an etcd-managed global metadata system. Fully releasing GPU memory via vLLM offload is hard (CUDA graphs, NCCL buffers, NVIDIA drivers), so we just kill and restart vLLM when needed. Megatron converts owned checkpoints to HuggingFace format in shared memory (collapsing PP/EP into TP-only), then shards and registers them in the global metadata; <strong>Mooncake</strong> transfers checkpoints between peer nodes over <strong>RDMA</strong>.</p>
+            <p><strong>Code Sandbox.</strong> Secure environment for executing user-submitted code; supports MultiPL-E, DMOJ Judge Server, Lean, Jupyter Notebook etc. by dynamic image switching. Optimizations: ① <em>crun</em> as container runtime (faster startup vs Docker); ② <em>cgroup reuse</em>—pre-create cgroups to avoid per-container creation cost under high concurrency; ③ <em>tmpfs-backed overlay filesystem</em> for ephemeral workloads. Benchmarks: container startup <strong>0.04s (sandbox) vs 0.12s (Docker)</strong>; max containers/sec on a 16-core machine <strong>120 (sandbox) vs 27 (Docker)</strong>.</p>
+          </div>
+          <div class="zh">
+            <p><strong>迭代同步式 RL 系统。</strong>受 AlphaGo / AlphaStar / OpenAI Dota Five 启发,k1.5 的 RL 训练是迭代同步的:每轮 = rollout 阶段 + 训练阶段。中央 <em>master</em> 协调 <em>rollout workers</em>(跑轨迹)、<em>trainer workers</em>(梯度更新)、<em>reward models</em>(Code / Math / K-12 / Vision 四类)与 <em>replay buffer</em>。还有专门的 <em>code-execution service</em>,在真实环境里跑模型生成的代码做验证。拓扑见图 3a。</p>
+            <p><strong>Partial Rollouts——本工作 long-CoT RL 的核心 trick。</strong>我们给每条 rollout 设定固定 token 预算;若轨迹超长,把未完成的部分存进 replay buffer,<em>下一轮迭代继续生成</em>。带来三大好处:</p>
+            <ul>
+              <li>没有任何一条超长轨迹能霸占整个系统的算力。</li>
+              <li>Rollout workers 是<em>异步</em>的——有些 worker 在啃长轨迹时,其他 worker 可以独立处理新到的短任务;所有 worker 全程不闲。</li>
+              <li>只有<em>当前段</em>(iter $n$)需要 on-policy 计算;之前的段(iter $n{-}m$ 到 $n{-}1$)直接从 buffer 复用。训练时甚至可以把某些段从 loss 中剔除,以进一步压低 off-policy 偏差。</li>
+            </ul>
+            <p>Partial rollouts 还内置<em>重复检测</em>:识别并提前终止重复序列;对检测到的重复段加额外惩罚,从源头打消"凑字数"。</p>
+            <p><strong>Hybrid 部署:训练 + 推理共栈。</strong>RL 训练有三个阶段:</p>
+            <ul>
+              <li><em>训练阶段</em>:Megatron 与 vLLM 分别跑在独立容器中,被一个 shim 进程 <em>checkpoint-engine</em> 包住。Megatron 跑训练;训练结束后,offload 显存,准备把当前权重传给 vLLM。</li>
+              <li><em>推理阶段</em>:vLLM 用 dummy 权重启动,然后通过 <strong>Mooncake</strong> 从 Megatron 拉最新权重。rollout 跑完后,checkpoint-engine 关掉 vLLM。</li>
+              <li><em>下一轮训练</em>:vLLM 显存释放,Megatron onload 显存,再开训。</li>
+            </ul>
+            <p>我们用 Kubernetes <em>Sidecar</em> 容器共享 GPU,把训练与推理放进同一个 pod。好处:① 不会出现"训练节点闲等推理节点"的情况;② 训练镜像与推理镜像可分别迭代;③ 框架无关——不锁死在 vLLM 上。端到端切换:<strong>训练 → 推理 &lt; 1 分钟,推理 → 训练 ≈ 10 秒</strong>。</p>
+            <p><strong>Checkpoint Engine。</strong>管理 vLLM 进程的生命周期,提供 HTTP API;一致性由 etcd 全局元数据系统广播。由于 CUDA graphs / NCCL buffers / NVIDIA 驱动的限制,vLLM offload 很难完全释放 GPU 显存——所以我们干脆"用完就杀,要用再拉",既省显存又增容错。Megatron 的 worker 在共享内存里把 checkpoint 转成 Hugging Face 格式(把 PP / EP 折叠掉、只剩 TP),再分片注册到全局元数据系统;<strong>Mooncake</strong> 通过 <strong>RDMA</strong> 在节点间高速搬运 checkpoint。</p>
+            <p><strong>Code Sandbox。</strong>提供安全的用户代码执行环境,支持 MultiPL-E、DMOJ Judge Server、Lean、Jupyter Notebook 等(动态切镜像)。性能优化:① 用 <em>crun</em> 取代 Docker 做 container runtime(启动更快);② <em>cgroup 复用</em>——预创建 cgroup,避免高并发下"每容器都创建/销毁 cgroup"成为瓶颈;③ 上层挂 <em>tmpfs</em> 的 overlay 文件系统,适合 ephemeral 任务。Benchmark:容器启动时间 <strong>sandbox 0.04s vs Docker 0.12s</strong>;16 核机器每秒可启动容器数 <strong>sandbox 120 vs Docker 27</strong>。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="4g"></div>
+    </details>
+
+    <details class="sec" id="sec-6" open>
+      <summary>
+        <span>§3 Experiments / 实验<span class="sec-page">p.11</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Evaluation setup.</strong> k1.5 is multimodal, so benchmarks span three families: <em>Text</em>—MMLU, IF-Eval, CLUEWSC, C-EVAL; <em>Reasoning</em>—HumanEval-Mul, LiveCodeBench, Codeforces, AIME 2024, MATH-500; <em>Vision</em>—MMMU, MATH-Vision, MathVista. Detailed setup in Appendix C.</p>
+            <p><strong>Long-CoT main results (Table 2).</strong> Through long-CoT SFT (§2.2) + vision-text joint RL (§2.3), the model's long-horizon reasoning improves dramatically. At test time, scaling compute via longer CoT further lifts performance to SOTA across modalities. Headline numbers: <strong>MATH-500 96.2</strong>, <strong>AIME 77.5</strong>, <strong>Codeforces 94 pct</strong>, <strong>MathVista 74.9</strong>—all matching or surpassing OpenAI o1.</p>
+            <p><strong>Short-CoT main results (Table 3).</strong> Combining vanilla SFT (§2.5.2) + RL (§2.3) + long2short distillation (§2.4) gives a short-CoT model that is competitive with or superior to the leading open / closed-source models. Headline numbers: <strong>MMLU 87.4</strong>, <strong>IF-Eval 87.2</strong>, <strong>CLUEWSC 91.7</strong>, <strong>C-Eval 88.3</strong>, <strong>MATH-500 94.6</strong>, <strong>AIME 60.8</strong>, <strong>LiveCodeBench 47.3</strong>, <strong>MathVista 70.1</strong>.</p>
+          </div>
+          <div class="zh">
+            <p><strong>评估设置。</strong>k1.5 是多模态模型,基准分三大类:<em>文本类</em>——MMLU、IF-Eval、CLUEWSC、C-EVAL;<em>推理类</em>——HumanEval-Mul、LiveCodeBench、Codeforces、AIME 2024、MATH-500;<em>视觉类</em>——MMMU、MATH-Vision、MathVista。详细设置见附录 C。</p>
+            <p><strong>Long-CoT 主结果(表 2)。</strong>通过 long-CoT SFT(§2.2)+ 视觉文本联合 RL(§2.3),长程推理能力大幅提升;再叠加 test-time compute scaling(让 CoT 更长),达到多模态 SOTA。亮眼数字:<strong>MATH-500 96.2</strong>、<strong>AIME 77.5</strong>、<strong>Codeforces 94 分位</strong>、<strong>MathVista 74.9</strong>——均与 OpenAI o1 持平或超越。</p>
+            <p><strong>Short-CoT 主结果(表 3)。</strong>vanilla SFT(§2.5.2)+ RL(§2.3)+ long2short 蒸馏(§2.4)的组合得到的 short-CoT 模型,在多任务上与最强开源 / 闭源模型可比或更优。亮眼数字:<strong>MMLU 87.4</strong>、<strong>IF-Eval 87.2</strong>、<strong>CLUEWSC 91.7</strong>、<strong>C-Eval 88.3</strong>、<strong>MATH-500 94.6</strong>、<strong>AIME 60.8</strong>、<strong>LiveCodeBench 47.3</strong>、<strong>MathVista 70.1</strong>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§3.3 Long-context scaling (Figure 5, 6).</strong> A mid-sized model is used to study RL scaling. As training iterations grow on math prompts, <em>both</em> response length and accuracy rise concurrently; harder benchmarks (AIME, OMNI-MATH500) show steeper length growth—the model "learns to think longer on harder problems." Figure 6 plots accuracy vs mean token length: strong positive trend (slopes $\sim 1.4\!\times\!10^{-5}$ to $4.2\!\times\!10^{-5}$). Our final k1.5 run scales to <strong>128k</strong> context and still gains on hard benchmarks.</p>
+            <p><strong>§3.4 Long2short (Figure 7).</strong> Compared methods: <em>k1.5-long</em>, <em>k1.5-short w/ RL</em> (long2short RL), <em>k1.5-short w/ DPO</em>, <em>k1.5-short w/ merge</em>, <em>k1.5-short w/ merge + RS</em>, <em>k1.5-shortest</em>. On AIME 2024 and MATH-500 (token-length vs accuracy Pareto), all k1.5 variants (orange) dominate other models (blue). <em>k1.5-short w/ RL</em>: AIME Pass@1 = <strong>60.8</strong> with only <strong>~3,272 tokens</strong> on average. <em>k1.5-shortest</em>: MATH-500 Pass@1 = <strong>88.2</strong> at a token budget similar to other short models. Conclusion: <strong>long2short RL has the highest token efficiency</strong> among DPO / model-merge / shortest-RS / RL.</p>
+            <p><strong>§3.5 Ablations.</strong> ① <em>Model size vs context length (Figure 8)</em>: a larger model starts ahead, but a smaller one catches up by training longer CoT; larger models still have better token efficiency overall. If you target peak performance, scale a larger model's context; if you're test-time-compute-constrained, train a smaller model with longer context. ② <em>Negative gradients matter (Figure 10)</em>: ReST (which only refines on best-of-N positive samples, no negative gradients) has worse sample complexity than our method, especially when generating long CoT—<em>negative gradients are crucial</em> for this regime. ③ <em>Curriculum sampling (Figure 9)</em>: warm up on the full uniform mix, then switch to hard-only at iter 24—significantly beats the uniform-sampling baseline; the model develops more robust reasoning by being progressively challenged.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§3.3 Long-context scaling(图 5、6)。</strong>用中等规模模型研究 RL scaling 规律。在数学 prompt 集上训练时,迭代次数增加,响应长度<em>和</em>精度都在涨;难题(AIME、OMNI-MATH500)长度涨得更陡——模型学会"在更难的题上想更久"。图 6 给"精度 vs 平均 token 长度"散点,呈强正相关(斜率约 $1.4\!\times\!10^{-5}$ 到 $4.2\!\times\!10^{-5}$)。最终 k1.5 跑到 <strong>128k</strong> 上下文,在难基准上仍持续提升。</p>
+            <p><strong>§3.4 Long2short(图 7)。</strong>对比方法:<em>k1.5-long</em>、<em>k1.5-short w/ RL</em>(long2short RL)、<em>k1.5-short w/ DPO</em>、<em>k1.5-short w/ merge</em>、<em>k1.5-short w/ merge + RS</em>、<em>k1.5-shortest</em>。在 AIME 2024 与 MATH-500 的"token 长度 vs 精度" Pareto 图上,所有 k1.5 系列(橘色)都压在其它模型(蓝色)之上。<em>k1.5-short w/ RL</em>:AIME Pass@1 = <strong>60.8</strong>,平均仅用 <strong>~3,272 tokens</strong>;<em>k1.5-shortest</em>:MATH-500 Pass@1 = <strong>88.2</strong>,token 数与其它 short 模型相当。结论:DPO / model-merge / shortest-RS / RL 四种方案里,<strong>long2short RL 的 token 效率最高</strong>。</p>
+            <p><strong>§3.5 Ablations。</strong>① <em>模型规模 vs 上下文长度(图 8)</em>:大模型起步领先,但小模型靠"训出更长 CoT"可追上;大模型整体 token 效率仍更好。要冲性能上限就 scale 大模型的上下文;test-time compute 有预算就训"小模型 + 长上下文"。② <em>负梯度的重要性(图 10)</em>:ReST(只在 best-of-N 正样本上拟合、不带负梯度)的样本复杂度明显劣于我们的方法,生成长 CoT 时更甚——<em>负梯度对这种场景至关重要</em>。③ <em>课程采样(图 9)</em>:先在均匀混合数据上 warm-up,第 24 轮切到"只训难题",显著超过 uniform sampling baseline;模型在"难度逐步加大"的过程中练出了更鲁棒的推理能力。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="6"></div>
+    </details>
+
+    <details class="sec" id="sec-7" open>
+      <summary>
+        <span>§4 Conclusions / 结论<span class="sec-page">p.15</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p>We presented the training recipe and system design of k1.5, our latest multi-modal LLM trained with RL. The central lesson from our practice: <strong>scaling context length is critical for continued improvement of LLMs.</strong> We achieved efficient long-context RL training via optimized learning algorithms plus infrastructure tricks like <em>partial rollouts</em>. Improving the efficiency and scalability of long-context RL further remains an open question.</p>
+            <p>Our second contribution is a combination of techniques for improved policy optimization: a long-CoT RL formulation, a variant of online mirror descent for robust optimization, sampling strategies, length penalty, and data-recipe optimization. We show that <em>long context scaling + better policy optimization</em> alone&mdash;<strong>no MCTS, no value functions, no process reward models</strong>&mdash;is enough for strong performance. Open directions: better credit assignment and less overthinking, without crippling exploration.</p>
+            <p>We also see promise in long2short methods, which substantially boost short-CoT model performance. Iteratively combining long2short with long-CoT RL is a way to squeeze even more token efficiency out of a given context budget.</p>
+          </div>
+          <div class="zh">
+            <p>本文展示了 k1.5 的训练菜谱与系统设计——我们最新的、用 RL 训练的多模态 LLM。最核心的一条经验:<strong>"上下文长度"的 scaling 是 LLM 继续进步的关键。</strong>我们靠优化后的学习算法 + <em>partial rollouts</em> 等基础设施 trick,让 long-context RL 训练跑得起来。如何进一步提升 long-context RL 的效率与可扩展性,是后续重要课题。</p>
+            <p>第二个贡献是组合的策略优化技术:long-CoT 下的 RL 公式、online mirror descent 的鲁棒变体、采样策略、length penalty、数据配方优化。我们证明仅靠<em>long context scaling + 更好的策略优化</em>——<strong>不需要 MCTS、不需要 value function、不需要 process reward model</strong>——就能拿到强性能。未来方向:更好的 credit assignment、减少 overthinking,但都不能伤害模型探索能力。</p>
+            <p>我们同样看到 long2short 方法的潜力——能显著抬升 short-CoT 模型。把 long2short 与 long-CoT RL 迭代地结合,可以在给定上下文预算下继续压榨 token 效率。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="7"></div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>References(略)<span class="sec-page">p.16</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p>References omitted from this bilingual reading-notes view. Full reference list is in the original PDF (e.g., Kaplan et al. 2020 on scaling laws; Hoffmann et al. 2022 Chinchilla; Ouyang et al. 2022 InstructGPT; Rafailov et al. 2024 DPO; Yang et al. 2024 model merging; Shoeybi et al. 2020 Megatron; Kwon et al. 2023 vLLM; Qin et al. 2024 Mooncake; Gulcehre et al. 2023 ReST; Jaech et al. 2024 OpenAI o1 system card; etc.).</p>
+          </div>
+          <div class="zh">
+            <p>References 在本双语阅读笔记视图中略去。完整参考文献见原始 PDF(如 Kaplan et al. 2020 scaling laws;Hoffmann et al. 2022 Chinchilla;Ouyang et al. 2022 InstructGPT;Rafailov et al. 2024 DPO;Yang et al. 2024 model merging;Shoeybi et al. 2020 Megatron;Kwon et al. 2023 vLLM;Qin et al. 2024 Mooncake;Gulcehre et al. 2023 ReST;Jaech et al. 2024 OpenAI o1 system card 等等)。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="8"></div>
+    </details>
+
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>Appendix<span class="sec-page">p.20</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>A Contributions.</strong> Research &amp; Development: Angang Du, Bofei Gao, Bowei Xing, Changjiu Jiang, Cheng Chen, Cheng Li, Chenjun Xiao, Chenzhuang Du, Chonghua Liao*, Congcong Wang, Dehao Zhang, Enming Yuan, Enzhe Lu, Flood Sung, Guokun Lai, Haiqing Guo, Han Zhu, Hao Ding, Hao Hu, Hao Yang, Hao Zhang, Haotian Yao, Haotian Zhao, Haoyu Lu, Hongcheng Gao, Huan Yuan, Huabin Zheng, Jingyuan Liu, Jianlin Su, Jianzhou Wang, Jin Zhang, Junjie Yan, Lidong Shi, Longhui Yu, Mengnan Dong, Neo Zhang, Ningchen Ma*, Qiwei Pan, Qucheng Gong, Shaowei Liu, Shupeng Wei, Sihan Cao, Tao Jiang, Weimin Xiong, Weiran He, Weihao Gao*, Weixiao Huang, Weixin Xu, Wenhao Wu, Wenyang He, Xianqing Jia, Xingzhe Wu, Xinran Xu, Xinyu Zhou, Xinxing Zu, Xuehai Pan, Yang Li, Yangyang Hu, Yangyang Liu, Yanru Chen, Yejie Wang, Yidao Qin, Yibo Liu, Yiping Bao, Yifeng Liu*, Yulun Du, Yuzhi Wang, Yuxin Wu, Y. Charles, Zaida Zhou, Zhaoji Wang, Zhaowei Li, Zheng Zhang, Zhexu Wang, Zhiqi Huang, Zhilin Yang, Zihao Huang, Ziyao Xu, Zonghan Yang, Zongyu Lin. Data Annotation: Chuning Tang, Fengxiang Tang, Guangda Wei, Haoze Li, Haozhen Yu, Jia Chen, Jianhang Guo, Jie Zhao, Junyan Wu, Ling Ye, Shengling Ma, Siying Huang, Xianghui Wei, Yangyang Liu, Ying Yang, Zhen Zhu. The listing of authors is in alphabetical order based on their first names. Names marked with an asterisk (*) indicate people who are no longer part of our team.</p>
+          </div>
+          <div class="zh">
+            <p><strong>A 贡献者名单。</strong>研发(Research &amp; Development):Angang Du, Bofei Gao, Bowei Xing, Changjiu Jiang, Cheng Chen, Cheng Li, Chenjun Xiao, Chenzhuang Du, Chonghua Liao*, Congcong Wang, Dehao Zhang, Enming Yuan, Enzhe Lu, Flood Sung, Guokun Lai, Haiqing Guo, Han Zhu, Hao Ding, Hao Hu, Hao Yang, Hao Zhang, Haotian Yao, Haotian Zhao, Haoyu Lu, Hongcheng Gao, Huan Yuan, Huabin Zheng, Jingyuan Liu, Jianlin Su, Jianzhou Wang, Jin Zhang, Junjie Yan, Lidong Shi, Longhui Yu, Mengnan Dong, Neo Zhang, Ningchen Ma*, Qiwei Pan, Qucheng Gong, Shaowei Liu, Shupeng Wei, Sihan Cao, Tao Jiang, Weimin Xiong, Weiran He, Weihao Gao*, Weixiao Huang, Weixin Xu, Wenhao Wu, Wenyang He, Xianqing Jia, Xingzhe Wu, Xinran Xu, Xinyu Zhou, Xinxing Zu, Xuehai Pan, Yang Li, Yangyang Hu, Yangyang Liu, Yanru Chen, Yejie Wang, Yidao Qin, Yibo Liu, Yiping Bao, Yifeng Liu*, Yulun Du, Yuzhi Wang, Yuxin Wu, Y. Charles, Zaida Zhou, Zhaoji Wang, Zhaowei Li, Zheng Zhang, Zhexu Wang, Zhiqi Huang, Zhilin Yang, Zihao Huang, Ziyao Xu, Zonghan Yang, Zongyu Lin。数据标注(Data Annotation):Chuning Tang, Fengxiang Tang, Guangda Wei, Haoze Li, Haozhen Yu, Jia Chen, Jianhang Guo, Jie Zhao, Junyan Wu, Ling Ye, Shengling Ma, Siying Huang, Xianghui Wei, Yangyang Liu, Ying Yang, Zhen Zhu。作者按名字首字母字母序排列。带星号(*)的姓名指已离开本团队的成员。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>B Pretraining.</strong> Reinforcement learning (RL) efficiency is closely tied to the performance of the underlying base model. Frontier models such as Gemini (Team et al. 2024) and Llama (Grattafiori et al. 2024) highlight the importance of pretraining data quality in achieving high performance. However, many recent open-source models lack full transparency regarding their data processing pipelines and recipes, creating challenges for broader community understanding. While we are not open-sourcing our proprietary model at this time, we are committed to providing a comprehensive disclosure of our data pipeline and methodologies. In this section, we focus primarily on the multimodal pretraining data recipe, followed by a brief discussion of the model architecture and training stages.</p>
+            <p><strong>B.1 Language Data.</strong> Our pretrain corpus is designed to provide comprehensive and high-quality data for training large language models (LLMs). It encompasses five domains: English, Chinese, Code, Mathematics &amp; Reasoning, and Knowledge. We employ sophisticated filtering and quality control mechanisms for each domain to ensure the highest quality training data. For all pretrain data, we conducted rigorous individual validation for each data source to assess its specific contribution to the overall training recipe. This systematic evaluation ensures the quality and effectiveness of our diverse data composition.</p>
+          </div>
+          <div class="zh">
+            <p><strong>B 预训练。</strong>强化学习(RL)的效率与底层 base model 的性能紧密耦合。前沿模型如 Gemini(Team et al. 2024)、Llama(Grattafiori et al. 2024)凸显了"预训练数据质量"对"达到高性能"的重要性。然而,许多近期的开源模型并未完全披露其数据处理流水线与配方,这给社区的更广泛理解带来了挑战。虽然我们目前不开源专有模型,但我们承诺会全面披露我们的数据流水线与方法论。本节我们重点讲多模态预训练的数据配方,然后简要讨论模型架构与训练阶段。</p>
+            <p><strong>B.1 语言数据。</strong>我们的预训练语料旨在为训练大语言模型(LLM)提供全面、高质量的数据,覆盖五大领域:英文、中文、代码、数学与推理、知识。我们对每个领域都使用了复杂的过滤与质量控制机制,以确保训练数据质量最高。对于所有预训练数据,我们对每个数据源都做了严格的单独验证,以评估其对整体训练配方的具体贡献。这种系统性评估确保了多元数据组合的质量与有效性。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>English and Chinese textual data:</strong> we developed a multi-dimensional quality filtering framework that combines multiple scoring methods to reduce individual biases and ensure comprehensive quality assessment. Our framework incorporates: (1) <em>Rule-based filtering:</em> domain-specific heuristics to remove duplicates, machine-translated text, and low-quality web scrapes; we also filter documents with excessive special characters, unusual formatting, or spam patterns. (2) <em>FastText-based classification:</em> we trained specialized FastText (Joulin et al. 2016; J. Li et al. 2024) models to identify content quality based on linguistic features and semantic coherence. (3) <em>Embedding-based similarity analysis:</em> using document embeddings (Jianlv Chen et al. 2024) we compute document-level similarity to remove near-duplicates while preserving semantically valuable variations. (4) <em>LLM-based quality assessment:</em> following (Penedo et al. 2024), we leverage LLMs to score documents on coherence, informativeness, and educational value. The final quality score is a combination of these individual scores; based on extensive empirical analysis we apply <strong>dynamic sampling rates</strong>—high-quality documents upsampled, low-quality downsampled.</p>
+            <p><strong>Code data:</strong> two categories. For pure code from code files we follow BigCode (R. Li et al. 2023; Lozhkov et al. 2024)—eliminate miscellaneous languages, rule-based cleaning, then rebalance via sampling: markup languages (JSON, YAML, YACC) downsampled; 32 major programming languages (Python, C, C++, Java, Go, …) upsampled. For text-code interleaved data from various sources, we use an <em>embedding-based recall</em> method to keep diversity and high quality.</p>
+            <p><strong>Math &amp; Reasoning data:</strong> mainly retrieved from web text and PDFs collected from public internet (Paster et al. 2023). Our general-domain text extraction and OCR had high false-negative rates on math content, so we built dedicated cleaning &amp; OCR models to <em>maximise math recall</em>, then a two-stage cleaning pipeline: (1) FastText for initial cleaning to drop most irrelevant data; (2) a fine-tuned LM to further clean the remainder, yielding high-quality math data.</p>
+            <p><strong>Knowledge data:</strong> meticulously curated to cover academic disciplines—academic exercises, textbooks, research papers, and general educational literature. A large portion is digitised through OCR processing, for which we have developed proprietary OCR models optimised for academic content (math formulas, special symbols). We annotate documents with multi-dimensional labels: (1) OCR quality metrics, (2) educational-value indicators, (3) document-type classification (exercises / theoretical materials / …). Documents are filtered by OCR quality thresholds (our framework specifically detects repetitive-text artefacts that indicate OCR failure); high educational-value documents are prioritised. Sampling strategy across document types is empirically determined; high-value subsets are upsampled, but other types are preserved at appropriate ratios to maintain diversity and generalisation.</p>
+          </div>
+          <div class="zh">
+            <p><strong>中英文文本数据:</strong>我们开发了一套<strong>多维质量过滤框架</strong>,组合多种评分方法以降低个体偏差、保证全面的质量评估。框架包含:(1)<em>基于规则的过滤:</em>领域专属启发式规则,去除重复内容、机翻文本、低质网页抓取,同时过滤掉特殊字符过多、格式异常、垃圾模式的文档;(2)<em>基于 FastText 的分类:</em>我们训练专用 FastText(Joulin et al. 2016;J. Li et al. 2024)模型,基于语言特征和语义连贯性来识别内容质量,帮助识别自然语言流畅、语法结构良好的文档;(3)<em>基于 embedding 的相似度分析:</em>使用文档 embedding(Jianlv Chen et al. 2024)计算文档级相似度,在保留有语义价值的"变体"前提下移除近重复文档,从而维持训练语料的多样性;(4)<em>基于 LLM 的质量评估:</em>仿照(Penedo et al. 2024),用 LLM 对文档的连贯性、信息量、潜在教育价值打分,这种方法尤其能捕捉简单方法漏掉的"细微质量信号"。每个文档的最终质量得分是上述分数的组合;基于大量经验分析,我们使用<strong>动态采样率</strong>——高质量文档 upsample,低质量文档 downsample。</p>
+            <p><strong>代码数据:</strong>分两类。来自代码文件的纯代码数据,我们遵循 BigCode(R. Li et al. 2023;Lozhkov et al. 2024)的方法,先剔除杂项语言、用规则清洗,再通过采样手段处理语言失衡:JSON / YAML / YACC 等 markup 语言 downsample,Python、C、C++、Java、Go 等 32 种主流编程语言 upsample,以保证均衡覆盖。对于来自不同数据源的<em>文本-代码交错</em>数据,我们用<strong>基于 embedding 的召回</strong>挑选高质量数据,既保多样性又保质量。</p>
+            <p><strong>数学与推理数据:</strong>主要从公开互联网采集的网页文本和 PDF 文档中检索(Paster et al. 2023)。我们一开始就发现通用文本抽取流程、数据清洗流程和 OCR 模型在数学领域的<strong>假阴性率</strong>很高,因此我们专门为数学内容开发了数据清洗流程和 OCR 模型,以"最大化数学数据召回"为目标。随后实施两阶段清洗:(1)用 FastText 模型做初步清洗,去掉大多数无关数据;(2)再用一个微调过的语言模型进一步清洗,得到高质量数学数据。</p>
+            <p><strong>知识数据:</strong>我们精心挑选以覆盖各学术学科——核心来自学术习题、教材、研究论文及一般教育类文献。其中相当一部分是经 OCR 处理数字化的;我们为此专门开发了针对学术内容(尤其是数学公式与特殊符号)的专有 OCR 模型。我们用内部语言模型给文档打多维标签:(1)OCR 质量指标(评估识别准确度);(2)教育价值指标(衡量教学相关性);(3)文档类型分类(如习题、理论材料等)。基于这些多维标注,我们实现了精细的过滤与采样流水线。首先,按 OCR 质量阈值过滤,我们的 OCR 质量评估框架特别关注 OCR 伪影、尤其是"重复文本模式"这种典型识别失败的标志。除了基本质量控制,我们还细致评估每篇文档的教育价值;教育相关性高、知识深度好的文档被优先采样,同时也在"理论深度"与"教学清晰度"之间保持平衡。最后,不同文档类型的采样策略经大量实验经验性确定;我们做隔离实验、识别出对模型知识获取贡献最大的子集并 upsample;同时也保留其他类型的合理比例,以确保多样性与泛化能力。这条数据驱动的方式帮助我们在"聚焦知识获取"与"广泛泛化"之间取得最佳折中。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>B.2 Multimodal Data.</strong> Our multi-modal pretraining corpus is designed to provide high-quality data that enables models to process and understand information from multiple modalities, including text, images, and videos. We curate high-quality data from five categories—<em>captioning, interleaving, OCR, knowledge, and general question answering</em>—to form the corpus. We developed several multi-modal data processing pipelines covering filtering, synthesis, and deduplication. Establishing an effective multi-modal data strategy is crucial during joint vision-language training, as it both preserves the LM's capabilities and facilitates alignment of knowledge across modalities.</p>
+            <p><strong>Caption data:</strong> provides fundamental modality alignment and broad world knowledge. We integrate open-source Chinese/English caption datasets (Schuhmann et al. 2022; S. Y. Gadre et al. 2024) plus substantial in-house caption data. Throughout training we <em>strictly limit synthetic caption proportion</em> to mitigate hallucination risk from insufficient real-world knowledge. We follow a rigorous QC pipeline that avoids duplication and maintains high image-text correlation; image resolution is varied during pretraining so the vision tower remains effective on both high- and low-resolution images.</p>
+            <p><strong>Image-text interleaving data:</strong> benefits multi-image comprehension, provides detailed knowledge for given images, enables longer multi-modal context learning, and helps maintain the LM's language abilities. We use open interleave datasets (Zhu et al. 2024; Laurençon et al. 2024) and constructed large-scale in-house data from textbooks, webpages, and tutorials. We further find <em>synthesising</em> interleaving data benefits multi-modal LLM performance while keeping text knowledge. Beyond standard filtering/dedup/QC, we apply a <strong>data reordering procedure</strong> to keep all images and text in the correct order.</p>
+            <p><strong>OCR data:</strong> diverse open-source + in-house datasets, both clean and augmented images. We built substantial in-house OCR datasets covering multilingual text, dense layouts, web-based content, handwritten samples. Following OCR 2.0 (H. Wei et al. 2024), we also handle figures, tables, geometry diagrams, mermaid plots, and natural scene text. Extensive data augmentation (rotation, distortion, colour adjustments, noise) is applied for robustness; the model achieves high OCR proficiency as a result.</p>
+            <p><strong>Knowledge data:</strong> analogous to text pretraining—assemble multi-modal knowledge from diverse sources. Carefully curated <em>geometry data</em> is vital for visual reasoning (interpreting abstract human-drawn diagrams). We adhere to a standardised taxonomy to balance categories and ensure source diversity. Multi-modal knowledge processing combines a layout parser and an OCR model; we also include filtered internet/external data. Because much of the corpus is internet-sourced, infographics can cause the model to focus only on OCR; we developed an additional pipeline to better capture pure textual information embedded in images.</p>
+            <p><strong>General QA data:</strong> we found that a substantial volume of high-quality QA datasets in pretraining offers significant benefits. We included rigorous academic datasets on grounding, table/chart QA, web agents, and general QA, plus a large in-house QA corpus. To balance difficulty and diversity we applied scoring models and meticulous manual categorisation.</p>
+          </div>
+          <div class="zh">
+            <p><strong>B.2 多模态数据。</strong>我们的多模态预训练语料旨在提供高质量数据,使模型能处理与理解来自多种模态的信息——文本、图像、视频。为此我们从五大类别精心挑选数据:<em>caption(图说)、interleaving(图文交错)、OCR(光学字符识别)、knowledge(知识)、general QA(通用问答)</em>,共同构成语料。在构建训练语料时,我们开发了多条多模态数据处理流水线,涵盖过滤、合成、去重。在视觉-语言联合训练阶段,建立有效的多模态数据策略至关重要——既能保留语言模型的能力,也能促进跨模态知识对齐。我们将各数据源详细介绍如下:</p>
+            <p><strong>Caption 数据(图说数据):</strong>为模型提供基础的模态对齐和广泛的世界知识。融入 caption 数据后,多模态 LLM 能以较高的学习效率获得更广的世界知识。我们整合了多种开源中英文 caption 数据集如(Schuhmann et al. 2022;S. Y. Gadre et al. 2024),并从多个来源收集了大量内部 caption 数据。然而整个训练过程中,我们<strong>严格限制合成 caption 的比例</strong>,以缓解"真实世界知识不足导致幻觉"的风险。对通用 caption 数据,我们遵循严格的质量控制流水线,避免重复、维持高图文相关性;我们在预训练中变换图像分辨率,确保视觉 tower 在高、低分辨率图像上都能保持有效。</p>
+            <p><strong>图文交错数据(image-text interleaving):</strong>在预训练阶段,模型从交错数据中受益良多——例如多图理解能力可由交错数据提升,交错数据通常提供"对应图像的详细知识",更长的多模态上下文学习能力也可由交错数据获得。此外,我们还发现交错数据对"维持模型的语言能力"也有正向贡献。因此,图文交错数据是我们训练语料的重要组成。多模态语料考虑了开源交错数据集如(Zhu et al. 2024;Laurençon et al. 2024),并基于教材、网页、教程等资源构建了大规模内部数据。进一步,我们还发现"合成"交错数据有利于多模态 LLM 的性能,同时保留文本知识。为确保每张图像的知识被充分学习,对所有交错数据,除标准过滤、去重和其他质量控制流水线外,我们还集成了一个<strong>数据重排序流程</strong>,以保持所有图像和文本的正确顺序。</p>
+            <p><strong>OCR 数据:</strong>光学字符识别(OCR)是把图像中的文本转换为可编辑格式的一种广泛采用的技术。在 k1.5 中,鲁棒的 OCR 能力被视为"更好对齐人类价值"的必要条件。因此我们的 OCR 数据来源多样,从开源到内部数据集都有,既包含干净图像也包含增强图像。除公开数据外,我们还自建了大量内部 OCR 数据集,覆盖多语种文本、密集文本布局、网页内容和手写样本。此外,遵循 OCR 2.0 的原则(H. Wei et al. 2024),我们的模型还能处理多种光学图像类型,包括 figures、tables、geometry diagrams、mermaid 图表和自然场景文字。我们应用了大量数据增强技术——如旋转、扭曲、颜色调整、加噪——以增强模型鲁棒性。最终模型在 OCR 任务上达到了很高的水平。</p>
+            <p><strong>知识数据:</strong>多模态知识数据的概念类似前文的文本预训练数据,区别在于这里聚焦"从多种来源汇集一个全面的人类知识库"以进一步增强模型能力。例如,我们数据中精心挑选的<em>几何数据</em>对培养"视觉推理能力"至关重要——让模型能解读人类绘制的抽象示意图。我们的知识语料遵循一种标准化的分类法,以平衡不同类别的内容、保证数据源多样。与文本语料类似(从教材、研究论文等学术材料获取知识),多模态知识数据通过 layout parser 加 OCR 模型来处理内容,同时我们也包含从互联网及其他外部资源过滤来的数据。由于相当一部分知识语料来自互联网材料,信息图(infographics)有时会让模型"只看 OCR 信息"。在这种情况下,只依赖基础 OCR 流水线会限制训练效果;为此我们开发了额外的流水线,能更好地捕获"嵌入在图像中的纯文本信息"。</p>
+            <p><strong>通用 QA 数据:</strong>训练过程中我们观察到,在预训练阶段加入大量高质量 QA 数据集会带来显著收益。具体而言,我们引入了严格的学术数据集,涵盖 grounding、表格 / 图表问答、网页 agent、通用 QA 等任务。此外,我们还编制了大量内部 QA 数据以进一步增强模型能力。为保持难度与多样性平衡,我们对通用问答数据集应用了评分模型与细致的人工分类,带来整体性能提升。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>B.3 Model Architecture.</strong> Kimi k-series models employ a variant of the Transformer decoder (Vaswani et al. 2017) that integrates multimodal capabilities alongside improvements in architecture and optimisation strategies, illustrated in Figure 11. These advancements collectively support stable large-scale training and efficient inference, tailored specifically to large-scale reinforcement learning and the operational requirements of Kimi users. Extensive scaling experiments indicate that most of the base model performance comes from improvements in the quality and diversity of the pretraining data. Specific details regarding model architecture scaling experiments lie beyond the scope of this report and will be addressed in future publications.</p>
+            <p><em>Figure 11: Kimi k1.5 supports interleaved images and text as input, leveraging large-scale reinforcement learning to enhance the model's reasoning capabilities.</em></p>
+            <p><strong>B.4 Training Stages.</strong> The Kimi k1.5 model is trained in three stages: the vision-language pretraining stage, the vision-language cooldown stage, and the long-context activation stage. Each stage focuses on a particular capability enhancement.</p>
+            <p><strong>Vision-language pretraining stage:</strong> the model is first trained solely on language data to establish a robust LM foundation, then gradually introduced to interleaved vision-language data to acquire multimodal capabilities. The visual tower is initially trained in isolation without updating LM parameters; then we unfreeze the LM layers and ultimately raise vision-text data proportion to 30%. Final mixtures and weights were determined through ablations on smaller models.</p>
+            <p><strong>Vision-language cooldown stage:</strong> the model is continued-trained with high-quality language and vision-language datasets. Empirically, <em>incorporating synthetic data during cooldown yields significant gains</em>, particularly in math reasoning, knowledge-based tasks, and code. English/Chinese cooldown sets are curated from high-fidelity subsets of the pretraining corpus. For math / knowledge / code, we adopt a hybrid: selected pretraining subsets augmented with synthetic content—generating QA pairs from existing math/knowledge/code corpora via a proprietary LM, with rejection sampling for quality (Yue, Qu, et al. 2023; D. Su et al. 2024). These synthesised QA pairs undergo comprehensive validation before being added.</p>
+            <p><strong>Long-context activation stage:</strong> k1.5 is trained with <em>upsampled long-context cooldown data</em> to handle extended sequences. We use <strong>40% full-attention data + 60% partial-attention data</strong>; full-attention data is part high-quality natural + part synthetic long-context Q&amp;A and summary; partial-attention data is uniform-sampled cooldown data. RoPE frequency (J. Su et al. 2024) is set to <strong>1,000,000</strong>. We gradually extend max sequence length from <strong>4,096 → 32,768 → 131,072</strong>.</p>
+          </div>
+          <div class="zh">
+            <p><strong>B.3 模型架构。</strong>Kimi k 系列模型采用 Transformer 解码器(Vaswani et al. 2017)的一个变体,在架构与优化策略上做了改进的同时集成多模态能力,如 Figure 11 所示。这些改进共同支持稳定的大规模训练与高效推理,专门面向大规模强化学习与 Kimi 用户的运营需求做了适配。大量的 scaling 实验表明,base model 性能的提升<strong>大部分</strong>来自预训练数据质量与多样性的提升。模型架构 scaling 实验的具体细节超出了本报告范围,将在后续论文中讨论。</p>
+            <p><em>Figure 11:Kimi k1.5 支持图文交错作为输入,借助大规模强化学习增强模型的推理能力。</em></p>
+            <p><strong>B.4 训练阶段。</strong>Kimi k1.5 模型分三阶段训练:<em>视觉-语言预训练阶段、视觉-语言 cooldown 阶段、long-context 激活阶段</em>。每个阶段都聚焦特定能力的增强。</p>
+            <p><strong>视觉-语言预训练阶段:</strong>本阶段先只用语言数据训练模型,打下稳健的语言模型基础;然后逐步引入图文交错的视觉-语言数据,获得多模态能力。视觉 tower 一开始单独训练、不更新语言模型参数,之后我们解冻语言模型层,最终把视觉-文本数据的比例提升到 30%。最终的数据混合比例与权重是通过小模型上的 ablation 研究决定的。</p>
+            <p><strong>视觉-语言 cooldown 阶段:</strong>第二阶段是 cooldown 阶段,模型继续在高质量语言与视觉-语言数据集上训练,以确保获得卓越性能。经过经验性研究我们观察到:在 cooldown 阶段引入<strong>合成数据</strong>带来显著的性能提升,尤其在数学推理、知识类任务、代码生成上。cooldown 数据集的英文与中文部分,从预训练语料的高保真子集中挑选。对于数学、知识、代码三个领域,我们采用混合方式——用选定的预训练子集 + 合成内容增强:具体做法是,我们以已有的数学、知识、代码语料为源材料,通过一个专有语言模型生成问答对,并用<em>拒绝采样</em>(rejection sampling)维持质量标准(Yue, Qu, et al. 2023;D. Su et al. 2024)。这些合成的 QA 对在加入 cooldown 数据集之前都经过了全面验证。</p>
+            <p><strong>Long-context 激活阶段:</strong>最后,在第三阶段,k1.5 使用 <em>upsample 后的 long-context cooldown 数据</em>训练,使其能处理超长序列并支持长上下文任务。为确保 base model 出色的长文本能力,我们 upsample 长上下文数据,并在 long-context 训练中使用 <strong>40% full-attention 数据 + 60% partial-attention 数据</strong>。full-attention 数据一部分来自高质量自然数据、一部分来自合成的长上下文 Q&amp;A 与摘要数据。partial-attention 数据来自 cooldown 数据的均匀采样。RoPE 频率(J. Su et al. 2024)设为 <strong>1,000,000</strong>。在本阶段,我们逐步扩展长度激活训练,把最大序列长度从 <strong>4,096 → 32,768 → 131,072</strong> 一步步拉长。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>C Evaluation Details — C.1 Text Benchmark.</strong></p>
+            <p><strong>MMLU</strong> (Hendrycks et al. 2020) covers 57 subjects in STEM, humanities, social sciences, and more, ranging from elementary to advanced professional difficulty; tests both world knowledge and problem-solving ability.</p>
+            <p><strong>IF-Eval</strong> (J. Zhou et al. 2023) evaluates LLMs' ability to follow verifiable instructions—500+ prompts like "write an article with more than 800 words". Note: due to a version shift, the IF-Eval number in Table 3 came from an intermediate model; we will update with final-model scores.</p>
+            <p><strong>CLUEWSC</strong> (L. Xu et al. 2020) is a coreference resolution task in the CLUE benchmark—determine whether a pronoun and a noun phrase in a sentence co-refer, data drawn from Chinese fiction books.</p>
+            <p><strong>C-EVAL</strong> (Y. Huang et al. 2023) is a comprehensive Chinese evaluation suite for assessing advanced knowledge and reasoning abilities of foundation models—13,948 multiple-choice questions across 52 disciplines and four difficulty levels.</p>
+            <p><strong>C.2 Reasoning Benchmark.</strong></p>
+            <p><strong>HumanEval-Mul</strong> is a subset of Multipl-E (Cassano et al. 2022). MultiPL-E extends HumanEval and MBPP to 18 languages; we choose HumanEval translations in 8 mainstream languages (Python, Java, C++, C#, JavaScript, TypeScript, PHP, Bash).</p>
+            <p><strong>LiveCodeBench</strong> (Jain et al. 2024) is a comprehensive contamination-free coding benchmark with live updates. We test short-CoT models on 2408-2411 (release v4) and long-CoT models on 2412-2502 (release v5).</p>
+            <p><strong>AIME 2024:</strong> the 2024 American Invitational Mathematics Examination competition—a prestigious, invitation-only contest for top US high-school students; tests advanced math skill and rigorous logical thinking.</p>
+            <p><strong>MATH-500</strong> (Lightman et al. 2023) is a comprehensive math benchmark with 500 problems across algebra, calculus, probability, etc.—tests computation + reasoning. Higher score = stronger math problem-solving.</p>
+            <p><strong>Codeforces</strong> is a well-known online judge platform; a popular testbed for long-CoT coding models. To achieve higher ranks in Div2/Div3 contests, we apply <em>majority voting</em> on code snippets generated by k1.5 long-CoT, using test cases also generated by the same model. The Codeforces ELO percentile was extracted from OpenAI Day 12 talk.</p>
+            <p><strong>C.3 Image Benchmark.</strong></p>
+            <p><strong>MMMU</strong> (Yue, Ni, et al. 2024) encompasses 11.5K multimodal questions from college exams/quizzes/textbooks, spanning Art &amp; Design, Business, Science, Health &amp; Medicine, Humanities &amp; Social Science, Tech &amp; Engineering.</p>
+            <p><strong>MATH-Vision (MATH-V)</strong> (K. Wang et al. 2024) is a curated collection of 3,040 high-quality math problems with visual contexts sourced from real math competitions—16 disciplines, 5 difficulty levels.</p>
+            <p><strong>MathVista</strong> (Lu et al. 2023) integrates challenges from a variety of math and visual tasks, requiring fine-grained, deep visual understanding plus compositional reasoning.</p>
+          </div>
+          <div class="zh">
+            <p><strong>C 评测细节 — C.1 文本基准。</strong></p>
+            <p><strong>MMLU</strong>(Hendrycks et al. 2020)覆盖 STEM、人文、社科等共 57 个学科;难度从小学到高级专业;同时测试"世界知识"与"问题解决能力"。</p>
+            <p><strong>IF-Eval</strong>(J. Zhou et al. 2023)是一个评估 LLM 对"可验证指令"遵循能力的基准——500+ 条 prompt,如"写一篇 800 字以上的文章"等。注意:由于版本变更,Table 3 中的 IF-Eval 数字来自一个中间模型,我们会根据最终模型更新分数。</p>
+            <p><strong>CLUEWSC</strong>(L. Xu et al. 2020)是 CLUE 基准中的指代消解任务——判断句中代词与名词短语是否同指,数据来自中文小说。</p>
+            <p><strong>C-EVAL</strong>(Y. Huang et al. 2023)是一个用于评估 foundation model 高阶知识与推理能力的综合中文评测套件——含 13,948 道选择题,覆盖 52 个学科、四个难度级别。</p>
+            <p><strong>C.2 推理基准。</strong></p>
+            <p><strong>HumanEval-Mul</strong> 是 Multipl-E(Cassano et al. 2022)的一个子集。MultiPL-E 把 HumanEval 与 MBPP 扩展到 18 种语言;我们选 8 种主流编程语言(Python、Java、C++、C#、JavaScript、TypeScript、PHP、Bash)的 HumanEval 翻译版本。</p>
+            <p><strong>LiveCodeBench</strong>(Jain et al. 2024)是一个综合、抗污染的代码任务评测基准,具备实时更新以防数据污染、跨多种编码场景的整体评估、高质量题目与测试,以及均衡的题目难度。我们用 2408-2411(release v4)题目测试 short-CoT 模型,用 2412-2502(release v5)题目测试 long-CoT 模型。</p>
+            <p><strong>AIME 2024:</strong>2024 年 AIME(American Invitational Mathematics Examination)的竞赛题目。AIME 是一项极具声望的、仅限受邀参加的数学竞赛,面向美国顶尖高中生,考察高阶数学功力和严谨的逻辑思维。</p>
+            <p><strong>MATH-500</strong>(Lightman et al. 2023)是一个综合数学基准,含 500 道题,涵盖代数、微积分、概率等多个数学主题——同时考察计算能力与数学推理。分数越高,数学问题解决能力越强。</p>
+            <p><strong>Codeforces</strong> 是著名的在线评测平台,也是评测 long-CoT 代码模型的流行测试场。为了在 Div2、Div3 比赛中获得更高排名,我们对 k1.5 long-CoT 模型生成的代码片段进行<em>多数投票</em>,所用测试用例也由同一模型生成。Codeforces ELO 评分的分位数取自 OpenAI Day 12 演讲。</p>
+            <p><strong>C.3 图像基准。</strong></p>
+            <p><strong>MMMU</strong>(Yue, Ni, et al. 2024)精选了来自大学考试、测验、教材的 11.5K 道多模态题目,覆盖六大学科领域:Art &amp; Design、Business、Science、Health &amp; Medicine、Humanities &amp; Social Science、Tech &amp; Engineering。</p>
+            <p><strong>MATH-Vision (MATH-V)</strong>(K. Wang et al. 2024)是一份精选数据集,含 3,040 道高质量、带视觉上下文的数学题,题目来源于真实数学竞赛,覆盖 16 个数学学科、按 5 个难度等级分级。该数据集提供了丰富多样的挑战,非常适合评测大型多模态模型的数学推理能力。</p>
+            <p><strong>MathVista</strong>(Lu et al. 2023)整合了多种数学与视觉任务的挑战,要求参与者既要展现细粒度、深度的视觉理解,又要进行组合式推理才能成功完成任务。</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-claude-note" data-sec-idx="9"></div>
+    </details>
+    
+  </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

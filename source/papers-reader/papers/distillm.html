@@ -1,0 +1,913 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DistiLLM: Towards Streamlined Distillation for Large Language Models · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2402.03898 · 23 页 · 0 张图</div>
+    <h1>DistiLLM: Towards Streamlined Distillation for Large Language Models</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W8</span>
+      <span>Distillation</span>
+      <span><a href="https://arxiv.org/abs/2402.03898" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2402.03898.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>DistiLLM 把 LLM 蒸馏整合成两个 streamlined 模块——① Skewed KL 散度(在 $p$ 与 $q_\theta$ 之间做凸混合 $\tilde q = \alpha p + (1-\alpha) q_\theta$ 再算 KL),用 $\alpha\!\approx\!0.1$ 同时压低梯度爆炸与经验估计误差;② Adaptive Off-policy 采样,用 replay buffer 缓存 student 生成 (SGO),并按 validation loss 动态升高 SGO 占比 $\phi$,既治了 MiniLLM 的 noisy feedback 又把 on-policy 的 5×~6× 训练时间砍回 1.5×~1.7×,在指令跟随上整体 2.5~4.3× 加速且 ROUGE-L / GPT-4 评测显著优于 MiniLLM 与 GKD。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li>
+          <strong>SKL 与 SRKL 公式(必默写)</strong>:Skewed Forward KL 定义为
+          $$D^{(\alpha)}_{\text{SKL}}(p,q_\theta) = D_{\text{KL}}\!\bigl(p\,\|\,\alpha p + (1-\alpha)q_\theta\bigr),$$
+          Skewed Reverse KL 为
+          $$D^{(\alpha)}_{\text{SRKL}}(p,q_\theta) = D_{\text{KL}}\!\bigl(q_\theta\,\|\,(1-\alpha)p + \alpha q_\theta\bigr).$$
+          其梯度系数 $-(1-\alpha)\,r_{p,\tilde q_\theta}$ 把分母从 $q_\theta\!\to\!0$ 救出来——既不像 FKL 那样在 student 把 mass 漏掉时炸,也不像 RKL 那样 mode-seeking 太狠;$\alpha\!=\!0.1$ 在<em>梯度尺度</em>与<em>经验 L2 误差</em>之间是凸最优。
+        </li>
+        <li><strong>Mode-seeking vs mode-covering</strong>:Forward KL($D_{\text{KL}}(p\|q)$)mode-covering——$q$ 必须覆盖 $p$ 的所有支撑,常导致 mode-averaging 与 over-smoothing;Reverse KL($D_{\text{KL}}(q\|p)$)mode-seeking——$q$ 缩到 $p$ 的某一峰,丢多样性。Skew 用混合分布<em>同时收紧两边</em>:SKL ≈ smoother forward,SRKL ≈ smoother reverse,$\alpha$ 越大越柔和,$\alpha\!=\!0$ 退化为原 KLD。</li>
+        <li><strong>Adaptive off-policy 采样</strong>:SGO 概率 $\phi$ 起初为 0,每次 validation loss $L_{\tilde t}$ 比 $L_{\tilde t-1}$ 升高超过 $\varepsilon$ 时,$\phi \leftarrow \min(\phi + 1/N_\phi, 1.0)$;同时 replay 写入率 $\lambda_R = \phi(1 - t/T)$ 随训练线性衰减(早期多用新 SGO 减 bias,后期靠 buffer 复用提样本效率)。这套设计同时缓解 MiniLLM 的"老师对自家 SGO 不熟、给错监督"和 GKD 的"每步都生成、慢得离谱"。</li>
+        <li><strong>训练稳定性 vs MiniLLM</strong>:MiniLLM 用 policy gradient 最小化 RKLD,需要老师 + 学生两份 forward,且对 RL 高方差敏感;DistiLLM 是<em>纯监督的 token 级 KL</em> + replay buffer,不走 RL,所以可以从<em>无预 SFT</em> 的 pretrained student 直接蒸(Table 6),且 ROUGE-L 在 Dolly/Self-Inst/Super-NI 上稳超 MiniLLM。</li>
+        <li><strong>Wall-clock 加速来源</strong>:① 不每步采样,SGO 由 $\phi$ 控制;② replay buffer 让一份 SGO 被多次复用;③ SKL 收敛更快(Fig. 6),允许早停。OLLaMA2-3B 上 DistiLLM 仅 1.6× naive KD 时间,而 MiniLLM/GKD 3~7×,总体 2.5~4.3× 加速。</li>
+        <li><strong>$\alpha$ 选择实操</strong>:消融显示 SKL 和 SRKL 都在 $\alpha\!=\!0.1$ 最佳;$\alpha$ 升到 0.5+ 时 SRKL 掉点比 SKL 厉害(SRKL 项里 $\alpha$ 出现在 $q_\theta$ 那侧,过大时损失退化为 $q_\theta$ 自熵)。</li>
+        <li><strong>与 GKD / Generalized JSD 的关系</strong>:JSD$^{(\beta)} = \beta\,\text{SKL}^{(\beta)}(p,q) + (1-\beta)\text{SKL}^{(1-\beta)}(q,p)$——只能用同一个 $\beta$ 同时控制两侧 skew,自由度比 DistiLLM 直接选 SKL 或 SRKL 少一截。</li>
+        <li><strong>Replay buffer 容量</strong>:1000 最优(Tab. 10);太小→过拟合 buffer,太大→里面是过期 SGO,off-policy bias 又起来。这与离线 RL 里的 buffer size 现象同源。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      skew KL,工程效果好
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+      <li><a href="#sec-4">§2 Background / 预备</a><span class="toc-page">p.2</span></li>
+      <li><a href="#sec-5">§3.1 Skew (Reverse) KLD / 斜偏 KL</a><span class="toc-page">p.4</span></li>
+      <li><a href="#sec-6">§3.2 Adaptive Off-policy / 自适应离线策略</a><span class="toc-page">p.5</span></li>
+      <li><a href="#sec-7">§4 Experiments / 实验</a><span class="toc-page">p.6</span></li>
+      <li><a href="#sec-8">§5–7 Analysis & Conclusion / 分析与结论</a><span class="toc-page">p.7</span></li>
+      <li><a href="#sec-9">References(片段)</a><span class="toc-page">p.10</span></li>
+    </ul>
+  </div>
+
+  <!-- 章节正文 -->
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(双语逐段对照)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary><span>Preamble<span class="sec-page">p.1</span></span></summary>
+      <div class="sec-content"><p>DISTILLM: Towards Streamlined Distillation for Large Language Models. Jongwoo Ko¹, Sungnyun Kim¹, Tianyi Chen², Se-Young Yun¹. ¹KAIST AI · ²Microsoft. <a href="https://github.com/jongwooko/distillm" target="_blank">github.com/jongwooko/distillm</a> · ICML 2024.</p></div>
+    </details>
+
+    <details class="sec" id="sec-2" open>
+      <summary><span>Abstract / 摘要<span class="sec-page">p.1</span></span></summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Knowledge distillation (KD) is widely used for compressing a teacher model to a smaller student model, reducing its inference cost and memory footprint while preserving model capabilities. However, current KD methods for auto-regressive sequence models (e.g., large language models) suffer from missing a standardized objective function. Moreover, the recent use of student-generated outputs to address training-inference mismatches has significantly escalated computational costs. To tackle these issues, we introduce DISTILLM, a more effective and efficient KD framework for auto-regressive language models. DISTILLM comprises two components: (1) a novel skew Kullback–Leibler divergence loss, where we unveil and leverage its theoretical properties, and (2) an adaptive off-policy approach designed to enhance the efficiency in utilizing student-generated outputs. Extensive experiments, including instruction-following tasks, demonstrate the effectiveness of DISTILLM in building high-performing student models while achieving up to 4.3× speedup compared to recent KD methods.</p>
+          </div>
+          <div class="zh">
+            <p>知识蒸馏(KD)被广泛用于把教师模型压缩成更小的学生模型,在保持模型能力的同时降低推理成本与显存占用。然而,当前面向自回归序列模型(例如大语言模型)的 KD 方法存在一个问题——<em>缺乏标准化的目标函数</em>。此外,近来为缓解训练-推理不匹配而采用的"学生自生成输出(SGO)"做法,把计算开销大幅推高。为应对这些问题,我们提出 DistiLLM——一种更有效、更高效的自回归语言模型 KD 框架。DistiLLM 由两个组件构成:(1)一种新的<em>斜偏 Kullback–Leibler 散度</em>(skew KL)损失,我们揭示并利用其理论性质;(2)一种<em>自适应 off-policy</em> 方法,用以提升 SGO 的使用效率。包含指令跟随任务在内的大量实验表明,DistiLLM 能训出高性能的学生模型,且相对近期 KD 方法实现最高 4.3× 的训练加速。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-3">
+      <summary><span>§1 Introduction / 引言<span class="sec-page">p.1</span></span></summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Recent advancements in auto-regressive language models (LMs) such as large language models (LLMs) have significantly improved the quality of text generation in a variety of generative tasks such as task-agnostic instruction-following tasks. This success is often attributed to the increased scale of training data and model parameters (e.g., 175B parameters for GPT-3). However, expanding the parameter count brings associated costs, limiting the deployment of these models due to either high inference costs or large memory footprints. Therefore, a crucial objective for the practical use of these high-capacity models is to compress them by reducing the number of parameters while preserving their performance to the greatest extent possible.</p>
+            <p>As the necessity of reducing the demands on computational resources becomes important, KD emerges as a promising method. It involves the transfer of knowledge from a teacher model with large capacity (i.e., LLMs) to a smaller student LM. Most approaches of KD have employed the Kullback–Leibler divergence (KLD) loss, enforcing the student model to generate outputs that mirror the teacher model's outputs on a fixed dataset. Such methods of KD have significantly enhanced the performance of student models, making them competitive with teacher models while increasing efficiency, especially for various classification tasks.</p>
+          </div>
+          <div class="zh">
+            <p>近来自回归语言模型(LM)、特别是大语言模型(LLM)的进展,在各类生成任务上——例如任务无关的指令跟随——显著提升了文本生成质量。这一成功通常被归因于训练数据规模与模型参数规模的扩张(例如 GPT-3 的 175B 参数)。然而,扩大参数量带来相应代价,要么推理成本高、要么显存占用大,限制了这些模型的部署。因此,要将这些大容量模型真正用起来,一个关键目标是<em>把它们压缩到更少参数,同时尽可能保留性能</em>。</p>
+            <p>随着降低算力需求变得越来越重要,KD 成为一种有前景的方法。它把一个大容量教师模型(即 LLM)的知识迁移到一个更小的学生 LM 上。大多数 KD 方法采用 Kullback–Leibler 散度(KLD)损失,强制学生模型在固定数据集上输出与教师模型分布一致的结果。这类 KD 方法显著提升了学生模型的性能,在各种分类任务上既与教师模型有竞争力又更高效。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>These approaches using KLD on fixed datasets, however, have two primary shortcomings in applying to auto-regressive LMs. First, using the KLD can lead to sub-optimal results. Given the complexity of generative tasks compared to classification tasks, this can result in the student distribution becoming overly smooth and consequently failing to fully capture the teacher distribution, or becoming overly concentrated in high-probability distributions. This issue—referred to as mode averaging or mode collapse—arises due to the asymmetric nature of the KLD. Second, the use of a fixed dataset in the training phase can cause a distribution mismatch between the sequences observed during training and those generated by the student in auto-regressive inference, leading to exposure bias problems.</p>
+            <p>Recent studies have explored various divergence losses or the incorporation of student-generated output (SGO) to address the existing problems. However, these methods often lack standardized objective functions and are less efficient due to the continuous SGO generation. For instance, Agarwal et al. employed on-policy distillation with SGOs, but it faces low sample efficiency and high generation time as it constantly prompts the student to produce new training sequences. Also, their experiments indicated the optimal divergence seems to be task-dependent, which requires additional efforts to inconveniently select a proper loss function. Gu et al. introduced a policy optimization method to minimize reverse KLD between student and teacher distributions, yet this also compromises training efficiency by requiring generation from both models in every iteration.</p>
+          </div>
+          <div class="zh">
+            <p>然而,这些"在固定数据集上做 KLD"的方法,用到自回归 LM 上有两大缺陷。其一,KLD 本身就可能导致次优结果。生成任务比分类任务复杂,KLD 会让学生分布<em>过度平滑</em>而无法完整刻画教师分布,或<em>过度集中</em>到高概率区域——这就是 <em>mode averaging / mode collapse</em>,根源是 KLD 的非对称性。其二,训练阶段使用固定数据集,会让"训练时看到的序列"和"推理时学生自回归生成的序列"产生分布不匹配,从而引发 exposure bias。</p>
+            <p>近来的工作要么尝试不同的散度损失,要么引入学生自生成输出(SGO)来缓解上述问题。但这些方法常常缺乏统一的目标函数,且因为要持续生成 SGO 而效率不高。例如 Agarwal 等人采用 on-policy 蒸馏 + SGO,但样本效率低、生成时间长——它不停地让学生再生成新的训练序列;且实验显示最优散度<em>依任务而异</em>,得额外费力挑损失函数。Gu 等人(MiniLLM)提出用策略梯度去最小化 student 与 teacher 之间的 RKLD,但每次迭代要从两个模型都生成一次,训练效率也被拖垮。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Contributions.</strong> In this paper, we introduce DISTILLM, featuring a novel skew KLD loss and an adaptive off-policy approach, focusing on both distillation effectiveness and training efficiency. We provide both theoretical and empirical evidence that the components of DISTILLM work well individually and synergistically with each other. Our detailed contributions include: <em>Skew KLD</em>—we focus on two key issues of existing objective functions for auto-regressive LMs: instability from potential gradient explosions in optimizing the KLD loss, and lack of emphasis on generalizability and convergence; we introduce skew KLD, optimized for stable gradients and minimal approximation errors. <em>Adaptive off-policy approach</em>—while using SGOs in KD is generally effective, it significantly increases training time; we propose an adaptive off-policy module for adaptively and efficiently leveraging SGOs. <em>Advanced performance and efficiency</em>—DISTILLM accomplishes SOTA performance for student LMs on various generative tasks, while achieving 2.5×∼4.3× training speedup compared to recent KD techniques (MiniLLM, GKD).</p>
+          </div>
+          <div class="zh">
+            <p><strong>贡献。</strong>本文提出 DistiLLM,核心是一种新的 skew KLD 损失与一种自适应 off-policy 方法,同时关注蒸馏效果与训练效率。我们在理论与实证两方面给出证据:DistiLLM 的各个组件单独都好用,组合起来还能<em>协同增效</em>。具体贡献包括:<em>Skew KLD</em>——我们关注现有自回归 LM 目标函数的两个关键问题:优化 KLD 时潜在的梯度爆炸导致的不稳定,以及对泛化性与收敛性的忽视;我们引入 skew KLD,在梯度稳定性与近似误差上同时做了优化。<em>自适应 off-policy 方法</em>——在 KD 中用 SGO 通常有效,但显著拖慢训练;我们提出一种自适应 off-policy 模块,自适应、高效地利用 SGO。<em>性能与效率双提升</em>——DistiLLM 在各类生成任务上为学生 LM 拿下 SOTA,相比近期 KD(MiniLLM、GKD)实现 2.5×~4.3× 训练加速。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-4">
+      <summary><span>§2 Background / 预备<span class="sec-page">p.2</span></span></summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">2.1 KD for Auto-regressive Generative LMs</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We provide preliminary information on the KD for auto-regressive generative LMs. Given a source and target sequence pair, denoted as $(x,y)$, KD minimizes divergence $D$ between the distributions of a fixed teacher model $p(y|x)$ and a parameterized student model $q_\theta(y|x)$. The training data pairs $(x,y)$ are either sampled from a fixed ground-truth dataset or from teacher-generated outputs. Conventionally, KLD, denoted as $D_{\text{KL}}$, is the most widely used loss in KD due to its simplicity and tractability. The sequence-level distillation using the KLD is accurately decomposed into a sum of token-wise distillation:</p>
+            <div class="bi-eq">$$D_{\text{KL}}(p, q_\theta) = \mathbb{E}_x\,\mathbb{E}_{y\sim p(\cdot|x)}\!\left[\log\frac{p(y|x)}{q_\theta(y|x)}\right] \quad (1)$$</div>
+            <div class="bi-eq">$$\approx \frac{1}{|\mathcal{D}|}\sum_{(x,y)\in\mathcal{D}} p(y|x)\log\frac{p(y|x)}{q_\theta(y|x)} \quad (2)$$</div>
+            <div class="bi-eq">$$= \frac{1}{|\mathcal{D}|}\sum_{x\in\mathcal{D}_X}\sum_{t}^{|y|}\sum_{y_t\in V} p(y_t\mid y_{<t},x)\,\log\frac{p(y_t\mid y_{<t},x)}{q_\theta(y_t\mid y_{<t},x)} \quad (3)$$</div>
+            <p>where $V$ is the vocabulary token set and $y_{<t} := (y_1, y_2, \ldots, y_{t-1})$ represents the sequence of tokens up to index $t{-}1$. We focus solely on tractable KLD, as other divergences like total variation distance (TVD) do not effectively decompose sequence-level distillation into token-level components. For training efficiency, our method utilizes the definition in Eq. (2), while Eq. (1) is used for theoretical analysis.</p>
+          </div>
+          <div class="zh">
+            <p>我们先给出自回归生成式 LM 的 KD 预备。给定源-目标序列对 $(x,y)$,KD 最小化教师分布 $p(y|x)$ 与参数化学生分布 $q_\theta(y|x)$ 之间的散度 $D$。训练样对 $(x,y)$ 要么从固定的 ground-truth 数据集采样,要么来自教师生成的输出。最常用的损失是 KLD($D_{\text{KL}}$),因其简单且可解析处理。基于 KLD 的序列级蒸馏可<em>精确分解</em>为 token 级蒸馏之和,如公式 (1)~(3) 所示。其中 $V$ 是词表 token 集,$y_{<t} := (y_1, y_2, \ldots, y_{t-1})$ 表示截至 $t{-}1$ 时刻的前缀序列。我们只关注 tractable 的 KLD,因为像 total variation distance(TVD)这类散度无法把序列级蒸馏漂亮地分解到 token 级。为训练效率,我们用公式 (2) 的定义训练;理论分析(Thm. 1)则用公式 (1) 的定义。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">2.2 Pitfalls of Existing Distillation</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Limitation of objective functions.</strong> The KLD objective in KD, primarily due to its asymmetric nature, often forces the student distribution to cover the entire support set of the teacher distribution, leading to significant limitations. This becomes evident when a sampled data point is included in the teacher distribution's support but falls outside the student distribution, i.e., $\exists (x,y)$ such that $p(y|x) \gg 0$ and $q_\theta(y|x) \approx 0$. The limitation becomes pronounced if the student model lacks the capacity to match all support sets of the teacher distribution accurately. Consequently, this results in the student model exhibiting a mode-averaging problem, where it learns an overly smooth distribution.</p>
+            <p>Recent studies have partially addressed this issue by applying the reverse KLD (RKLD), defined as $D_{\text{RKL}}(p, q_\theta) := D_{\text{KL}}(q_\theta, p)$, or generalized JSD by introducing an interpolation parameter $\beta \in [0,1]$:</p>
+            <div class="bi-eq">$$D^{(\beta)}_{\text{JSD}}(p, q_\theta) := \beta\,D_{\text{KL}}\!\bigl(p,\,\beta p + (1-\beta)q_\theta\bigr) + (1-\beta)\,D_{\text{KL}}\!\bigl(q_\theta,\,\beta p + (1-\beta)q_\theta\bigr). \quad (4)$$</div>
+            <p>These approaches have shown empirical success in auto-regressive LMs, but there is a need for systematic study to provide a standard distillation objective grounded in comprehensive theoretical and experimental analyses. The lack of such backing for these recently proposed objective functions leads to sub-optimal performance and task-dependent variability.</p>
+          </div>
+          <div class="zh">
+            <p><strong>目标函数的局限。</strong>KD 中的 KLD 目标因其<em>非对称</em>本质,往往迫使学生分布<em>覆盖整个教师支撑集</em>,带来显著问题。当某个采样点落在教师支撑内但学生分布几乎没有质量时——即 $\exists(x,y)$ 使 $p(y|x)\!\gg\!0$ 而 $q_\theta(y|x)\!\approx\!0$——这种限制就暴露出来。若学生模型容量不足以匹配教师的整个支撑集,问题更突出,结果就是 mode-averaging:学生学到一个过于平滑的分布,试图盲目覆盖教师的整个支撑。</p>
+            <p>近期工作部分缓解了这一问题:或用 reverse KLD(RKLD,$D_{\text{RKL}}(p, q_\theta) := D_{\text{KL}}(q_\theta, p)$),或用引入插值参数 $\beta\!\in\![0,1]$ 的 generalized JSD,如公式 (4)。这些做法在自回归 LM 上有经验上的成功,但仍需要系统性研究,在理论与实验上给出一个<em>标准的</em>蒸馏目标。缺乏这种背书,近期提出的目标函数会带来次优性能且<em>因任务而异</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Limitations of utilizing SGO.</strong> Previous KD methods for auto-regressive LMs have encountered a training-inference mismatch between the samples from fixed datasets that are used during training and those produced by the student model during inference. Recent studies explored addressing this challenge by prompting the student model to generate SGOs and then training from the feedback of the teacher model on these sequences. This approach addresses the mismatch by training the student model on its familiar, self-generated sequences. These efforts have significantly improved the performance of distilling LLMs.</p>
+            <p>Despite its effectiveness, we identify two main issues with the current utilization of SGO. First, teacher models may experience a distribution mismatch between their training data and unfamiliar or inaccurate SGOs, potentially leading to misguidance on $q_\theta$. Such a mismatch can result in the teacher model assigning low validation loss to incorrect but shorter generations and high validation loss to longer but correct ones. Second, generating SGOs for every iteration proves computationally inefficient. Across all experiments, irrespective of the maximum sequence length (ranging from 64 to 256) of SGOs or the model size (from GPT-2 to OpenLLaMA2-3B), the SGO generation accounts for a considerable portion of the total training time, reaching up to 80%.</p>
+          </div>
+          <div class="zh">
+            <p><strong>使用 SGO 的局限。</strong>以往的自回归 LM KD 方法存在训练-推理不匹配:训练时用固定数据集的样本,推理时却是学生模型自回归生成的序列。近期研究试图通过让学生生成 SGO、再由教师对其打分来缓解这一问题——让学生在它<em>自己熟悉的、自生成的</em>序列上训练。这些努力显著提升了 LLM 蒸馏性能。</p>
+            <p>尽管有效,我们指出当前 SGO 使用方式的两个主要问题。第一,教师模型也可能对 SGO 不熟——教师训练数据与 SGO 之间出现分布失配,导致对 $q_\theta$ 的<em>错误指导</em>。这种失配会使教师把低验证 loss 给到<em>错但短</em>的生成,把高验证 loss 给到<em>长但对</em>的生成(Fig. 1)。第二,每轮迭代都生成 SGO 在计算上极其低效:无论最大序列长度从 64 到 256,无论模型规模从 GPT-2 到 OpenLLaMA2-3B,SGO 生成都占据总训练时长的相当大比例,最高可达 80%。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-5">
+      <summary><span>§3.1 Skew (Reverse) KLD / 斜偏 KL<span class="sec-page">p.4</span></span></summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We mathematically present our motivation that skewing such KLD is highly effective in improving the performance of student models with a more favorable optimization process. The definition of skew KLD (SKL) employs the parameter $\alpha$ that controls the mixing ratio of two distributions. The $\alpha$-SKL between $p$ and $q_\theta$ is defined as the KLD between $p$ and the mixture of distributions $\alpha p + (1-\alpha) q_\theta$:</p>
+            <div class="bi-eq">$$D^{(\alpha)}_{\text{SKL}}(p, q_\theta) = D_{\text{KL}}\!\bigl(p,\;\alpha p + (1-\alpha) q_\theta\bigr).$$</div>
+            <p>We similarly define the $\alpha$-SRKL by $D^{(\alpha)}_{\text{SRKL}}(p, q_\theta) = D_{\text{KL}}\!\bigl(q_\theta,\,(1-\alpha) p + \alpha q_\theta\bigr)$. Here, following our thorough analysis, we present a comprehensive insight suggesting that S(R)KL is superior to other loss functions, owing to its more stable gradient and smaller approximation error.</p>
+          </div>
+          <div class="zh">
+            <p>我们用数学论证一个动机:把 KLD <em>斜偏</em>(skew)一下能显著改善学生模型性能,且优化过程更友好。Skew KLD(SKL,Lee 2001)用一个参数 $\alpha$ 控制两个分布的混合比例。$p$ 与 $q_\theta$ 之间的 $\alpha$-SKL 定义为<em> $p$ 与混合分布 $\alpha p + (1-\alpha)q_\theta$ 之间的 KLD</em>,如上式。类似地,$\alpha$-SRKL 定义为 $D^{(\alpha)}_{\text{SRKL}}(p, q_\theta) = D_{\text{KL}}(q_\theta,\,(1-\alpha)p + \alpha q_\theta)$。基于充分的分析,我们给出一个综合论断:S(R)KL 优于其它损失函数,原因在于它的<em>梯度更稳</em>且<em>近似误差更小</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Stable gradient.</strong> To provide stable optimization of SKL, we first analyze the gradients of KLD and SKL to parameter $\theta$. Given a context-target sequence pair $(x,y)$, we define the gradient of KLD w.r.t. $\theta$:</p>
+            <div class="bi-eq">$$\nabla_\theta D_{\text{KL}}(p, q_\theta) = -r_{p, q_\theta}\,\nabla_\theta q_\theta(y|x), \quad (5)$$</div>
+            <p>where $r_{p_1, p_2}$ is the ratio between arbitrary distributions $p_1$ and $p_2$. The result is the model probability's negative gradient, weighted inversely by its value. If $q_\theta(y|x) \approx 0$, the gradient norm grows large, causing a significant, potentially noisy parameter update step. These ingredients can adversely affect gradient updates, impacting the optimization process. We now compute the gradient of SKL w.r.t. $\theta$:</p>
+            <div class="bi-eq">$$\nabla_\theta D^{(\alpha)}_{\text{SKL}}(p, q_\theta) = -\underbrace{(1-\alpha)\,r_{p,\tilde q_\theta}}_{\text{coefficient}}\,\nabla_\theta q_\theta(y|x), \quad (6)$$</div>
+            <p>where $\tilde q_\theta(y|x) = \alpha p(y|x) + (1-\alpha) q_\theta(y|x)$. SKL offers a reduced gradient norm compared to KLD, due to $p$ and $q_\theta$ interpolation preventing the denominator of $r_{p,\tilde q_\theta}$ from reaching zero. This results in a more stable gradient for SKL. The gradient analysis for RKLD and SRKL reveals similar trends:</p>
+            <div class="bi-eq">$$\nabla_\theta D_{\text{KL}}(q_\theta, p) = -(\log r_{q_\theta, p} + 1)\,\nabla_\theta q_\theta(y|x), \quad (7)$$</div>
+            <div class="bi-eq">$$\nabla_\theta D^{(\alpha)}_{\text{SKL}}(q_\theta, p) = -\underbrace{(\log r_{q_\theta, \tilde p} + 1 - \alpha\,r_{q_\theta, \tilde p})}_{\text{coefficient}}\,\nabla_\theta q_\theta(y|x),$$</div>
+            <p>where $\tilde p(y|x) = (1-\alpha) p(y|x) + \alpha q_\theta(y|x)$. As $\alpha$ becomes large, the coefficient is effectively small for both SKL and SRKL.</p>
+          </div>
+          <div class="zh">
+            <p><strong>稳定梯度。</strong>为说明 SKL 的稳定性,我们先分析 KLD 与 SKL 对参数 $\theta$ 的梯度。给定上下文-目标序列对 $(x,y)$,KLD 对 $\theta$ 的梯度如公式 (5),其中 $r_{p_1, p_2}$ 是两个分布的比值。结果是<em>模型概率的负梯度,反比加权于其概率值本身</em>。一旦 $q_\theta(y|x) \approx 0$,梯度范数就会变大,导致一次显著且可能带噪声的参数更新——这些因素都会损害优化过程。再看 SKL 对 $\theta$ 的梯度,如公式 (6),其中 $\tilde q_\theta(y|x) = \alpha p(y|x) + (1-\alpha) q_\theta(y|x)$。<em>$p$ 与 $q_\theta$ 的插值</em>保证 $r_{p,\tilde q_\theta}$ 的分母不会到零,SKL 因此比 KLD 拥有更小的梯度范数、更稳定的梯度。对 RKLD 和 SRKL 做同样的梯度分析,趋势一致——公式 (7) 与其下方公式,其中 $\tilde p(y|x) = (1-\alpha) p(y|x) + \alpha q_\theta(y|x)$。$\alpha$ 越大,SKL 与 SRKL 的系数都越小。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Small approximation error.</strong> We show that the empirical estimator of SKL from mini-batch training has a bounded $L^2$ norm. This bounded norm ensures rapid convergence with minimal error between the estimator and true divergence, yielding high generalizability.</p>
+            <p><em>Theorem 1.</em> Let $p^1_n$ and $p^2_n$ be empirical distributions of $n$ i.i.d. samples from $p^1$ and $p^2$. Under mild assumptions, we have an upper bound for the $L^2$ norm of the $\alpha$-SKL estimator:</p>
+            <div class="bi-eq">$$\mathbb{E}\!\left[\bigl|D^{(\alpha)}_{\text{SKL}}(p^1_n, p^2_n) - D^{(\alpha)}_{\text{SKL}}(p^1, p^2)\bigr|^2\right] \le \frac{c_1(\alpha)}{n^2} + \frac{c_2 \log^2(\alpha n)}{n} + \frac{c_3 \log^2(c_4 n)}{\alpha^2 n},$$</div>
+            <p>for $c_1(\alpha) = \min\{1/\alpha^2,\;\chi^2(p^1,p^2)^2/(1-\alpha)^2\}$ and positive constants $c_2, c_3, c_4$ independent of $n, \alpha$. Thm. 1 states that a large $\alpha$ lowers the $L^2$ norm between empirical and true objectives. However, considering the gradient scale reduction in Eq. (6)–(7), the benefit of a reduced $L^2$ norm is negated by compensating the reduced gradient scale. Overall, selecting $\alpha$ involves a trade-off: the relationship between the upper bound of the <em>normalized</em> $L^2$ norm and $\alpha \in [0,1]$ appears to be convex. Our experiments indicate that $\alpha$-SKL and $\alpha$-SRKL are most effective with $\alpha = 0.1$, surpassing KLD, RKLD, and JSD.</p>
+          </div>
+          <div class="zh">
+            <p><strong>较小的近似误差。</strong>我们证明 SKL 的 mini-batch 经验估计量具有<em>有界的 $L^2$ 范数</em>——这个有界性保证经验估计与真实散度之间的快速收敛和小误差,从而带来高泛化性。</p>
+            <p><em>定理 1。</em>设 $p^1_n, p^2_n$ 是从 $p^1, p^2$ 各采 $n$ 个 i.i.d. 样本得到的经验分布。在温和假设下,$\alpha$-SKL 估计量的 $L^2$ 范数上界如上式,其中 $c_1(\alpha) = \min\{1/\alpha^2,\;\chi^2(p^1,p^2)^2/(1-\alpha)^2\}$,$c_2, c_3, c_4$ 为与 $n, \alpha$ 无关的正常数。定理 1 表明 $\alpha$ 越大,经验估计与真实目标的 $L^2$ 范数越小。然而,考虑到公式 (6)–(7) 中梯度尺度也会随 $\alpha$ 缩小,$L^2$ 范数变小的好处会被现代优化器对小梯度的补偿抵消。综合来看,选择 $\alpha$ 是一个<em>折中</em>:对<em>归一化</em> $L^2$ 范数上界与 $\alpha \in [0,1]$ 的关系是凸的。我们的实验表明,$\alpha$-SKL 与 $\alpha$-SRKL 在 $\alpha = 0.1$ 时最佳,优于 KLD、RKLD 与 JSD。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary><span>§3.2 Adaptive Off-policy Approach / 自适应离线策略<span class="sec-page">p.5</span></span></summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In §2.2, we have discussed two main issues of naïvely using SGO: (1) the risk of noisy feedback due to the teacher model's unfamiliarity with the SGO and (2) the significant increase in training time. For instance, employing SGO at every training iteration (on-policy) can lead to a substantial increase in runtime, up to 5.5×, and may also result in performance degradation. To tackle these issues, we propose (1) an adaptive SGO scheduler to conservatively utilize SGO in KD, guided by the validation loss of student models, thus mitigating the risk of noisy feedback; and (2) an efficient off-policy strategy to improve the sample efficiency of SGO.</p>
+          </div>
+          <div class="zh">
+            <p>§2.2 已指出朴素使用 SGO 的两大问题:① 教师对 SGO 不熟,容易给出 noisy feedback;② 训练时间显著增加。例如<em>每步都生成 SGO</em>(on-policy)的设置,runtime 飙升至最多 5.5×,并可能反而拉低性能。为此,我们提出:① <em>自适应 SGO 调度器</em>,以学生模型的<em>验证损失</em>为指引,保守地使用 SGO,缓解 noisy feedback;② <em>高效 off-policy 策略</em>,提升 SGO 的样本效率。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Adaptive SGO scheduler.</strong> We define the probability of using SGOs, denoted as $\phi$. We apply SGOs with a probability of $\phi$, i.e., using samples from a fixed dataset with a probability of $1-\phi$. Unlike previous methods that maintain a consistently high $\phi$, our scheduler starts with low $\phi$ value, gradually increasing during training. This strategy prevents student models from being overwhelmed by noisy feedback. To manage the increase of $\phi$, we primarily rely on validation loss as a metric. Our observations indicate that training on a diverse range of SGOs, rather than solely on a fixed dataset, mitigates training-inference mismatch and consequently lowers validation loss. We adjust $\phi$ by comparing the current and previous validation losses; an increase in validation loss leads to an increase in $\phi$. Concretely, if $L_{\tilde t} > L_{\tilde t-1} + \varepsilon$, then</p>
+            <div class="bi-eq">$$\phi_{\tilde t} \leftarrow \min\!\Bigl(\phi_{\tilde t-1} + \tfrac{1}{N_\phi},\; 1.0\Bigr); \quad \text{otherwise } \phi_{\tilde t} \leftarrow \phi_{\tilde t-1}.$$</div>
+            <p>This method effectively improves student model performance by striking a balance between managing noisy feedback and minimizing training-inference mismatch issues.</p>
+          </div>
+          <div class="zh">
+            <p><strong>自适应 SGO 调度器。</strong>我们记使用 SGO 的概率为 $\phi$——每次以概率 $\phi$ 用 SGO、$1-\phi$ 用固定数据集。与以往工作维持一个<em>恒定较高</em> $\phi$ 不同,我们的调度器<em>从低开始,训练中逐步抬高 $\phi$</em>。这能避免学生在早期就被 noisy feedback 淹没。具体怎么涨?以<em>验证损失</em>为信号:我们观察到,在多样的 SGO(而不止固定集)上训练能缓解训练-推理不匹配,从而降低验证损失。我们比较当前与上一次验证损失,如果验证损失上升($L_{\tilde t} > L_{\tilde t-1} + \varepsilon$),就把 $\phi$ 抬一格,即上式;否则保持。这样在管理 noisy feedback 与缓解训练-推理不匹配之间达成平衡。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Off-policy approach for sample efficiency.</strong> To enhance efficiency, we replace the recently adopted on-policy approach with an off-policy approach, employing a replay buffer. In this buffer, we store SGOs from student models at a probability of $\lambda_R$. Subsequently, we randomly draw samples from this pool. We also replace the oldest samples of $\mathcal{D}_R$ with new ones once it reaches its maximum capacity. This off-policy strategy significantly improves the sample efficiency of KD with SGO, saving more resources than on-policy which constantly requires new data.</p>
+            <p>Off-policy reinforcement learning is prone to high bias error, particularly when there is a significant divergence between past and current policies. To address this, we set $\lambda_R := \phi\,(1 - t/T)$, where $t$ represents the current training iteration and $T$ is the total number of iterations. Define the replay ratio $\zeta := (1 - t/T)$:</p>
+            <div class="bi-eq">$$\lambda_R \;=\; \phi \cdot \zeta, \qquad \zeta := 1 - \tfrac{t}{T}.$$</div>
+            <ul>
+              <li><em>Early training phase</em> (small $\phi$): student parameters evolve rapidly, so we focus on current SGOs with a high replay ratio $\zeta$ to minimize bias error.</li>
+              <li><em>Late training phase</em> (larger $\phi$): student nears convergence, so we predominantly reuse stored SGOs from $\mathcal{D}_R$ with a small $\zeta$.</li>
+            </ul>
+            <p>Hence we consistently maintain a small $\lambda_R$ across the entire training, effectively balancing bias error reduction with sample efficiency.</p>
+          </div>
+          <div class="zh">
+            <p><strong>用 off-policy 提升样本效率。</strong>我们用 off-policy 方法替代近期的 on-policy:维护一个 <em>replay buffer $\mathcal{D}_R$</em>,以概率 $\lambda_R$ 把学生生成的 SGO 写入 buffer;每次从 buffer 中随机抽样;buffer 满后用新样本替换最旧的。off-policy 大幅提升带 SGO 的 KD 的样本效率——比"每步都生成新样本"的 on-policy 节省得多。</p>
+            <p>off-policy 强化学习容易出现<em>高偏差</em>:当过去策略与当前策略差距大时,用旧样本更新当前策略就次优。为此我们令 $\lambda_R := \phi\,(1 - t/T)$,$t$ 为当前迭代、$T$ 为总迭代数;定义 replay 比率 $\zeta := (1 - t/T)$,则 $\lambda_R = \phi\cdot\zeta$。设计哲学:</p>
+            <ul>
+              <li><em>训练前期</em>($\phi$ 小):学生参数变化快,我们用<em>高</em> $\zeta$ 多用<em>新鲜</em>的 SGO 来减小 bias;</li>
+              <li><em>训练后期</em>($\phi$ 大):学生接近收敛,我们用<em>小</em> $\zeta$ 多<em>复用</em> $\mathcal{D}_R$ 中的旧 SGO 提升样本效率。</li>
+            </ul>
+            <p>所以整个训练过程中 $\lambda_R$ 都被保持在一个较小值——<em>bias 减少</em>与<em>样本效率</em>得以兼顾。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Synergy with SKL.</strong> Off-policy approach's success stems from the fast convergence speed of S(R)KL while other loss functions cannot be achieved. As shown in our validation curves, both SKL and SRKL have a significant early-stage improvement, effectively leveraging the off-policy approach without high bias issues. This advantage is also evident in our ablation: unlike other baselines (ImitKD, GKD) that suffer performance drops when switching from on-policy to off-policy, our method maintains its efficacy. Consequently, our off-policy approach significantly improves the training efficiency with a negligible performance drop.</p>
+            <p>The full pipeline is summarized in <em>Algorithm 1</em>: at each iteration $t$, sample $u \sim \mathrm{Unif}(0,1)$; if $u < \lambda_R$, generate fresh SGO from $q_{\theta_t}$ and push into $\mathcal{D}_R$; if $u < \phi$, use a mini-batch from $\mathcal{D}_R$, otherwise from the fixed dataset $\mathcal{D}$; update $\theta_t$ with $D^{(\alpha)}_{\text{SKL}}$ or $D^{(\alpha)}_{\text{SRKL}}$; on validation step, run the SGO scheduler to update $\phi$.</p>
+          </div>
+          <div class="zh">
+            <p><strong>与 SKL 的协同。</strong>off-policy 方法之所以成功,关键在 S(R)KL 的<em>快速收敛</em>——其它损失函数做不到这点。验证曲线显示,SKL 与 SRKL 在训练早期就有显著改进,这让 off-policy 能被有效利用而不会出现 high bias 问题。消融也证实了这一优势:把 on-policy 换成 off-policy 后,ImitKD、GKD 等基线性能掉,但我们的方法保持不变。最终,off-policy 在<em>几乎不损失性能</em>的前提下显著提升了训练效率。</p>
+            <p>完整流程见 <em>Algorithm 1</em>:每步 $t$ 采 $u \sim \mathrm{Unif}(0,1)$;若 $u < \lambda_R$,从 $q_{\theta_t}$ 生成新 SGO 并写入 $\mathcal{D}_R$;若 $u < \phi$,从 $\mathcal{D}_R$ 抽 mini-batch,否则从固定数据集 $\mathcal{D}$ 抽;用 $D^{(\alpha)}_{\text{SKL}}$ 或 $D^{(\alpha)}_{\text{SRKL}}$ 更新 $\theta_t$;到验证步,跑 SGO scheduler 更新 $\phi$。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-7">
+      <summary><span>§4 Experiments / 实验<span class="sec-page">p.6</span></span></summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We evaluate DISTILLM on instruction-following, text summarization, and machine translation tasks. We apply DISTILLM with SRKL and the off-policy approach with initial probability as zero and replay buffer size of 1000 as SRKL with $\alpha$ of 0.1 as determined through our ablation studies. We compare our approach with previous KD: (1) SFT directly fine-tunes the student on fixed datasets; (2) KD (Hinton et al., 2015) uses KLD on fixed datasets; (3) SeqKD applies SFT to teacher-generated output; (4) ImitKD employs KLD on SGO; (5) MiniLLM utilizes a policy gradient approach on SGO; and (6) GKD uses JSD on a mixture of SGOs and a fixed dataset.</p>
+          </div>
+          <div class="zh">
+            <p>我们在指令跟随、文本摘要、机器翻译任务上评估 DistiLLM。配置为:SRKL + off-policy,初始概率 $\phi_0\!=\!0$,replay buffer 容量 1000,$\alpha\!=\!0.1$(均由消融决定)。与之比较的基线包括:① <em>SFT</em>——直接在固定数据集上微调学生;② <em>KD</em>(Hinton 等)——在固定数据集上用 KLD;③ <em>SeqKD</em>——把 SFT 用在教师生成的输出上;④ <em>ImitKD</em>——在 SGO 上用 KLD;⑤ <em>MiniLLM</em>——在 SGO 上做 policy gradient;⑥ <em>GKD</em>——在 SGO 与固定数据集的混合上用 JSD。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">4.1 Instruction-Following</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Implementation details.</strong> Our implementation follows the experiment setup of Gu et al. We first construct the training data from <code>databricks-dolly-15k</code>, wherein we randomly select 14K samples for training and equally leave 500 samples for validation and testing. We evaluate the trained models on five instruction-following benchmarks: Dolly evaluation, Self-Instruct, Vicuna evaluation, Super-Natural Instructions, and Unnatural Instruction. We add a language modeling loss to the OpenWebText corpus for all experiments. For evaluation, we adopt two metrics: ROUGE-L and GPT-4 feedback.</p>
+            <p><strong>Main results.</strong> Our results demonstrate DISTILLM's superiority to state-of-the-art methods, across diverse teacher-student combinations and evaluation metrics. Notably, GKD and MiniLLM, which recently incorporated SGO in distillation, are less effective or even lead to a performance decline in smaller-sized student models, particularly in GPT-4 feedback and some ROUGE-L scores. For evaluating DISTILLM on larger-sized LLMs, we utilize LoRA for training, with OpenLLaMA2-7B as the teacher and OpenLLaMA2-3B as the student. The results reveal that DISTILLM significantly surpasses other baseline methods in performance. While other supervised KD techniques are less effective than MiniLLM in LLM applications, DISTILLM uniquely achieves superior performance compared to MiniLLM. Moreover, DISTILLM requires only 1.6× the training time of naïve KD, whereas other methods take 3∼7×.</p>
+          </div>
+          <div class="zh">
+            <p><strong>实现细节。</strong>实现遵循 Gu 等(MiniLLM)的实验设置。训练数据来自 <code>databricks-dolly-15k</code>:随机抽 14K 做训练、各留 500 做验证与测试。在五个指令跟随基准上评估:Dolly evaluation、Self-Instruct、Vicuna evaluation、Super-Natural Instructions、Unnatural Instruction。所有实验都额外加一个对 OpenWebText 语料的语言建模损失。评测指标用 ROUGE-L 与 GPT-4 feedback。</p>
+            <p><strong>主要结果。</strong>DistiLLM 在不同教师-学生组合和评测指标上都显著优于 SOTA。值得注意的是,近期把 SGO 引入蒸馏的 GKD 与 MiniLLM,在<em>小学生</em>上反而效果欠佳甚至倒退,在 GPT-4 feedback 与部分 ROUGE-L 上掉点尤为明显。在更大 LLM 上,我们用 LoRA 训练,OpenLLaMA2-7B 当教师、OpenLLaMA2-3B 当学生,结果 DistiLLM 显著超过其它基线;在 LLM 上其它有监督 KD 方法都不如 MiniLLM,而 DistiLLM 反过来超过 MiniLLM。训练成本上,DistiLLM 仅需 naïve KD 的 1.6× 时间,而其它方法是 3~7×。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">4.2 Text Summarization and Machine Translation</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We evaluate the effectiveness of task-specific LMs on summarization and translation tasks using two datasets, SAMSum and IWSLT 2017. For SAMSum we use T5-XL v1.1 as the teacher model and T5-Base/-Small v1.1 as the student models. For IWSLT we employ mT5-XL as the teacher and mT5-Base/-Small as students. ROUGE-L (summarization) and BLEU (translation) scores show that DISTILLM outperforms other baselines, but with a smaller performance margin in single-task scenarios than in general-purpose instruction-following tasks. In SAMSum, students trained with ImitKD outperform those trained with GKD; in IWSLT, GKD outperforms ImitKD—consistent with prior findings that the effectiveness of objective functions and the use of SGO are task-dependent. Despite these variations, DISTILLM consistently shows superiority across different tasks, attributed to its adaptive use of the SGO scheduler and skew divergence.</p>
+          </div>
+          <div class="zh">
+            <p>我们在摘要(SAMSum)与翻译(IWSLT 2017)两个数据集上评估任务专用 LM 的效果。SAMSum:T5-XL v1.1 为教师,T5-Base/-Small v1.1 为学生;IWSLT:mT5-XL 为教师,mT5-Base/-Small 为学生。ROUGE-L(摘要)与 BLEU(翻译)显示 DistiLLM 都领先,但在<em>单任务</em>场景下的优势幅度比通用指令跟随小。在 SAMSum 中 ImitKD 训出的学生优于 GKD 训出的学生;在 IWSLT 中却是 GKD 优于 ImitKD——这与已有发现一致:<em>损失函数与 SGO 用法都因任务而异</em>。即便如此,DistiLLM 在不同任务上一贯领先——得益于自适应 SGO 调度器与 skew 散度的搭配。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary><span>§5–7 Analysis & Conclusion / 分析与结论<span class="sec-page">p.7</span></span></summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-sub">5.1 Effect of Skew Divergence</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We compare the performance of various models trained with different objective functions: conventional KLD, RKLD, and JSD with a $\beta$ of 0.9, as well as our SKL and SRKL with $\alpha$ of 0.1. The results show that our proposed objective functions generally outperform the others. Notably, both SKL and SRKL achieve remarkably high validation ROUGE-L scores during the entire training phase, consistently demonstrating the rapid convergence and strong generalization capabilities of our proposed loss functions. These empirical results verify our theoretical analysis and indicate that even our simple modification leads to significant performance enhancements.</p>
+          </div>
+          <div class="zh">
+            <p>我们用不同的目标函数训练相同模型并对比:传统 KLD、RKLD、$\beta\!=\!0.9$ 的 JSD,以及我们 $\alpha\!=\!0.1$ 的 SKL 和 SRKL。结果是我们提出的目标普遍胜出。值得注意的是,SKL 与 SRKL 在<em>整个训练过程</em>都保持很高的验证 ROUGE-L——一致地体现了我们的损失函数<em>收敛快、泛化强</em>。这些经验结果验证了 §3.1 的理论分析:这个看似简单的修改,带来的性能提升相当显著。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">5.2 Effect of Adaptive Off-policy Approach</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We compare adaptive off-policy with on-policy and a mixed strategy (on-policy with probability 0.5, fixed dataset otherwise). The results indicate that our adaptive SGO scheduler effectively balances the trade-off between the risk of noisy feedback and training-inference mismatch. Notably, while the baselines suffer from performance degradation when applying SKL, our proposed adaptive strategy consistently improves the performance for all datasets. Moreover, the off-policy approach leads to a minimal performance drop while significantly improving computational efficiency—achieving 2.2× to 3.4× faster training speed compared to the on-policy or mixed strategy. Replacing the on-policy in GKD and ImitKD with our off-policy method significantly hurts those baselines, validating the synergy of SKL and adaptive off-policy in DISTILLM.</p>
+          </div>
+          <div class="zh">
+            <p>我们把<em>自适应 off-policy</em> 与 on-policy 以及<em>混合策略</em>(以 0.5 概率 on-policy,其它从固定集采)对比。结果显示:自适应 SGO 调度器在<em>noisy feedback</em> 与 <em>训练-推理不匹配</em> 之间做了有效折中。值得注意的是,当切换到 SKL 损失时,baselines 性能下降,而我们的自适应策略在所有数据集上都稳定提升。此外,off-policy 在几乎不损失性能的前提下大幅提升计算效率——比 on-policy 或 mixed 快 2.2× 到 3.4×。把 off-policy 套到 GKD、ImitKD 上反而拉低它们的性能,这正反过来证明:<em>SKL × adaptive off-policy</em> 在 DistiLLM 里是协同的、不能拆开用。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">5.3 Additional Ablations</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Skew values $\alpha$.</strong> We empirically evaluate the performance of $\alpha$-SKL under a wide range of $\alpha$. Both SKL and SRKL achieve the best performance at $\alpha = 0.1$, highly consistent with the theoretical result where both normalized $L^2$ norms have the smallest values at $\alpha = 0.1$. SKL shows a mild performance reduction as $\alpha$ increases above 0.1, while SRKL's reduction is comparably severe. <strong>One-stage Distillation.</strong> A significant issue with previous KD methods using SGO is their reliance on beginning with fine-tuned student models. A key advantage of DISTILLM is its rapid convergence and the adaptive SGO scheduler, which eliminates the need for such fine-tuned student models. We evaluated the performance of students distilled from pre-trained parameters without any prior fine-tuning, and DISTILLM maintains efficiency with only a minor performance reduction—a feat not matched by other methods.</p>
+          </div>
+          <div class="zh">
+            <p><strong>Skew 值 $\alpha$。</strong>我们在大区间内消融 $\alpha$:SKL 与 SRKL 都在 $\alpha\!=\!0.1$ 最优,与理论分析高度一致(归一化 $L^2$ 范数在 $\alpha\!=\!0.1$ 最小)。$\alpha$ 抬过 0.1 之后,SKL 仅略掉点,SRKL 掉点则相对严重。<strong>One-stage 蒸馏。</strong>以往使用 SGO 的 KD 方法有一个常被忽视的问题——它们都依赖<em>先 SFT 过的</em>学生作为起点。DistiLLM 的一个关键优势是其<em>快速收敛 + 自适应 SGO 调度</em>,使我们可以直接从预训练参数开始蒸馏,无需先做 SFT。实验表明在这种 one-stage 设定下 DistiLLM 仍保持效率,性能仅有轻微下降——其它方法做不到这一点。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">6. Related Work</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>KD effectively compresses neural networks, allowing smaller student models to match the performance of larger teacher models. Recently, KD has been extended to compressing auto-regressive LMs to address the challenges posed by the large scale of current LLMs. One popular direction harnesses LLMs as supervising data generators where only the teacher predictions are accessible (e.g., ChatGPT APIs); these methods employ LLMs for guided annotations or for imparting reasoning capabilities. Another noteworthy approach, when the teacher model is accessible, entails matching the student's generation distribution with that of the teacher through divergence loss functions. ImitKD demonstrated the effectiveness of SGO in distillation, leading Agarwal et al. (GKD) to propose on-policy SGO with diverse objectives like RKLD and JSD. Wen et al. examined various $f$-divergences, while Gu et al. (MiniLLM) proposed a policy-gradient method addressing the high variance issues in RL-based methods. Building on this research, we introduce DISTILLM with comprehensive analysis in objective function and data utilization.</p>
+          </div>
+          <div class="zh">
+            <p>KD 能有效压缩神经网络,让小学生模型逼近大教师模型的表现。最近 KD 被扩展到压缩自回归 LM,以应对当前 LLM 规模带来的挑战。一条流行路线是把 LLM 当作监督数据生成器(只能拿到教师预测,如 ChatGPT API)——用 LLM 做指导性标注、或赋予推理能力。另一条值得关注的路线在教师可访问时,用<em>散度损失</em>把学生生成分布对齐到教师分布。ImitKD 展示了 SGO 在蒸馏中的有效性,激发了 Agarwal 等(GKD)提出 on-policy + 多目标(RKLD、JSD);Wen 等研究多种 $f$-散度;Gu 等(MiniLLM)用 policy gradient 解决 RL 方法的高方差。我们在这些研究之上,提出 DistiLLM,在<em>目标函数</em>和<em>数据使用</em>两端给出系统的分析。</p>
+          </div>
+        </div>
+
+        <div class="bi-sub">7. Conclusion</div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We have proposed DISTILLM to address the challenges of KD frameworks for auto-regressive LMs. Our approach incorporates two key components: (1) SKL which is based on mathematically in-depth analyses and empirical evidence; (2) an adaptive off-policy approach that enhances the utility of SGO by reducing the noisy feedback introduced by SGO and improving the sample efficiency with a replay buffer. Through extensive experiments on various generation tasks, we have demonstrated the superior performance of DISTILLM, achieving significant training efficiency and performance improvement.</p>
+          </div>
+          <div class="zh">
+            <p>我们提出 DistiLLM,以应对自回归 LM 的 KD 框架挑战。方法包含两个关键组件:① SKL——既有深入的数学分析,也有实证支持;② 自适应 off-policy 方法——通过 replay buffer 提升 SGO 的样本效率,同时降低 SGO 引入的 noisy feedback。在多种生成任务的大量实验中,我们展示了 DistiLLM 的领先性能——训练效率与最终表现都有显著提升。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-9">
+      <summary><span>References(片段)<span class="sec-page">p.10</span></span></summary>
+      <div class="sec-content"><p style="font-family: var(--mono); font-size: 12px; color: var(--text-faint);">参考文献从略;原文见 arxiv:2402.03898 第 10–14 页。常引参考:Agarwal et al. 2024 (GKD)、Gu et al. 2024 (MiniLLM)、Lin et al. 2020 (ImitKD)、Wen et al. 2023 (f-divergence KD)、Hinton et al. 2015 (KD)、Kim &amp; Rush 2016 (SeqKD)、Lee 2001 (Skew divergence)、Touvron et al. 2023 (LLaMA-2)。</p></div>
+    </details>
+
+  </div>
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>
