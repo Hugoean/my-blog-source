@@ -1,0 +1,1015 @@
+---
+layout: false
+---
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Don’t Stop Pretraining: Adapt Language Models to Domains and Tasks · 论文阅读</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- KaTeX 公式渲染(普适于所有论文笔记) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false}
+    ],
+    throwOnError: false,
+    ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  });"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --bg-card: #ffffff;
+    --bg-elev: #f0f3f6;
+    --border: #d0d7de;
+    --border-soft: #e4e7eb;
+    --text: #1f2328;
+    --text-dim: #4a525a;
+    --text-faint: #8b929a;
+    --accent: #b07700;
+    --learn: #1d4ed8;
+    --research: #6d28d9;
+    --exp: #c2410c;
+    --note: #15803d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Manrope', -apple-system, sans-serif;
+    --serif: 'Lora', Georgia, serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px;
+    line-height: 1.7; padding: 32px 24px 96px;
+    min-height: 100vh;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted; }
+  a:hover { border-bottom-style: solid; }
+  
+  /* ============ HEADER ============ */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px; margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.01em; line-height: 1.25;
+    margin-bottom: 12px;
+  }
+  .meta-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .meta-bar span {
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .meta-bar .track-A { color: var(--learn); border-color: rgba(96,165,250,0.3); }
+  .meta-bar .track-B { color: var(--research); border-color: rgba(167,139,250,0.3); }
+  .meta-bar .track-C { color: var(--exp); border-color: rgba(249,115,22,0.3); }
+  .meta-bar .prio-deep { color: #fca5a5; }
+  .meta-bar .prio-read { color: #fdba74; }
+  .meta-bar .prio-skim { color: #cbd5e1; }
+  
+  /* ============ NOTE PANEL (供 Claude 写阅读笔记) ============ */
+  .note-panel {
+    background: rgba(21, 128, 61, 0.05);
+    border: 1px solid rgba(21, 128, 61, 0.25);
+    border-left: 4px solid var(--note);
+    border-radius: 5px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .note-panel .note-label {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--note); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .note-panel .note-content { color: var(--text); line-height: 1.9; }
+  .note-panel .note-content p { margin-bottom: 10px; }
+  .note-panel .note-content ol, .note-panel .note-content ul { margin: 8px 0 10px 22px; }
+  .note-panel .note-content li { margin-bottom: 8px; }
+  .note-panel .note-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .note-panel .note-content strong { color: var(--note); }
+  .note-panel.empty .note-content::before {
+    content: "🤖 让 Claude 看完本页后,在此处填入: ①一句话总结 ②核心方法 ③图表导读 ④面试考点";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ TOC ============ */
+  .toc-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+  .toc-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .toc ul { list-style: none; padding-left: 0; }
+  .toc li {
+    padding: 3px 0;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc li a {
+    color: var(--text-dim); border-bottom: none;
+  }
+  .toc li a:hover { color: var(--accent); }
+  .toc-page {
+    color: var(--text-faint); font-size: 11px; margin-left: 6px;
+  }
+  
+  /* ============ FIGURE GALLERY ============ */
+  .figures-section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 16px;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .figure-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .figure-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .figure-card img {
+    width: 100%; height: 200px;
+    object-fit: contain; display: block;
+    background: #fff;
+    cursor: zoom-in;
+  }
+  .figure-meta {
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border-soft);
+  }
+  .figure-meta .fig-id {
+    color: var(--accent); font-weight: 700;
+  }
+  .figure-meta .fig-caption {
+    margin-top: 4px; color: var(--text-dim);
+    font-family: var(--sans); font-size: 12px;
+    line-height: 1.5;
+  }
+  .figure-explain {
+    padding: 12px 14px;
+    background: rgba(29, 78, 216, 0.04);
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px; color: var(--text);
+    line-height: 1.75; min-height: 30px;
+  }
+  .figure-explain p { margin-bottom: 6px; }
+  .figure-explain p:last-child { margin-bottom: 0; }
+  .figure-explain strong { color: var(--learn); }
+  .figure-explain code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .figure-explain:empty::before {
+    content: "🤖 让 Claude 看图后写解读: ①图说明什么 ②关键数据 ③启示";
+    color: var(--text-faint); font-style: italic;
+  }
+  
+  /* ============ SECTION (论文章节) ============ */
+  .paper-sections {
+    margin-bottom: 24px;
+  }
+  details.sec {
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  details.sec[open] {
+    border-color: var(--text-faint);
+  }
+  details.sec summary {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--bg-elev);
+    display: flex; justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    list-style: none;
+  }
+  details.sec summary::-webkit-details-marker { display: none; }
+  details.sec summary::after {
+    content: "▸"; color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+  details.sec[open] summary::after {
+    transform: rotate(90deg);
+  }
+  details.sec summary:hover { background: var(--bg-soft); }
+  .sec-page {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); font-weight: 400;
+    margin-left: 8px;
+  }
+  .sec-content {
+    padding: 20px 24px;
+    font-size: 15.5px; line-height: 1.85;
+    color: var(--text);
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .sec-content > p {
+    font-family: var(--serif); font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .sec-content > p:last-child { margin-bottom: 0; }
+  /* ============ 双语逐段对照 ============ */
+  .sec-content.bilingual { padding: 8px 4px 20px; }
+  .bi-section {
+    margin: 22px 24px 12px;
+    padding: 6px 0 4px;
+    font-size: 17px; font-weight: 800;
+    color: var(--learn);
+    border-bottom: 2px solid rgba(29, 78, 216, 0.25);
+    letter-spacing: -0.005em;
+  }
+  .bi-section:first-child { margin-top: 6px; }
+  .bi-sub {
+    margin: 16px 24px 8px;
+    font-size: 14.5px; font-weight: 700;
+    color: var(--research); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .bi-pair {
+    margin: 0 24px 18px;
+    padding: 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bi-pair > .en, .bi-pair > .zh {
+    padding: 16px 20px;
+    line-height: 1.9;
+    margin: 0;
+  }
+  .bi-pair > .en {
+    font-family: var(--serif); font-size: 15.5px;
+    color: var(--text);
+    background: #fcfcfd;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .bi-pair > .zh {
+    font-family: var(--sans); font-size: 15px;
+    color: var(--text);
+    background: rgba(29, 78, 216, 0.03);
+  }
+  .bi-pair > .en > p, .bi-pair > .zh > p { margin: 0 0 10px; }
+  .bi-pair > .en > p:last-child, .bi-pair > .zh > p:last-child { margin-bottom: 0; }
+  .bi-pair > .en::before {
+    content: "EN";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-faint); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: var(--bg-elev); border-radius: 3px;
+  }
+  .bi-pair > .zh::before {
+    content: "中";
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--learn); letter-spacing: 0.15em;
+    margin-bottom: 6px; padding: 1px 6px;
+    background: rgba(29, 78, 216, 0.08); border-radius: 3px;
+  }
+  .bi-eq {
+    margin: 4px 0 6px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .bi-eq .katex-display { margin: 4px 0 !important; }
+  .sec-claude-note {
+    margin: 14px 22px 18px;
+    font-family: var(--sans); font-size: 13.5px;
+    color: var(--text);
+  }
+  .sec-claude-note:empty::before {
+    content: "🤖 让 Claude 给这一节写中文摘要(可选)";
+    color: var(--text-faint); font-style: italic;
+  }
+  /* ============ 中文导读折叠块 ============ */
+  details.cn-note {
+    margin-top: 8px;
+    border: 1px solid rgba(29, 78, 216, 0.22);
+    border-left: 4px solid var(--learn);
+    border-radius: 5px;
+    background: rgba(29, 78, 216, 0.04);
+    overflow: hidden;
+  }
+  details.cn-note summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--learn); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.cn-note summary::-webkit-details-marker { display: none; }
+  details.cn-note summary::after {
+    content: "▸"; color: var(--learn);
+    transition: transform 0.2s;
+  }
+  details.cn-note[open] summary::after { transform: rotate(90deg); }
+  details.cn-note summary:hover { background: rgba(29, 78, 216, 0.08); }
+  .cn-content {
+    padding: 14px 18px 16px;
+    font-family: var(--sans); font-size: 14.5px;
+    line-height: 1.9; color: var(--text);
+    border-top: 1px solid rgba(29, 78, 216, 0.18);
+  }
+  .cn-content p { margin-bottom: 10px; }
+  .cn-content ul, .cn-content ol { margin: 6px 0 10px 24px; }
+  .cn-content li { margin-bottom: 6px; }
+  .cn-content code {
+    background: var(--bg-elev); padding: 2px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--exp);
+    border: 1px solid var(--border-soft);
+  }
+  .cn-content strong { color: var(--note); }
+  .katex { font-size: 1.02em !important; }
+  .katex-display { margin: 12px 0 !important; padding: 6px 0; }
+  
+  /* ============ LIGHTBOX(图片放大 + 解读文字 同框)============ */
+  .lightbox {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    padding: 32px;
+  }
+  .lightbox.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .lightbox-img-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    cursor: zoom-out;
+    min-height: 0;
+  }
+  .lightbox-img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  }
+  .lightbox-caption {
+    flex: 0 0 auto;
+    width: min(960px, 92%);
+    max-height: 38vh; overflow-y: auto;
+    background: #ffffff;
+    color: var(--text);
+    padding: 16px 22px;
+    border-radius: 8px;
+    border-left: 4px solid var(--learn);
+    font-size: 14px; line-height: 1.8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .lightbox-caption :first-child { margin-top: 0; }
+  .lightbox-caption p { margin: 0 0 8px; }
+  .lightbox-caption p:last-child { margin-bottom: 0; }
+  .lightbox-caption strong { color: var(--learn); }
+  .lightbox-caption code {
+    background: var(--bg-elev); padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 12px; color: var(--exp);
+  }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.12);
+    color: #fff; border: none; border-radius: 50%;
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+  .lightbox-meta {
+    flex: 0 0 auto;
+    color: rgba(255,255,255,0.7);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  
+  /* ============ BACK LINK ============ */
+  .back-link {
+    position: fixed; top: 16px; left: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12px;
+    z-index: 100;
+  }
+  .back-link:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← 返回目录</a>
+
+<div class="container">
+
+  <header>
+    <div class="eyebrow">arxiv:2004.10964 · 19 页 · 2 张图</div>
+    <h1>Don’t Stop Pretraining: Adapt Language Models to Domains and Tasks</h1>
+    <div class="meta-bar">
+      <span class="track-A">轨道 A</span>
+      <span class="prio-read">优先级 read</span>
+      <span>W3</span>
+      <span>CPT</span><span>Domain Adaptation</span>
+      <span><a href="https://arxiv.org/abs/2004.10964" target="_blank">原文 ↗</a></span>
+      <span><a href="https://arxiv.org/pdf/2004.10964.pdf" target="_blank">PDF ↗</a></span>
+    </div>
+  </header>
+
+  <!-- 阅读笔记面板(供 Claude 写一句话总结 / 面试考点) -->
+  <div class="note-panel" id="overview-note">
+    <div class="note-label">📝 论文一图速览(Claude Opus 4.7 填写)</div>
+    <div class="note-content" data-editable>
+      <p><strong>一句话总结:</strong>在已经很强的 RoBERTa 上,再做"领域自适应预训练"(DAPT,在领域无标语料上继续 MLM)与"任务自适应预训练"(TAPT,在任务自己的无标语料上继续 MLM),在 4 个领域 × 8 个分类任务上一致提升;两者互补、可叠加为 <code>RoBERTa → DAPT → TAPT</code>;且 TAPT 的算力远小于完整训练(单任务约为 DAPT 的 1/60),为今日的"继续预训练 / CPT"立了实证基线。</p>
+
+      <p><strong>🎯 面试考点(高频):</strong></p>
+      <ol>
+        <li><strong>DAPT vs TAPT 定义与流程</strong>:
+          <ul>
+            <li><em>DAPT</em>:在<em>领域</em>大规模无标语料上,继续做 MLM,目标 $\mathcal{L}_{\text{MLM}} = -\mathbb{E}\bigl[\log p_\theta(x_{\text{mask}}\mid x_{\backslash\text{mask}})\bigr]$,12.5K 步 ≈ 单 epoch,得到一个<em>领域 LM</em>,再去微调。</li>
+            <li><em>TAPT</em>:在<em>任务本身的无标训练集</em>上继续 MLM,跑 100 epoch + 动态重新 mask(masking probability 0.15),语料小但与任务同分布;先 DAPT 再 TAPT(<code>DAPT + TAPT</code>)效果最好。</li>
+          </ul>
+        </li>
+        <li><strong>何时该 DAPT / 何时该 TAPT(实证表)</strong>:
+          <ul>
+            <li>领域离 RoBERTa 预训练语料越远(BIOMED、CS),DAPT 增益越大(如 ACL-ARC: 63.0 → 75.4);贴近 RoBERTa 原语料的 NEWS / REVIEWS,增益小。</li>
+            <li>TAPT 在<em>所有 8 个任务</em>上都涨过 RoBERTa,甚至在 RCT、HYPERPARTISAN、AGNEWS、HELPFULNESS、IMDB 上单独 TAPT 超过 DAPT。</li>
+            <li>"反向 DAPT"(NEWS 任务用 CS LM 之类)会显著拉低性能,说明并非"喂更多数据就好",分布相关性才是关键。</li>
+            <li>Transfer-TAPT(用同领域<em>另一个任务</em>的 TAPT 模型)反而掉点 → 域内任务分布也不同,这是为什么 DAPT 不够、还需 TAPT。</li>
+          </ul>
+        </li>
+        <li><strong>curated TAPT data 选择 / VAMPIRE 检索</strong>:在没有人工 curated 任务语料的低资源场景下,用轻量 BoW 主题模型 <strong>VAMPIRE</strong> 把任务句子和 1M 领域句子嵌入到同一空间,对每条任务句子 kNN 检索领域中最像的 k 条(50/150/500),与 TAPT 数据合并继续预训练 → kNN-TAPT 一致优于 TAPT 与 RAND-TAPT,k 越大越接近 DAPT 的效果,但成本远低于 DAPT。Curated-TAPT(若任务标注者自留有大无标语料)直接拿来 TAPT,通常胜过 DAPT + TAPT。</li>
+        <li><strong>与 SFT 的边界</strong>:这里"adaptation"全部仍是<em>无监督 MLM 继续预训练</em>——只是改训练分布,不动监督目标;微调阶段才进入有标分类。这与今日 instruction-tuning / SFT(直接监督生成)是<em>不同阶段</em>:CPT 调表征 / 调先验,SFT 调行为。面试常被问"为什么 CPT 还需要,直接 SFT 不行?"→ 因为 SFT 数据更稀缺,且如果基模在该领域 MLM loss 仍很高,SFT 的初始化质量差,通常先 CPT 再 SFT 才稳。</li>
+        <li><strong>算力 vs 收益</strong>(Table 9 必记):RCT-500 任务上,TAPT 0.2K 步 / 80KB 语料 / 单 v3-8 TPU 几十分钟;DAPT 12.5K 步 / 47GB 语料 / 训练时间约 60 倍。kNN-TAPT 居中。性价比排序:Curated-TAPT > kNN-TAPT > TAPT 单跑 > DAPT > DAPT+TAPT(最强但最贵)。结论:DAPT 适合"一次训、多任务复用",TAPT 适合"按任务定制"。</li>
+        <li><strong>与现代 CPT 的延续关系</strong>:本文是 2020 年代继续预训练范式的奠基论文之一,后续 LLM 时代的<em>domain CPT</em>(BioMedLM、Code Llama、金融/法律 LLM)直接沿用 DAPT 套路;<em>task CPT</em> 演化为今日的 "mid-training" / "annealing" 阶段,在通用语料上再混入任务/能力相关语料(如代码、数学)。VAMPIRE-kNN 思路也演化为 DSIR、QuRating、DataComp-LM 等基于嵌入相似度的预训练数据选择方法。</li>
+        <li><strong>负面信号</strong>:"反向 DAPT" 在 SCIERC / ACL-ARC 上居然偶尔超过 RoBERTa → 提示"任何继续预训练都可能带来一些好处"(也呼应 Baevski 2019);但整体看,无关数据更常是有害的。Transfer-TAPT 全面掉点 → 同一领域的不同任务也不可互通,这一点对今日"通用 mid-training"的混合配比很有启发。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 学习卡片(关键信息) -->
+  <div class="toc-section">
+    <div class="toc-title">📌 我对这篇的学习方针</div>
+    <div style="font-family:var(--serif);font-style:italic;color:var(--text-dim);font-size:13.5px;">
+      CPT 理论依据,面试必问
+    </div>
+  </div>
+
+  <!-- 章节目录 -->
+  
+  <div class="toc-section">
+    <div class="toc-title">📚 章节目录</div>
+    <ul class="toc">
+
+      <li><a href="#sec-1">Preamble</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-2">Abstract / 摘要</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-3">§1 Introduction / 引言</a><span class="toc-page">p.1</span></li>
+
+      <li><a href="#sec-4">§3 Domain-Adaptive Pretraining (DAPT) / 领域自适应预训练</a><span class="toc-page">p.3</span></li>
+
+      <li><a href="#sec-5">§4 Task-Adaptive Pretraining (TAPT) / 任务自适应预训练</a><span class="toc-page">p.5</span></li>
+
+      <li><a href="#sec-6">§4.x Combining DAPT + TAPT / 组合 DAPT 与 TAPT</a><span class="toc-page">p.6</span></li>
+
+      <li><a href="#sec-7">§5 Augmenting Data for TAPT (Curated &amp; kNN-VAMPIRE) / 为 TAPT 增广数据</a><span class="toc-page">p.7</span></li>
+
+      <li><a href="#sec-8">§5.3 Computational Requirements / 算力代价</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-9">§6 Related Work / 相关工作</a><span class="toc-page">p.8</span></li>
+
+      <li><a href="#sec-10">§7 Conclusion / 结论</a><span class="toc-page">p.9</span></li>
+
+      <li><a href="#sec-11">References(略)</a><span class="toc-page">p.9</span></li>
+
+    </ul>
+  </div>
+  
+
+  <!-- 图表画廊 -->
+  
+  <div class="figures-section">
+    <h2 class="section-title">🖼 图表速览 (2 张) · 点击放大</h2>
+    <div class="figure-grid">
+      
+      <div class="figure-card" id="fig_1">
+        <img src="../figures/2004.10964_fig_1.png" alt="fig_1" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_1</span> · p.1 · 2328×1556</div>
+          <div class="fig-caption">Figure 1: An illustration of data distributions. Task data 嵌套在更大的 target domain 中,target domain 又与 LM 原预训练域部分重叠。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_1">
+          <p><strong>① 图说明:</strong>论文 Figure 1——两个圆锥(蓝色 <em>target domain</em>、橙色 <em>original LM domain</em>)的交叠示意。中间深色小椭圆是<em>可观察的 task 分布</em>(task 数据来自这里),它非随机地从更大的"目标领域"采样;而目标领域<em>不一定</em>是 RoBERTa 预训练所覆盖的领域之一,但存在交集。</p>
+          <p><strong>② 关键数据 / 对照:</strong>本文 Table 1 的 RoBERTa MLM loss 给出了"目标域与 RoBERTa 域的距离"的量化:BIOMED 1.32、CS 1.63、REVIEWS 2.10、NEWS 1.08,与 RoBERTa-PT 1.19 比,NEWS/REVIEWS 近、CS/BIOMED 远——恰好对应后续 DAPT 增益的大小排序。Figure 2 的词表重叠矩阵进一步佐证:PT-NEWS 54%、PT-REVIEWS 35%、PT-CS 27%、PT-BIOMED 19%。</p>
+          <p><strong>③ 启示:</strong>这张图把全文的两个继续预训练范式画在了同一空间——<strong>DAPT</strong> 是把模型从橙色域往蓝色域整体搬,<strong>TAPT</strong> 是直接对准中央那个小椭圆。它解释了为什么 DAPT 在偏远域(BIOMED/CS)收益更大、为什么 TAPT 在所有 8 个任务上都有效但不能跨任务迁移(同域不同任务对应不同的小椭圆),也为 §5 用 VAMPIRE-kNN <em>从 domain 里捞 task-邻居</em>提供直观依据。</p>
+        </div>
+      </div>
+
+      <div class="figure-card" id="fig_2">
+        <img src="../figures/2004.10964_fig_2.png" alt="fig_2" loading="lazy" onclick="openLightbox(this)">
+        <div class="figure-meta">
+          <div><span class="fig-id">fig_2</span> · p.7 · 1616×1212</div>
+          <div class="fig-caption">Figure 3: VAMPIRE 嵌入 → kNN-TAPT 自动数据选择示意。</div>
+        </div>
+        <div class="figure-explain" data-fig-id="fig_2">
+          <p><strong>① 图说明:</strong>论文 Figure 3——kNN-TAPT 的工作示意。左侧两句红色的 CHEMPROT(任务)句子和右侧 1M 蓝色 BIOMED(领域)句子,都被同一个轻量 BoW 主题模型 <strong>VAMPIRE</strong> 投影到共享向量空间;对每条任务句子做 k-近邻检索(图中红点紧邻的几颗蓝点),把这些"领域里最像任务"的句子合并进 TAPT 语料继续预训练。</p>
+          <p><strong>② 关键数据 / 对照:</strong>Table 8 显示 ACL-ARC 上 50NN-TAPT 70.7 / 150NN-TAPT 73.3 / 500NN-TAPT 75.5,几乎追平 DAPT 75.4,而成本远低(Table 9:DAPT 12.5K 步 / 25M docs / 47GB;500NN-TAPT 9.0K 步 / 185K docs / 24MB)。RAND-TAPT(同 50 个随机邻居)显著弱于 50NN-TAPT,说明<em>是邻居相似度而非数据量</em>带来收益。</p>
+          <p><strong>③ 启示:</strong>这是 2020 年版的"基于嵌入相似度的预训练数据选择",直接孕育了今日 DSIR、QuRating、DataComp-LM 等系列工作。两个工程要点:(i) 嵌入器必须够轻才能跑 1M 句子(选 VAMPIRE 而非 BERT);(ii) 用 FAISS flat index + cosine 相似度,k 越大越逼近 DAPT 但开销也变大——选择 k 是 task-relevance 与 diversity 的权衡。</p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <!-- 章节正文 -->
+
+  <div class="paper-sections">
+    <h2 class="section-title">📖 论文正文(中英双语对照,按章节折叠)</h2>
+
+    <details class="sec" id="sec-1">
+      <summary>
+        <span>Preamble<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content"><p>Don't Stop Pretraining: Adapt Language Models to Domains and Tasks. Suchin Gururangan, Ana Marasović, Swabha Swayamdipta, Kyle Lo, Iz Beltagy, Doug Downey, Noah A. Smith. Allen Institute for Artificial Intelligence; Paul G. Allen School of CSE, University of Washington.</p></div>
+    </details>
+    
+    <details class="sec" id="sec-2">
+      <summary>
+        <span>Abstract / 摘要<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Language models pretrained on text from a wide variety of sources form the foundation of today's NLP. In light of the success of these broad-coverage models, we investigate whether it is still helpful to tailor a pretrained model to the domain of a target task. We present a study across four domains (biomedical and computer science publications, news, and reviews) and eight classification tasks, showing that a second phase of pretraining in-domain (domain-adaptive pretraining) leads to performance gains, under both high- and low-resource settings. Moreover, adapting to the task's unlabeled data (task-adaptive pretraining) improves performance even after domain-adaptive pretraining. Finally, we show that adapting to a task corpus augmented using simple data selection strategies is an effective alternative, especially when resources for domain-adaptive pretraining might be unavailable. Overall, we consistently find that multi-phase adaptive pretraining offers large gains in task performance.</p>
+          </div>
+          <div class="zh">
+            <p>在多种来源文本上预训练得到的语言模型,构成了今日 NLP 的基础。鉴于这些广覆盖模型的成功,我们研究的问题是:是否还有必要把一个已预训练好的模型针对目标任务的<em>领域</em>做定制?我们在四个领域(生物医学论文、计算机科学论文、新闻、评论)与八个分类任务上做了一项研究,结果表明:在领域内做"第二阶段预训练"(即<em>领域自适应预训练</em>,DAPT)在高资源与低资源设定下都能带来性能提升。此外,在任务自身的无标数据上做自适应(<em>任务自适应预训练</em>,TAPT)即使在 DAPT 之后仍能继续改进性能。最后,我们表明:通过简单的数据选择策略对任务语料进行扩充,再做自适应,是一种有效的替代方案——尤其当无法负担 DAPT 所需资源时。总的来说,我们一致地发现:多阶段自适应预训练能为下游任务性能带来很大的提升。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-3">
+      <summary>
+        <span>§1 Introduction / 引言<span class="sec-page">p.1</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Today's pretrained language models are trained on massive, heterogeneous corpora. For instance, RoBERTa was trained on over 160GB of uncompressed text, with sources ranging from English-language encyclopedic and news articles, to literary works and web content. Representations learned by such models achieve strong performance across many tasks with datasets of varying sizes drawn from a variety of sources. This leads us to ask whether a task's textual <em>domain</em>—a term typically used to denote a distribution over language characterizing a given topic or genre (such as "science" or "mystery novels")—is still relevant. Do the latest large pretrained models work universally, or is it still helpful to build separate pretrained models for specific domains?</p>
+          </div>
+          <div class="zh">
+            <p>今天的预训练语言模型都是在海量、异构的语料上训练的。例如,RoBERTa 在超过 160GB 未压缩文本上训练,来源跨度从英文百科与新闻文章,到文学作品与网页内容。由这类模型学到的表示,在各种来源、各种规模数据集的众多任务上都取得了强表现。这就引出一个问题:任务的<em>文本领域</em>(domain,通常用来指刻画某一话题或体裁——例如"科学"或"侦探小说"——的语言分布)是否仍然相关?最新的大型预训练模型是否能<em>普适</em>工作,还是说为特定领域单独构建预训练模型仍有意义?</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While some studies have shown the benefit of continued pretraining on domain-specific unlabeled data, these studies only consider a single domain at a time and use a language model that is pretrained on a smaller and less diverse corpus than the most recent language models. Moreover, it is not known how the benefit of continued pretraining may vary with factors like the amount of available labeled task data, or the proximity of the target domain to the original pretraining corpus (see Figure 1). We address this question for one such high-performing model, RoBERTa. We consider four domains (biomedical and computer science publications, news, and reviews) and eight classification tasks (two in each domain). For targets that are not already in-domain for RoBERTa, our experiments show that continued pretraining on the domain (which we refer to as domain-adaptive pretraining or DAPT) consistently improves performance on tasks from the target domain, in both high- and low-resource settings.</p>
+          </div>
+          <div class="zh">
+            <p>虽然已有一些研究展示了"在某个领域无标语料上继续预训练"的收益,但这些工作每次只考虑一个领域,且所用语言模型的预训练语料比当今最新模型更小、更不多样。此外,继续预训练的收益如何随"可用的有标任务数据量"或"目标领域与原预训练语料的相近程度"等因素变化,目前并不清楚(见 Figure 1)。我们针对一个高性能模型 RoBERTa 来回答这一问题。我们考虑四个领域(生物医学论文与计算机科学论文、新闻、评论)与八个分类任务(每个领域两个)。对于那些<em>不属于</em> RoBERTa 原域的目标,我们的实验表明:在该领域上继续预训练(我们称之为<em>领域自适应预训练</em>,DAPT)在高资源与低资源设定下,都能一致地提升目标领域任务的性能。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Above, we consider domains defined around genres and forums, but it is also possible to induce a domain from a given corpus used for a task, such as the one used in supervised training of a model. This raises the question of whether pretraining on a corpus more directly tied to the task can further improve performance. We study how domain-adaptive pretraining compares to task-adaptive pretraining, or TAPT, on a smaller but directly task-relevant corpus: the unlabeled task dataset, drawn from the task distribution. Task-adaptive pretraining has been shown effective, but is not typically used with the most recent models. We find that TAPT provides a large performance boost for RoBERTa, with or without domain-adaptive pretraining.</p>
+          </div>
+          <div class="zh">
+            <p>上面我们把领域定义在"体裁与论坛"的粒度,但其实也可以从某个任务所用的语料(例如监督训练所用的数据)里<em>诱导出</em>一个领域。这就引出一个问题:在与任务联系更直接的语料上做预训练,能否进一步提升性能?我们研究 DAPT 与<em>任务自适应预训练</em>(TAPT)的对比——TAPT 在更小但与任务直接相关的语料上做:即从任务分布中得到的<em>无标</em>任务数据集。TAPT 已被证明有效,但与最新的预训练模型搭配使用得并不多。我们发现:无论是否做过 DAPT,TAPT 都能给 RoBERTa 带来很大的性能提升。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Finally, we show that the benefits from task-adaptive pretraining increase when we have additional unlabeled data from the task distribution that has been manually curated by task designers or annotators. Inspired by this success, we propose ways to automatically select additional task-relevant unlabeled text, and show how this improves performance in certain low-resource cases. On all tasks, our results using adaptive pretraining techniques are competitive with the state of the art. In summary, our contributions include: (i) a thorough analysis of domain- and task-adaptive pretraining across four domains and eight tasks, spanning low- and high-resource settings; (ii) an investigation into the transferability of adapted LMs across domains and tasks; and (iii) a study highlighting the importance of pretraining on human-curated datasets, and a simple data selection strategy to automatically approach this performance.</p>
+          </div>
+          <div class="zh">
+            <p>最后,我们表明:如果有额外的、由任务设计者或标注者人工<em>精挑</em>的任务分布无标数据,TAPT 的收益会更大。受此启发,我们提出几种自动选择"任务相关无标文本"的方法,并展示其在某些低资源场景下的性能提升。在所有任务上,我们用自适应预训练技术得到的结果都与当时的 SOTA 具有竞争力。贡献概括为:(i) 在四个领域、八个任务、低/高资源设定下,对 DAPT 与 TAPT 做了全面分析;(ii) 研究了"自适应后的 LM"在跨域跨任务上的可迁移性;(iii) 强调了"人工精挑数据集"对预训练的重要性,并给出一种简单的数据选择策略来自动逼近该效果。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>§2 Background: Pretraining.</strong> Learning for most NLP research systems since 2018 consists of training in two stages. First, a neural language model (LM), often with millions of parameters, is trained on large unlabeled corpora. The word (or wordpiece) representations learned in the pretrained model are then reused in supervised training for a downstream task, with optional updates (fine-tuning) of the representations and network from the first stage. One such pretrained LM is RoBERTa, which uses the same transformer-based architecture as its predecessor BERT. It is trained with a masked language modeling objective (i.e., cross-entropy loss on predicting randomly masked tokens). The unlabeled pretraining corpus for RoBERTa contains over 160 GB of uncompressed raw text from different English-language corpora. RoBERTa attains better performance on an assortment of tasks than its predecessors, making it our baseline of choice.</p>
+          </div>
+          <div class="zh">
+            <p><strong>§2 背景:预训练。</strong>自 2018 年以来,大多数 NLP 研究系统的学习都分两阶段。第一阶段,一个参数量动辄上百万的神经语言模型(LM)在大规模无标语料上训练;第二阶段,预训练模型学到的词(或 wordpiece)表示被用于下游任务的监督训练,第一阶段的表示与网络可以选择性地<em>微调</em>。RoBERTa 就是这样一个预训练 LM——它与前身 BERT 共用相同的 transformer 架构,以掩码语言建模为目标训练(即交叉熵损失:$\mathcal{L}_{\text{MLM}} = -\mathbb{E}\bigl[\log p_\theta(x_{\text{mask}}\mid x_{\backslash\text{mask}})\bigr]$),预测随机被掩盖的 token。RoBERTa 的无标预训练语料含超过 160 GB 未压缩原始文本,来自多个英文语料库。它在一系列任务上比前辈更强,因此我们选其作基线。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Although RoBERTa's pretraining corpus is derived from multiple sources, it has not yet been established if these sources are diverse enough to generalize to most of the variation in the English language. In other words, we would like to understand what is <em>out of</em> RoBERTa's domain. Towards this end, we explore further adaptation by continued pretraining of this large LM into two categories of unlabeled data: (i) large corpora of domain-specific text, and (ii) available unlabeled data associated with a given task.</p>
+          </div>
+          <div class="zh">
+            <p>尽管 RoBERTa 的预训练语料来自多个来源,但这些来源是否<em>足够多样</em>到能泛化到英语的大部分变体,目前并未确证。换句话说,我们想搞清楚:什么<em>不在</em> RoBERTa 的域里?为此,我们通过对这个大型 LM 做继续预训练,探索两类无标数据上的进一步自适应:(i) 大规模的领域专属文本语料;(ii) 与某个任务相关、现成可得的无标数据。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-4">
+      <summary>
+        <span>§3 Domain-Adaptive Pretraining (DAPT) / 领域自适应预训练<span class="sec-page">p.3</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Our approach to domain-adaptive pretraining (DAPT) is straightforward—we continue pretraining RoBERTa on a large corpus of unlabeled domain-specific text. The four domains we focus on are biomedical (BIOMED) papers, computer science (CS) papers, news text from REALNEWS, and AMAZON reviews. We choose these domains because they have been popular in previous work, and datasets for text classification are available in each. Table 1 lists the specifics of the unlabeled datasets in all four domains (BIOMED 7.55B tokens / 47GB; CS 8.10B / 48GB; NEWS 6.66B / 39GB; REVIEWS 2.11B / 11GB), as well as RoBERTa's training corpus (~160GB).</p>
+          </div>
+          <div class="zh">
+            <p>我们的领域自适应预训练(DAPT)方法很直接——我们在大规模的领域专属无标文本上继续预训练 RoBERTa。我们聚焦四个领域:生物医学(BIOMED)论文、计算机科学(CS)论文、来自 REALNEWS 的新闻文本、AMAZON 评论。选这些领域是因为它们在以往工作中被广泛使用,而且每个领域都有可用的文本分类数据集。Table 1 列出了四个领域无标数据集的细节(BIOMED 75.5 亿 token / 47GB;CS 81.0 亿 / 48GB;NEWS 66.6 亿 / 39GB;REVIEWS 21.1 亿 / 11GB),以及 RoBERTa 自身的训练语料(约 160GB)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.1 Analyzing Domain Similarity.</strong> Before performing DAPT, we attempt to quantify the similarity of the target domain to RoBERTa's pretraining domain. We consider domain vocabularies containing the top 10K most frequent unigrams (excluding stopwords) in comparably sized random samples of held-out documents in each domain's corpus. We also sample 50K documents from sources similar to RoBERTa's pretraining corpus (i.e., BOOKCORPUS, STORIES, WIKIPEDIA, and REALNEWS) to construct the pretraining domain vocabulary, since the original pretraining corpus is not released. Figure 2 shows the vocabulary overlap across these samples. We observe that RoBERTa's pretraining domain has strong vocabulary overlap with NEWS (54%) and REVIEWS (35%), while CS (27%) and BIOMED (19%) are far more dissimilar. This simple analysis suggests the degree of benefit to be expected by adaptation of RoBERTa to different domains—the more dissimilar the domain, the higher the potential for DAPT.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.1 领域相似度分析。</strong>在做 DAPT 之前,我们尝试量化目标领域与 RoBERTa 预训练域的相似度。我们对每个领域语料,从大小可比较的留出文档随机样本中,取前 10K 个高频 unigram(去停用词)作为该领域的词表。由于原预训练语料未公开,我们也从与 RoBERTa 预训练语料相似的来源(即 BOOKCORPUS、STORIES、WIKIPEDIA、REALNEWS)中采样 50K 文档,以构造"预训练领域词表"。Figure 2 展示了样本之间的词表重叠。我们观察到:RoBERTa 的预训练域与 NEWS(54%)、REVIEWS(35%)有较强的词表重叠,而 CS(27%)、BIOMED(19%)则更为疏远。这个简单分析提示了 RoBERTa 自适应到不同领域时可期待的收益——领域越疏远,DAPT 的潜在收益越大。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.2 Experiments.</strong> Our LM adaptation follows the settings prescribed for training RoBERTa. We train RoBERTa on each domain for 12.5K steps, which amounts to a single pass on each domain dataset, on a v3-8 TPU. This second phase of pretraining results in four domain-adapted LMs, one for each domain. We present the masked LM loss of RoBERTa on each domain before and after DAPT in Table 1: $\mathcal{L}_{\text{ROB.}}$ vs $\mathcal{L}_{\text{DAPT}}$ — BIOMED 1.32 → 0.99, CS 1.63 → 1.34, NEWS 1.08 → 1.16, REVIEWS 2.10 → 1.93. We observe that masked LM loss decreases in all domains except NEWS after DAPT, where we observe a marginal increase. Under each domain, we consider two text classification tasks. Our tasks represent both high- and low-resource ($\le 5$K labeled training examples, and no additional unlabeled data) settings. As our baseline, we use an off-the-shelf RoBERTa-base model and perform supervised fine-tuning of its parameters for each classification task; following standard practice we pass the final-layer [CLS] token representation to a task-specific feedforward layer for prediction.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.2 实验设置。</strong>我们的 LM 自适应沿用 RoBERTa 训练所规定的设置。我们在每个领域上将 RoBERTa 训练 12.5K 步——大致相当于在该领域数据集上跑一个 epoch,使用一块 v3-8 TPU。第二阶段预训练得到四个领域自适应 LM,每个领域一个。Table 1 报告了 RoBERTa 在每个领域上 DAPT 前后的 MLM 损失 $\mathcal{L}_{\text{ROB.}}$ vs $\mathcal{L}_{\text{DAPT}}$:BIOMED 1.32 → 0.99,CS 1.63 → 1.34,NEWS 1.08 → 1.16,REVIEWS 2.10 → 1.93。可以看到,除了 NEWS(略增),DAPT 在所有领域都让 MLM 损失下降。每个领域下我们考虑两个文本分类任务,涵盖高资源和低资源($\le 5$K 个有标训练样本且无额外无标数据)设置。作为基线,我们使用现成的 RoBERTa-base 并对其参数做监督微调;按标准做法,把最后一层 [CLS] token 表示送入一个任务特定的前馈层做预测。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Results.</strong> Test results are shown under the DAPT column of Table 3. We observe that DAPT improves over RoBERTa in all domains. For BIOMED, CS, and REVIEWS, we see consistent improvements over RoBERTa, demonstrating the benefit of DAPT when the target domain is more distant from RoBERTa's source domain. The pattern is consistent across high- and low-resource settings. Although DAPT does not increase performance on AGNEWS, the benefit we observe in HYPERPARTISAN (86.6 → 88.2) suggests that DAPT may be useful even for tasks that align more closely with RoBERTa's source domain. Notable jumps: ACL-ARC 63.0 → 75.4 (+12.4), SCIERC 77.3 → 80.8, CHEMPROT 81.9 → 84.2.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结果。</strong>测试结果见 Table 3 的 DAPT 列。我们观察到:DAPT 在所有领域上都优于 RoBERTa。对 BIOMED、CS、REVIEWS,DAPT 都有一致提升,表明当目标领域离 RoBERTa 源域越远,DAPT 的收益越大。这一规律在高资源和低资源设定下都成立。尽管 DAPT 在 AGNEWS 上没有提升,但 HYPERPARTISAN(86.6 → 88.2)的提升说明:即使任务更贴近 RoBERTa 源域,DAPT 也可能有用。最显著的提升:ACL-ARC 63.0 → 75.4(+12.4),SCIERC 77.3 → 80.8,CHEMPROT 81.9 → 84.2。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.3 Domain Relevance for DAPT.</strong> Additionally, we compare DAPT against a setting where for each task, we adapt the LM to a domain <em>outside</em> the domain of interest (¬DAPT). This controls for the case in which the improvements over RoBERTa might be attributed simply to exposure to more data, regardless of the domain. For each task, DAPT significantly outperforms adapting to an irrelevant domain, suggesting the importance of pretraining on domain-relevant data. Furthermore, we generally observe that ¬DAPT results in worse performance than even RoBERTa on end-tasks. Taken together, these results indicate that in most settings, exposure to more data without considering domain relevance is detrimental to end-task performance. However, there are two tasks (SCIERC and ACL-ARC) in which ¬DAPT marginally improves performance over RoBERTa, suggesting that in some cases, continued pretraining on any additional data is useful, as noted in Baevski et al. (2019).</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.3 DAPT 的领域相关性。</strong>此外,我们把 DAPT 与一个对照设定做比较——对每个任务,把 LM 自适应到一个<em>与目标无关</em>的领域(称为 ¬DAPT)。这个对照排除了"提升仅是因为见到了更多数据(无关领域也行)"的可能。对每个任务,DAPT 都<em>显著</em>胜过自适应到无关领域,说明在<em>领域相关</em>数据上做预训练很重要。此外,我们普遍观察到 ¬DAPT 的下游表现甚至比 RoBERTa 还差。这些结果共同表明:大多数情况下,只看数据量、不看领域相关性是有害的。然而有两个任务(SCIERC 和 ACL-ARC)上 ¬DAPT 居然小幅胜过 RoBERTa——这暗示某些场景下,继续预训练任何额外数据都有点用,与 Baevski 等(2019)的发现一致。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>3.4 Domain Overlap.</strong> Our analysis of DAPT is based on prior intuitions about how task data is assigned to specific domains. For instance, to perform DAPT for HELPFULNESS, we only adapt to AMAZON reviews, but not to any REALNEWS articles. However, the gradations in Figure 2 suggest that the boundaries between domains are in some sense fuzzy; for example, 40% of unigrams are shared between REVIEWS and NEWS. As further indication of this overlap, we qualitatively identify documents that overlap cross-domain: in Table 4 we showcase reviews and REALNEWS articles that are similar to these reviews. In fact, we find that adapting RoBERTa to NEWS is not as harmful to its performance on REVIEWS tasks (DAPT on NEWS achieves 65.5 on HELPFULNESS and 95.0 on IMDB). Although this analysis is by no means comprehensive, it indicates that the factors giving rise to observable domain differences are likely not mutually exclusive. It is possible that pretraining beyond conventional domain boundaries could result in more effective DAPT; we leave this to future work.</p>
+          </div>
+          <div class="zh">
+            <p><strong>3.4 领域重叠。</strong>我们对 DAPT 的分析,建立在"任务数据归属于特定领域"的先验直觉上。例如,为做 HELPFULNESS 的 DAPT,我们只用 AMAZON 评论,而不用任何 REALNEWS 文章。然而 Figure 2 的渐变提示我们:领域边界在某种意义上是<em>模糊的</em>——例如 REVIEWS 与 NEWS 之间有 40% 的 unigram 共享。作为重叠的进一步佐证,我们也定性地识别出跨域相似的文档:Table 4 展示了与某些评论相似的 REALNEWS 文章。事实上,我们发现把 RoBERTa 自适应到 NEWS 对其在 REVIEWS 任务上的性能<em>并没有那么伤</em>(NEWS-DAPT 在 HELPFULNESS 上取得 65.5,在 IMDB 上 95.0)。虽然这一分析远非全面,但它提示:导致可观察领域差异的因素可能并不互斥。突破传统领域边界来做预训练或许能得到更高效的 DAPT,我们把这留给未来工作。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-5">
+      <summary>
+        <span>§4 Task-Adaptive Pretraining (TAPT) / 任务自适应预训练<span class="sec-page">p.5</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>Datasets curated to capture specific tasks of interest tend to cover only a subset of the text available within the broader domain. For example, the CHEMPROT dataset for extracting relations between chemicals and proteins focuses on abstracts of recently-published, high-impact articles from hand-selected PubMed categories. We hypothesize that in such cases where the task data is a narrowly-defined subset of the broader domain, pretraining on the task dataset itself, or data relevant to the task, may be helpful. Task-adaptive pretraining (TAPT) refers to pretraining on the unlabeled training set for a given task; prior work has shown its effectiveness. Compared to domain-adaptive pretraining (DAPT), the task-adaptive approach strikes a different trade-off: it uses a far smaller pretraining corpus, but one that is much more task-relevant (under the assumption that the training set represents aspects of the task well). This makes TAPT much less expensive to run than DAPT, and as we show in our experiments, the performance of TAPT is often competitive with that of DAPT.</p>
+          </div>
+          <div class="zh">
+            <p>那些为捕捉某个具体任务而精心整理的数据集,通常只覆盖更广领域文本中的一个<em>子集</em>。例如,用于抽取"化学物-蛋白质关系"的 CHEMPROT 数据集就专注于"从手工挑选的 PubMed 类目中近期发表的高影响因子论文摘要"。我们的假设是:当任务数据是更广领域中一个<em>狭窄子集</em>时,直接在任务数据集本身、或与任务相关的数据上做预训练,可能有帮助。<em>任务自适应预训练</em>(TAPT)指的是在某个任务的<em>无标训练集</em>上做预训练;以往工作已表明这是有效的。与 DAPT 相比,TAPT 走的是另一种权衡:它用<em>远小</em>的预训练语料,但这个语料与任务<em>更相关</em>(前提是训练集能很好地体现任务的方方面面)。这让 TAPT 比 DAPT 便宜得多,而我们的实验也将表明:TAPT 的性能往往可以与 DAPT 媲美。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>4.1 Experiments.</strong> Similar to DAPT, task-adaptive pretraining consists of a second phase of pretraining RoBERTa, but only on the available task-specific training data. In contrast to DAPT, which we train for 12.5K steps, we perform TAPT for 100 epochs. We artificially augment each dataset by randomly masking different words (using the masking probability of 0.15) across epochs. As in our DAPT experiments, we pass the final-layer [CLS] token representation to a task-specific feedforward layer for classification.</p>
+          </div>
+          <div class="zh">
+            <p><strong>4.1 实验。</strong>与 DAPT 类似,TAPT 也是对 RoBERTa 做一次第二阶段预训练,只不过<em>只用</em>该任务可获得的任务专属训练数据。与 DAPT 训练 12.5K 步不同,我们让 TAPT 跑 100 个 epoch;并通过<em>跨 epoch 随机重新 mask 不同 token</em>(mask 概率 0.15)对每个数据集做"人工增广"。与 DAPT 实验一样,我们把最后一层 [CLS] token 表示送入任务特定的前馈层做分类。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Results.</strong> Our results are shown in the TAPT column of Table 5. TAPT consistently improves the RoBERTa baseline for all tasks across domains. Even on the news domain, which was part of RoBERTa's pretraining corpus, TAPT improves over RoBERTa, showcasing the advantage of task adaptation. Particularly remarkable are the relative differences between TAPT and DAPT. DAPT is more resource intensive (see Table 9), but TAPT manages to match its performance in some of the tasks, such as SCIERC. In RCT, HYPERPARTISAN, AGNEWS, HELPFULNESS, and IMDB, the results even <em>exceed</em> those of DAPT, highlighting the efficacy of this cheaper adaptation technique. Selected numbers (RoBERTa / TAPT): HYPERPARTISAN 86.6 → 90.4, AGNEWS 93.9 → 94.5, HELPFULNESS 65.1 → 68.5, IMDB 95.0 → 95.5.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结果。</strong>结果见 Table 5 的 TAPT 列。TAPT 在所有 8 个任务上都<em>一致地</em>提升了 RoBERTa 基线。即使在 NEWS 这种<em>本属于</em> RoBERTa 预训练语料的领域,TAPT 也能给出提升,凸显了"任务自适应"的优势。尤其值得注意的是 TAPT 与 DAPT 的相对差异:DAPT 资源消耗更大(见 Table 9),但 TAPT 在某些任务(如 SCIERC)上能达到与 DAPT 相当的水平;在 RCT、HYPERPARTISAN、AGNEWS、HELPFULNESS、IMDB 上,TAPT 的结果甚至<em>超过</em> DAPT——突显了这种更便宜的自适应方式的有效性。关键数字(RoBERTa / TAPT):HYPERPARTISAN 86.6 → 90.4,AGNEWS 93.9 → 94.5,HELPFULNESS 65.1 → 68.5,IMDB 95.0 → 95.5。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-6">
+      <summary>
+        <span>§4.x Combining DAPT + TAPT &amp; Cross-Task Transfer / 组合与跨任务迁移<span class="sec-page">p.6</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Combined DAPT and TAPT.</strong> We investigate the effect of using both adaptation techniques together. We begin with RoBERTa and apply DAPT then TAPT under this setting. The three phases of pretraining add up to make this the most computationally expensive of all our settings. As expected, combined domain- and task-adaptive pretraining achieves the best performance on all tasks (Table 5; e.g., ACL-ARC 75.6, SCIERC 81.3, HYPERPARTISAN 90.0, AGNEWS 94.6). Overall, our results show that DAPT followed by TAPT achieves the best of both worlds of domain and task awareness, yielding the best performance. While we speculate that TAPT followed by DAPT would be susceptible to catastrophic forgetting of the task-relevant corpus, alternate methods of combining the procedures may result in better downstream performance. Future work may explore pretraining with a more sophisticated curriculum of domain and task distributions.</p>
+          </div>
+          <div class="zh">
+            <p><strong>DAPT 与 TAPT 的组合。</strong>我们研究两种自适应技术合用的效果。在这个设定下,我们从 RoBERTa 出发,先做 DAPT,再做 TAPT。三阶段预训练加起来,使其成为我们所有设定中<em>计算开销最高</em>的方案。如预期,域 + 任务自适应组合在所有任务上都取得了最佳成绩(Table 5;例如 ACL-ARC 75.6、SCIERC 81.3、HYPERPARTISAN 90.0、AGNEWS 94.6)。整体来看,"先 DAPT、后 TAPT"兼得"领域感知"与"任务感知"两个好处,得到最佳性能。我们推测,如果顺序是"先 TAPT、再 DAPT",任务相关语料可能会遭遇灾难性遗忘;其它组合方式或许能给出更好的下游性能。未来工作可探索"以领域与任务分布为课程"的、更复杂的预训练策略。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Cross-Task Transfer.</strong> We complete the comparison between DAPT and TAPT by exploring whether adapting to one task transfers to other tasks in the same domain. For instance, we further pretrain the LM using the RCT unlabeled data, fine-tune it with the CHEMPROT labeled data, and observe the effect. We refer to this setting as <em>Transfer-TAPT</em>. Our results for tasks in all four domains are shown in Table 6. We see that TAPT optimizes for single-task performance, to the detriment of cross-task transfer (e.g., CHEMPROT 82.6 → 80.4 / ↓2.2; HYPERPARTISAN 89.9 → 82.2 / ↓7.7; ACL-ARC 67.4 → 64.1 / ↓3.3; HELPFULNESS 68.5 → 65.0 / ↓3.5). These results demonstrate that data distributions of tasks within a given domain might differ. Further, this could also explain why adapting only to a broad domain is not sufficient, and why TAPT after DAPT is effective.</p>
+          </div>
+          <div class="zh">
+            <p><strong>跨任务迁移。</strong>为完整比较 DAPT 与 TAPT,我们考察:在某个任务上自适应得到的模型,能否迁移到<em>同一领域</em>的其它任务?例如,我们用 RCT 的无标数据继续预训练 LM,然后用 CHEMPROT 的有标数据做微调。我们把这种设定称为 <em>Transfer-TAPT</em>。Table 6 给出了四个领域上的结果。可以看出:TAPT 只为单任务优化,代价是跨任务迁移会变差(例如 CHEMPROT 82.6 → 80.4 / ↓2.2;HYPERPARTISAN 89.9 → 82.2 / ↓7.7;ACL-ARC 67.4 → 64.1 / ↓3.3;HELPFULNESS 68.5 → 65.0 / ↓3.5)。这表明:同一领域内不同任务的数据分布也可能不同。这也进一步解释了:为什么只在"宽泛领域"上自适应是不够的,以及为什么"先 DAPT、再 TAPT"会有效。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-7">
+      <summary>
+        <span>§5 Augmenting Data for TAPT (Curated &amp; kNN-VAMPIRE) / 为 TAPT 增广数据<span class="sec-page">p.7</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>In §4, we continued pretraining the LM for task adaptation using only the training data for a supervised task. Inspired by the success of TAPT, we next investigate another setting where a larger pool of unlabeled data from the task distribution exists, typically curated by humans. We explore two scenarios: first, for three tasks (RCT, HYPERPARTISAN, and IMDB) we use this larger pool of unlabeled data from an available human-curated corpus (§5.1). Next, we explore retrieving related unlabeled data for TAPT, from a large unlabeled in-domain corpus, for tasks where extra human-curated data is unavailable (§5.2).</p>
+          </div>
+          <div class="zh">
+            <p>在 §4 里,我们做任务自适应时<em>只用</em>该任务的(监督)训练集本身。受 TAPT 的成功启发,我们接下来考察另一种设定:存在<em>更大的、来自任务分布的无标语料池</em>,通常由人工整理。我们探索两种场景:首先,对三个任务(RCT、HYPERPARTISAN、IMDB),使用已有的人工整理(curated)语料池作为更大的无标数据(§5.1);其次,对那些没有额外人工 curated 数据的任务,我们从大规模无标领域语料里<em>检索</em>与任务相关的无标数据来做 TAPT(§5.2)。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.1 Human Curated-TAPT.</strong> Dataset creation often involves collection of a large unlabeled corpus from known sources. This corpus is then downsampled to collect annotations, based on the annotation budget. The larger unlabeled corpus is thus expected to have a similar distribution to the task's training data, and it is usually available. We simulate a low-resource setting RCT-500 by downsampling the training data of the RCT dataset to 500 examples (out of 180K available), and treat the rest of the training data as unlabeled. The HYPERPARTISAN shared task has two tracks: low- and high-resource; we use 5K documents from the high-resource setting as Curated-TAPT unlabeled data and the original low-resource training documents for task fine-tuning. For IMDB, we use the extra unlabeled data manually curated by task annotators, drawn from the same distribution as the labeled data.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.1 人工 curated 的 TAPT。</strong>构建数据集时,通常会先从已知来源采集一大批无标语料,再根据标注预算下采样去做标注。因此那个更大的无标语料预计与任务训练集分布相近,而且<em>通常是可用的</em>。我们模拟一个低资源设定 RCT-500:把 RCT 数据集的训练集下采样到 500 条(原有 18 万),把余下训练数据当作无标。HYPERPARTISAN 共享任务分低/高资源两道:我们把高资源设定下的 5K 文档当作 Curated-TAPT 的无标数据,把原低资源训练文档用于微调。对 IMDB,我们使用任务标注者人工整理的额外无标数据——其分布与有标数据相同。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We compare Curated-TAPT to TAPT and DAPT + TAPT in Table 7. Curated-TAPT further improves our prior results from §4 across all three datasets. Applying Curated-TAPT after adapting to the domain results in the largest boost in performance on all tasks; in HYPERPARTISAN, DAPT + Curated-TAPT is within standard deviation of Curated-TAPT. Moreover, Curated-TAPT achieves 95% of the performance of DAPT + TAPT with the fully labeled RCT corpus (Table 5) with only 0.3% of the labeled data. These results suggest that curating large amounts of data from the task distribution is extremely beneficial to end-task performance. We recommend that task designers release a large pool of unlabeled task data for their tasks to aid model adaptation through pretraining.</p>
+          </div>
+          <div class="zh">
+            <p>我们在 Table 7 中将 Curated-TAPT 与 TAPT、DAPT + TAPT 做对比。Curated-TAPT 在三个数据集上都进一步改进了 §4 的结果。先做 DAPT 再做 Curated-TAPT 在所有任务上都带来最大幅度的提升;在 HYPERPARTISAN 上,DAPT + Curated-TAPT 与 Curated-TAPT 单跑的差距在一倍标准差以内。此外,Curated-TAPT 仅用 0.3% 的有标数据,就达到了用全量有标的 DAPT + TAPT(Table 5)的 95% 性能。这些结果说明:从任务分布中<em>大量地</em>整理数据,对下游性能极为有益。我们建议任务设计者为其任务释放一大批无标数据,以助力通过预训练进行模型自适应。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>5.2 Automated Data Selection for TAPT.</strong> Consider a low-resource scenario without access to large amounts of unlabeled data to adequately benefit from TAPT, as well as absence of computational resources necessary for DAPT. We propose simple unsupervised methods to retrieve unlabeled text that aligns with the task distribution, from a large in-domain corpus. Our approach finds task-relevant data from the domain by embedding text from both the task and domain in a shared space, then selects candidates from the domain based on queries using the task data. Importantly, the embedding method must be lightweight enough to embed possibly millions of sentences in a reasonable time. Given these constraints, we employ VAMPIRE (Figure 3), a lightweight bag-of-words language model. We pretrain VAMPIRE on a large deduplicated sample of the domain (1M sentences) to obtain embeddings of the text from both the task and domain sample. We then select $k$ candidates of each task sentence from the domain sample, in embedding space, either via nearest-neighbor selection (kNN-TAPT, using a flat FAISS index with cosine similarity) or randomly (RAND-TAPT). We continue pretraining RoBERTa on this augmented corpus with both the task data (as in TAPT) and the selected candidate pool.</p>
+          </div>
+          <div class="zh">
+            <p><strong>5.2 为 TAPT 自动选择数据。</strong>考虑一种低资源场景:既没有大量无标数据来充分发挥 TAPT,也没有 DAPT 所需的算力。我们提出简单的<em>无监督</em>方法,从大规模无标的同领域语料中<em>检索</em>与任务分布对齐的无标文本。我们的做法是:把任务文本与领域文本嵌入到同一向量空间,然后用任务数据作 query 从领域中选候选。关键是嵌入器必须足够轻量,能在合理时间内嵌入上百万条句子。基于这些约束,我们采用 <strong>VAMPIRE</strong>(Figure 3)——一个轻量的词袋(BoW)语言模型。我们先在领域的一份大规模去重(1M 条句子)样本上预训练 VAMPIRE,得到任务文本与领域样本的嵌入;然后对每条任务句子,在嵌入空间内从领域样本中选 $k$ 个候选,选法有两种:(i) 近邻选择(kNN-TAPT,使用 cosine 相似度的 FAISS flat 索引);(ii) 随机(RAND-TAPT)。最后,我们在"任务数据 + 所选候选池"组成的增广语料上继续预训练 RoBERTa。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Results.</strong> Results in Table 8 show that kNN-TAPT outperforms TAPT for all cases. RAND-TAPT is generally worse than kNN-TAPT, but within a standard deviation on RCT and ACL-ARC. As we increase $k$, kNN-TAPT performance steadily increases and approaches that of DAPT. For ACL-ARC: TAPT 67.4 / RAND-TAPT 69.7 / 50NN 70.7 / 150NN 73.3 / 500NN 75.5, while DAPT is 75.4. Future work might consider a closer study of kNN-TAPT, more sophisticated data selection methods, and the tradeoff between the diversity and task relevance of selected examples.</p>
+          </div>
+          <div class="zh">
+            <p><strong>结果。</strong>Table 8 显示 kNN-TAPT 在所有情形下都优于 TAPT。RAND-TAPT 通常弱于 kNN-TAPT,但在 RCT、ACL-ARC 上的差距在一个标准差内。随着 $k$ 增大,kNN-TAPT 的性能稳步提升,逐步逼近 DAPT。以 ACL-ARC 为例:TAPT 67.4 / RAND-TAPT 69.7 / 50NN 70.7 / 150NN 73.3 / 500NN 75.5,而 DAPT 为 75.4。未来工作可对 kNN-TAPT、更复杂的数据选择方法、以及"所选样本的多样性与任务相关性之间的权衡"做更深入的研究。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-8">
+      <summary>
+        <span>§5.3 Computational Requirements / 算力代价<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>The computational requirements for all our adaptation techniques on RCT-500 in the BIOMED domain are summarized in Table 9. TAPT is nearly <strong>60 times faster</strong> to train than DAPT on a single v3-8 TPU and storage requirements for DAPT on this task are <strong>5.8M times</strong> that of TAPT (TAPT 0.2K steps / 500 docs / 80KB; DAPT 12.5K steps / 25M docs / 47GB). Our best setting of DAPT + TAPT amounts to three phases of pretraining, and at first glance appears to be very expensive. However, once the LM has been adapted to a broad domain, it can be reused for multiple tasks within that domain, with only a single additional TAPT phase per task.</p>
+          </div>
+          <div class="zh">
+            <p>在 BIOMED 域 RCT-500 任务上,所有自适应方法的算力需求汇总在 Table 9。在单块 v3-8 TPU 上,TAPT 训练比 DAPT 快近 <strong>60 倍</strong>;该任务上 DAPT 的存储开销是 TAPT 的 <strong>580 万倍</strong>(TAPT 0.2K 步 / 500 docs / 80KB;DAPT 12.5K 步 / 2500 万 docs / 47GB)。我们的最佳设定 DAPT + TAPT 是三阶段预训练,乍看非常昂贵——但一旦 LM 已自适应到某个宽泛领域,该 LM 就可以被该领域下多个任务复用,每个任务只需再做一次 TAPT。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>While Curated-TAPT tends to achieve the best cost-benefit ratio in this comparison, one must also take into account the cost of curating large in-domain data. Automatic methods such as kNN-TAPT are much cheaper than DAPT: e.g., 500NN-TAPT runs 9.0K steps on 185K docs / 24MB to reach F1 81.7, while DAPT runs 12.5K steps on 25M docs / 47GB to reach 82.5. The takeaway: DAPT pays off when the same domain LM will be reused across many tasks; TAPT (or kNN-TAPT / Curated-TAPT) is the right choice when budget is tight or when adaptation must be tailored per task.</p>
+          </div>
+          <div class="zh">
+            <p>虽然在本表对比中 Curated-TAPT 的"性价比"通常最好,但也要考虑"整理大规模域内数据"本身的成本。kNN-TAPT 这类自动方法比 DAPT 便宜得多:例如 500NN-TAPT 用 9.0K 步、18.5 万 docs、24MB 就能到 F1 81.7,而 DAPT 要 12.5K 步、2500 万 docs、47GB 才到 82.5。结论:当同一领域 LM 要被多任务复用时,DAPT 划算;预算紧或需要按任务定制时,TAPT(或 kNN-TAPT / Curated-TAPT)才是合适选择。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-9">
+      <summary>
+        <span>§6 Related Work / 相关工作<span class="sec-page">p.8</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Transfer learning for domain adaptation.</strong> Prior work has shown the benefit of continued pretraining in domain. We have contributed further investigation of the effects of a shift between a large, diverse pretraining corpus and target domain on task performance. Other studies have trained LMs in their domain of interest <em>from scratch</em>. In contrast, our work explores multiple domains, and is arguably more cost effective, since we continue pretraining an already powerful LM.</p>
+          </div>
+          <div class="zh">
+            <p><strong>用于领域自适应的迁移学习。</strong>已有工作展示了"在领域内继续预训练"的收益。我们进一步研究了"大规模、多样化的预训练语料与目标领域之间存在分布偏移时"对下游任务性能的影响。其它工作则在感兴趣领域<em>从零开始</em>训 LM。相比之下,我们的工作考察了多个领域,而且——由于我们是在已经很强的 LM 上继续预训练——更具成本效益。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Task-adaptive pretraining.</strong> Continued pretraining of a LM on the unlabeled data of a given task (TAPT) has been shown to be beneficial for end-task performance (Howard and Ruder, 2018; Phang et al., 2018; Sun et al., 2019). In the presence of domain shift between train and test data distributions of the same task, domain-adaptive pretraining (DAPT) is sometimes used to describe what we term TAPT (Logeswaran et al., 2019; Han and Eisenstein, 2019). Related approaches include language modeling as an auxiliary objective to task classifier fine-tuning, or considering simple syntactic structure of the input while adapting to task-specific data. We compare DAPT and TAPT as well as their interplay with respect to dataset size for continued pretraining (hence, expense of more rounds of pretraining), relevance to a data sample of a given task, and transferability to other tasks and datasets.</p>
+          </div>
+          <div class="zh">
+            <p><strong>任务自适应预训练。</strong>在某个任务的无标数据上继续预训练 LM(即 TAPT)已被证明能提升下游性能(Howard &amp; Ruder, 2018;Phang et al., 2018;Sun et al., 2019)。当同一任务的训练/测试分布有偏移时,有些工作把我们所谓的 TAPT 叫做 DAPT(Logeswaran et al., 2019;Han &amp; Eisenstein, 2019)。相关方法还包括把语言建模作为<em>辅助损失</em>加进任务分类微调,或者在自适应任务数据时考虑输入的简单句法结构。我们对比了 DAPT 与 TAPT 以及二者的相互作用,聚焦于:继续预训练所用数据集的<em>规模</em>(对应多轮预训练的代价)、与给定任务数据的<em>相关性</em>、以及向其它任务/数据集的<em>可迁移性</em>。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>Data selection for transfer learning.</strong> Selecting data for transfer learning has been explored in NLP. Dai et al. (2019) focus on identifying the most suitable corpus to pretrain a LM from scratch, for a single task (NER), whereas we select relevant examples for various tasks. Concurrent to our work, Aharoni and Goldberg (2020) propose data selection methods for NMT based on cosine similarity in embedding space, using DistilBERT for efficiency. In contrast, we use VAMPIRE, and focus on augmenting TAPT data for text classification tasks. Khandelwal et al. (2020) introduced kNN-LMs that allow easy domain adaptation of pretrained LMs by simply adding a datastore per domain with no further training; an alternative to integrate domain information in an LM. Our study of human-curated data is related to focused crawling for collection of suitable data, especially with LM reliance.</p>
+          </div>
+          <div class="zh">
+            <p><strong>迁移学习的数据选择。</strong>"为迁移学习选数据"在 NLP 中已有不少探索。Dai 等人(2019)聚焦于"为单一任务(NER)从零预训练 LM 时选最合适的语料",而我们是为多种任务挑选相关样本。与我们同期,Aharoni &amp; Goldberg(2020)为 NMT 提出基于嵌入空间 cosine 相似度的数据选择方法,用 DistilBERT 提升效率;相比之下,我们用 VAMPIRE,并聚焦于为文本分类任务的 TAPT 增广数据。Khandelwal 等(2020)提出的 kNN-LM 通过"为每个领域加一个数据存储、不再训练"实现 LM 的轻量领域自适应,是把领域信息融入 LM 的另一种思路。我们对"人工 curated 数据"的研究,与"主题聚焦爬虫"用于采集合适数据(尤其是依赖 LM)的工作相关。</p>
+          </div>
+        </div>
+
+        <div class="bi-pair">
+          <div class="en">
+            <p><strong>What is a domain?</strong> Despite the popularity of domain adaptation techniques, most research and practice seems to use an intuitive understanding of domains. A small body of work has attempted to address this question. For instance, Aharoni and Goldberg (2020) define domains by implicit clusters of sentence representations in pretrained LMs. Our results show that DAPT and TAPT complement each other, which suggests a spectrum of domains defined around tasks at various levels of granularity (e.g., Amazon reviews for a specific product, all Amazon reviews, all reviews on the web, the web).</p>
+          </div>
+          <div class="zh">
+            <p><strong>什么是"领域"?</strong>尽管领域自适应技术很流行,大多数研究与实践仍是凭"直觉"定义领域。仅少量工作尝试正面回答这一问题。例如 Aharoni &amp; Goldberg(2020)就用"预训练 LM 中句子表示的隐式聚类"来定义领域。我们的结果表明 DAPT 与 TAPT 互补,这暗示存在一个<em>以任务为中心、不同粒度</em>的领域谱系(例如:某个具体商品的 Amazon 评论 / 全部 Amazon 评论 / 整个 Web 上的所有评论 / 整个 Web)。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="sec" id="sec-10">
+      <summary>
+        <span>§7 Conclusion / 结论<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content bilingual">
+
+        <div class="bi-pair">
+          <div class="en">
+            <p>We investigate several variations for adapting pretrained LMs to domains and tasks within those domains, summarized in Table 10. Our experiments reveal that even a model of hundreds of millions of parameters struggles to encode the complexity of a single textual domain, let alone all of language. We show that pretraining the model towards a specific task or small corpus can provide significant benefits. Our findings suggest it may be valuable to complement work on ever-larger LMs with parallel efforts to identify and use domain- and task-relevant corpora to specialize models. While our results demonstrate how these approaches can improve RoBERTa, a powerful LM, the approaches we studied are general enough to be applied to any pretrained LM. Our work points to numerous future directions, such as better data selection for TAPT, efficient adaptation of large pretrained language models to distant domains, and building reusable language models after adaptation.</p>
+          </div>
+          <div class="zh">
+            <p>我们研究了若干种把预训练 LM 自适应到领域、以及领域内任务的变体,概要见 Table 10。实验表明:即使是数亿参数的模型,也难以编码单一文本领域的复杂性,更不用说整个语言。我们证明了:把模型向特定任务或小规模语料预训练,能带来显著收益。我们的发现提示:"训更大的 LM"与"挖掘并使用领域/任务相关语料对模型做专业化"应当并行推进。虽然我们的结果展示了这些做法对 RoBERTa 这样一个强 LM 的提升,但我们研究的方法<em>足够通用</em>,可应用于任何预训练 LM。本工作指向若干未来方向,例如更好的 TAPT 数据选择、把大型预训练 LM 高效自适应到疏远领域,以及构建"自适应后可复用"的语言模型。</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+    
+    <details class="sec" id="sec-11">
+      <summary>
+        <span>References(略)<span class="sec-page">p.9</span></span>
+      </summary>
+      <div class="sec-content"><p style="color:var(--text-faint);font-style:italic">参考文献清单与附录(包括 §A 数据集 / §B 超参 / §C 验证集结果 / §D 跨域文档对照 / §E 跨域 MLM 损失 / §F kNN 邻居示例)略,需要时请查阅 <a href="https://arxiv.org/pdf/2004.10964.pdf" target="_blank">原 PDF</a>。</p></div>
+    </details>
+    </div>
+  
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" aria-label="关闭">✕</button>
+  <div class="lightbox-meta" id="lightbox-meta"></div>
+  <div class="lightbox-img-wrap" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  </div>
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+function openLightbox(img) {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCap = document.getElementById('lightbox-caption');
+  const lbMeta = document.getElementById('lightbox-meta');
+
+  lbImg.src = img.src;
+  lbImg.alt = img.alt || '';
+
+  // 找到这张图所在的 figure-card,把解读 + 元信息搬过来
+  const card = img.closest('.figure-card');
+  if (card) {
+    const explain = card.querySelector('.figure-explain');
+    const meta = card.querySelector('.figure-meta > div:first-child');
+    lbCap.innerHTML = explain ? explain.innerHTML : '<em style="opacity:.6">(此图尚未撰写解读)</em>';
+    lbMeta.textContent = meta ? meta.textContent.trim() : (img.alt || '');
+  } else {
+    lbCap.innerHTML = '';
+    lbMeta.textContent = img.alt || '';
+  }
+
+  lb.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 在 lightbox 内重新渲染 KaTeX
+  if (window.renderMathInElement) {
+    renderMathInElement(lbCap, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+</body>
+</html>

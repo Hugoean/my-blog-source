@@ -460,5 +460,51 @@
       ],
       "sentence_count": 338
     }
+  },
+  {
+    "slug": "dont-stop",
+    "href": "papers/dont-stop.html",
+    "title": "Don't Stop Pretraining: Adapt LMs to Domains and Tasks",
+    "arxiv": "2004.10964",
+    "tags": [
+      "CPT"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "CPT 概念的鼻祖，提出 DAPT（领域）/ TAPT（任务）两套范式，面试常问。",
+    "published_at": "2026-06-08",
+    "path": "source/papers-reader/papers/dont-stop.html",
+    "audit": {
+      "slug": "dont-stop",
+      "title": "Don't Stop Pretraining: Adapt LMs to Domains and Tasks",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2004.10964_fig_1.png",
+          "exists": true,
+          "bytes": 995560,
+          "dimensions": [
+            2328,
+            1556
+          ]
+        },
+        {
+          "src": "../figures/2004.10964_fig_2.png",
+          "exists": true,
+          "bytes": 100333,
+          "dimensions": [
+            1616,
+            1212
+          ]
+        }
+      ],
+      "sentence_count": 259
+    }
   }
 ]

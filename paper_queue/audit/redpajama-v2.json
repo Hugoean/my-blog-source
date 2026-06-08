@@ -1,0 +1,393 @@
+{
+  "slug": "redpajama-v2",
+  "title": "RedPajama-v2: an Open Dataset for Training LLMs",
+  "status": "error",
+  "errors": [
+    "sentence 661 is too long for review: 1674 chars",
+    "sentence 800 is too long for review: 1261 chars",
+    "sentence 810 is too long for review: 1300 chars",
+    "image too small to read: ../figures/2411.12372_fig_1.png 304x599"
+  ],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2411.12372_fig_1.png",
+      "exists": true,
+      "bytes": 256660,
+      "dimensions": [
+        304,
+        599
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_2.png",
+      "exists": true,
+      "bytes": 311594,
+      "dimensions": [
+        4225,
+        1430
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_3.png",
+      "exists": true,
+      "bytes": 245316,
+      "dimensions": [
+        1999,
+        874
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_4.png",
+      "exists": true,
+      "bytes": 152736,
+      "dimensions": [
+        1600,
+        500
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_5.png",
+      "exists": true,
+      "bytes": 13695,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_6.png",
+      "exists": true,
+      "bytes": 13456,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_7.png",
+      "exists": true,
+      "bytes": 14435,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_8.png",
+      "exists": true,
+      "bytes": 13952,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_9.png",
+      "exists": true,
+      "bytes": 10315,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_10.png",
+      "exists": true,
+      "bytes": 10635,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_11.png",
+      "exists": true,
+      "bytes": 14990,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_12.png",
+      "exists": true,
+      "bytes": 13392,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_13.png",
+      "exists": true,
+      "bytes": 13338,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_14.png",
+      "exists": true,
+      "bytes": 13591,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_15.png",
+      "exists": true,
+      "bytes": 12887,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_16.png",
+      "exists": true,
+      "bytes": 15282,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_17.png",
+      "exists": true,
+      "bytes": 11758,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_18.png",
+      "exists": true,
+      "bytes": 12957,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_19.png",
+      "exists": true,
+      "bytes": 15886,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_20.png",
+      "exists": true,
+      "bytes": 14224,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_21.png",
+      "exists": true,
+      "bytes": 16432,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_22.png",
+      "exists": true,
+      "bytes": 14773,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_23.png",
+      "exists": true,
+      "bytes": 16910,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_24.png",
+      "exists": true,
+      "bytes": 15005,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_25.png",
+      "exists": true,
+      "bytes": 12915,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_26.png",
+      "exists": true,
+      "bytes": 13955,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_27.png",
+      "exists": true,
+      "bytes": 13905,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_28.png",
+      "exists": true,
+      "bytes": 12658,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_29.png",
+      "exists": true,
+      "bytes": 11024,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_30.png",
+      "exists": true,
+      "bytes": 12750,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_31.png",
+      "exists": true,
+      "bytes": 12926,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_32.png",
+      "exists": true,
+      "bytes": 15053,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_33.png",
+      "exists": true,
+      "bytes": 14016,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_34.png",
+      "exists": true,
+      "bytes": 14270,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_35.png",
+      "exists": true,
+      "bytes": 14017,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_36.png",
+      "exists": true,
+      "bytes": 14305,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_37.png",
+      "exists": true,
+      "bytes": 15274,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_38.png",
+      "exists": true,
+      "bytes": 15710,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_39.png",
+      "exists": true,
+      "bytes": 14456,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_40.png",
+      "exists": true,
+      "bytes": 12022,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_41.png",
+      "exists": true,
+      "bytes": 12152,
+      "dimensions": [
+        500,
+        350
+      ]
+    },
+    {
+      "src": "../figures/2411.12372_fig_42.png",
+      "exists": true,
+      "bytes": 13065096,
+      "dimensions": [
+        3004,
+        2950
+      ]
+    }
+  ],
+  "sentence_count": 831
+}

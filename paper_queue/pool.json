@@ -1,36 +1,5 @@
 [
   {
-    "slug": "redpajama-v2",
-    "href": "papers/redpajama-v2.html",
-    "title": "RedPajama-v2: an Open Dataset for Training LLMs",
-    "arxiv": "2411.12372",
-    "tags": [
-      "数据工程"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "质量信号比 v1 多 40+，多语种支持，2025 仍是开源训练的主力底料。"
-  },
-  {
-    "slug": "dont-stop",
-    "href": "papers/dont-stop.html",
-    "title": "Don't Stop Pretraining: Adapt LMs to Domains and Tasks",
-    "arxiv": "2004.10964",
-    "tags": [
-      "CPT"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "read",
-    "note": "CPT 概念的鼻祖，提出 DAPT（领域）/ TAPT（任务）两套范式，面试常问。"
-  },
-  {
     "slug": "cpt-gupta",
     "href": "papers/cpt-gupta.html",
     "title": "Continual Pre-Training of LLMs: How to (re)warm your model?",
