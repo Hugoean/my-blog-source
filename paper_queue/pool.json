@@ -1,20 +1,5 @@
 [
   {
-    "slug": "cpt-gupta",
-    "href": "papers/cpt-gupta.html",
-    "title": "Continual Pre-Training of LLMs: How to (re)warm your model?",
-    "arxiv": "2308.04014",
-    "tags": [
-      "CPT"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "CPT 学习率重启策略 + replay 比例。工业训练落地必读，灾难性遗忘缓解方案。"
-  },
-  {
     "slug": "scaling-laws",
     "href": "papers/scaling-laws.html",
     "title": "Scaling Laws for Neural Language Models",
