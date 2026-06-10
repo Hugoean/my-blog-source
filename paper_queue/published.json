@@ -534,5 +534,42 @@
       "images": [],
       "sentence_count": 351
     }
+  },
+  {
+    "slug": "chinchilla",
+    "href": "papers/chinchilla.html",
+    "title": "Training Compute-Optimal Large Language Models (Chinchilla)",
+    "arxiv": "2203.15556",
+    "tags": [
+      "CPT",
+      "其他"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "skim",
+    "note": "推翻 Kaplan，现行 compute-optimal 标准（D ≈ 20×N）。70B 时代的依据。",
+    "published_at": "2026-06-10",
+    "path": "source/papers-reader/papers/chinchilla.html",
+    "audit": {
+      "slug": "chinchilla",
+      "title": "Training Compute-Optimal Large Language Models (Chinchilla)",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2203.15556_fig_1.png",
+          "exists": true,
+          "bytes": 8820,
+          "dimensions": [
+            875,
+            216
+          ]
+        }
+      ],
+      "sentence_count": 301
+    }
   }
 ]

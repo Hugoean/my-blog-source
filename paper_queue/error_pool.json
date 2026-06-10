@@ -454,5 +454,35 @@
       "sentence_count": 831
     },
     "failed_at": "2026-06-08"
+  },
+  {
+    "slug": "scaling-laws",
+    "href": "papers/scaling-laws.html",
+    "title": "Scaling Laws for Neural Language Models",
+    "arxiv": "2001.08361",
+    "tags": [
+      "CPT",
+      "其他"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "skim",
+    "note": "Kaplan 2020 的 power law 三件套。面试经典，后被 Chinchilla 修正但仍要知道。",
+    "audit": {
+      "slug": "scaling-laws",
+      "title": "Scaling Laws for Neural Language Models",
+      "status": "error",
+      "errors": [
+        "sentence 70 is too long for review: 1351 chars"
+      ],
+      "warnings": [
+        "paper has no image gallery"
+      ],
+      "images": [],
+      "sentence_count": 223
+    },
+    "failed_at": "2026-06-10"
   }
 ]

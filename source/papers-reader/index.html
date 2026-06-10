@@ -348,7 +348,7 @@ layout: false
   <header>
     <div class="eyebrow">PAPERS READER · 大模型论文阅读地图 · 开源版 v0.1</div>
     <h1>大模型论文 <span class="accent">阅读地图</span></h1>
-    <div class="subtitle">6 篇已发布 · 每天 1 篇更新 · 5 标签分类 · 3 类读者推荐路径 · 中英双语全文翻译 · 公式 KaTeX · 图含中文图注</div>
+    <div class="subtitle">7 篇已发布 · 每天 1 篇更新 · 5 标签分类 · 3 类读者推荐路径 · 中英双语全文翻译 · 公式 KaTeX · 图含中文图注</div>
   </header>
 
   <!-- ===== 标签统计 ===== -->
@@ -359,7 +359,7 @@ layout: false
     </div>
     <div class="stat-card" data-stat="CPT">
       <div class="stat-label">🏗️ CPT</div>
-      <div class="stat-value">2</div>
+      <div class="stat-value">3</div>
     </div>
     <div class="stat-card" data-stat="后训练">
       <div class="stat-label">🎯 后训练</div>
@@ -371,7 +371,7 @@ layout: false
     </div>
     <div class="stat-card" data-stat="其他">
       <div class="stat-label">🌐 其他</div>
-      <div class="stat-value">0</div>
+      <div class="stat-value">1</div>
     </div>
   </div>
 
@@ -516,7 +516,7 @@ layout: false
   <div class="tag-section" data-tag="CPT">
     <div class="tag-header">
       <span class="tag-name">🏗️ CPT · 继续预训练</span>
-      <span class="tag-count">2 篇</span>
+      <span class="tag-count">3 篇</span>
       <span class="tag-pitch">领域适配 / 能力增强 / Scaling 理论 — base 模型上长出新能力</span>
     </div>
     <div class="papers-grid">
@@ -559,7 +559,24 @@ layout: false
 
       
 
-      
+      <div class="paper" data-tags="CPT,其他" data-aud="B,C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/chinchilla.html">Training Compute-Optimal Large Language Models (Chinchilla)</a></div>
+          <div class="paper-arxiv">2203.15556</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-CPT">CPT</span>
+          <span class="tag-其他">其他</span>
+          <span class="prio-skim">skim</span>
+          <span>20 tokens / param</span>
+        </div>
+        <div class="paper-note">推翻 Kaplan，现行 compute-optimal 标准（D ≈ 20×N）。70B 时代的依据。</div>
+        <div class="paper-actions">
+          <a href="papers/chinchilla.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2203.15556" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -640,21 +657,37 @@ layout: false
   <div class="tag-section" data-tag="其他">
     <div class="tag-header">
       <span class="tag-name">🌐 其他</span>
-      <span class="tag-count">0 篇</span>
+      <span class="tag-count">1 篇</span>
       <span class="tag-pitch">Scaling Law 理论 + 长序列架构 — 跨主题的支柱</span>
     </div>
     <div class="papers-grid">
 
       
 
-      
+      <div class="paper" data-tags="其他,CPT" data-aud="B,C" data-priority="skim">
+        <div class="aud-badges"><span class="aud-badge B">学</span><span class="aud-badge C">师</span></div>
+        <div class="paper-header">
+          <div class="paper-title"><a class="paper-link" href="papers/chinchilla.html">Training Compute-Optimal LLMs (Chinchilla)</a></div>
+          <div class="paper-arxiv">2203.15556</div>
+        </div>
+        <div class="paper-meta">
+          <span class="tag-其他">其他</span>
+          <span class="tag-CPT">CPT</span>
+          <span class="prio-skim">skim</span>
+        </div>
+        <div class="paper-note">见 CPT 区。20 tokens / param 现行标准。</div>
+        <div class="paper-actions">
+          <a href="papers/chinchilla.html">中英对照 →</a>
+          <a href="https://arxiv.org/abs/2203.15556" target="_blank">arxiv ↗</a>
+        </div>
+      </div>
 
     </div>
   </div>
 
   <footer>
     <div class="quote">"报告告诉你做什么，论文 + 代码告诉你为什么 + 怎么做。"</div>
-    <div>v0.1 · 6 篇已发布 · 每天 1 篇更新 · 中英双语全文 + KaTeX 公式 + 图含中文图注</div>
+    <div>v0.1 · 7 篇已发布 · 每天 1 篇更新 · 中英双语全文 + KaTeX 公式 + 图含中文图注</div>
     <div style="margin-top:8px">致谢：DPO/GRPO/SimPO/FineWeb/Qwen/DeepSeek/Kimi/Llama/MiniMax/Yi/GLM/MiMo 等开源团队</div>
   </footer>
 </div>

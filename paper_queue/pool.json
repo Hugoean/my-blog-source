@@ -1,37 +1,5 @@
 [
   {
-    "slug": "scaling-laws",
-    "href": "papers/scaling-laws.html",
-    "title": "Scaling Laws for Neural Language Models",
-    "arxiv": "2001.08361",
-    "tags": [
-      "CPT",
-      "其他"
-    ],
-    "audience": [
-      "B",
-      "C"
-    ],
-    "priority": "skim",
-    "note": "Kaplan 2020 的 power law 三件套。面试经典，后被 Chinchilla 修正但仍要知道。"
-  },
-  {
-    "slug": "chinchilla",
-    "href": "papers/chinchilla.html",
-    "title": "Training Compute-Optimal Large Language Models (Chinchilla)",
-    "arxiv": "2203.15556",
-    "tags": [
-      "CPT",
-      "其他"
-    ],
-    "audience": [
-      "B",
-      "C"
-    ],
-    "priority": "skim",
-    "note": "推翻 Kaplan，现行 compute-optimal 标准（D ≈ 20×N）。70B 时代的依据。"
-  },
-  {
     "slug": "instructgpt",
     "href": "papers/instructgpt.html",
     "title": "Training LMs to Follow Instructions with Human Feedback (InstructGPT)",

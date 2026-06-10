@@ -1,0 +1,13 @@
+{
+  "slug": "scaling-laws",
+  "title": "Scaling Laws for Neural Language Models",
+  "status": "error",
+  "errors": [
+    "sentence 70 is too long for review: 1351 chars"
+  ],
+  "warnings": [
+    "paper has no image gallery"
+  ],
+  "images": [],
+  "sentence_count": 223
+}

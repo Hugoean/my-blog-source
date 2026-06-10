@@ -1,0 +1,19 @@
+{
+  "slug": "chinchilla",
+  "title": "Training Compute-Optimal Large Language Models (Chinchilla)",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2203.15556_fig_1.png",
+      "exists": true,
+      "bytes": 8820,
+      "dimensions": [
+        875,
+        216
+      ]
+    }
+  ],
+  "sentence_count": 301
+}
