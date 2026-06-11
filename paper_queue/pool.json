@@ -1,20 +1,5 @@
 [
   {
-    "slug": "instructgpt",
-    "href": "papers/instructgpt.html",
-    "title": "Training LMs to Follow Instructions with Human Feedback (InstructGPT)",
-    "arxiv": "2203.02155",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "B",
-      "C"
-    ],
-    "priority": "skim",
-    "note": "RLHF 三阶段流水线奠基。所有后训练论文的\"前作\"，面试必背三阶段画图。"
-  },
-  {
     "slug": "dpo",
     "href": "papers/dpo.html",
     "title": "Direct Preference Optimization: Your LM is Secretly a Reward Model",

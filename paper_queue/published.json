@@ -571,5 +571,68 @@
       ],
       "sentence_count": 301
     }
+  },
+  {
+    "slug": "instructgpt",
+    "href": "papers/instructgpt.html",
+    "title": "Training LMs to Follow Instructions with Human Feedback (InstructGPT)",
+    "arxiv": "2203.02155",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "skim",
+    "note": "RLHF 三阶段流水线奠基。所有后训练论文的\"前作\"，面试必背三阶段画图。",
+    "published_at": "2026-06-11",
+    "path": "source/papers-reader/papers/instructgpt.html",
+    "audit": {
+      "slug": "instructgpt",
+      "title": "Training LMs to Follow Instructions with Human Feedback (InstructGPT)",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2203.02155_fig_2.png",
+          "exists": true,
+          "bytes": 16158,
+          "dimensions": [
+            434,
+            435
+          ]
+        },
+        {
+          "src": "../figures/2203.02155_fig_4.png",
+          "exists": true,
+          "bytes": 16158,
+          "dimensions": [
+            434,
+            435
+          ]
+        },
+        {
+          "src": "../figures/2203.02155_fig_5.png",
+          "exists": true,
+          "bytes": 133517,
+          "dimensions": [
+            2108,
+            1240
+          ]
+        },
+        {
+          "src": "../figures/2203.02155_fig_6.png",
+          "exists": true,
+          "bytes": 297406,
+          "dimensions": [
+            2546,
+            1548
+          ]
+        }
+      ],
+      "sentence_count": 200
+    }
   }
 ]
