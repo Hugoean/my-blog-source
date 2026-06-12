@@ -1,0 +1,28 @@
+{
+  "slug": "dpo",
+  "title": "Direct Preference Optimization: Your LM is Secretly a Reward Model",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2305.18290_fig_1.png",
+      "exists": true,
+      "bytes": 180990,
+      "dimensions": [
+        2380,
+        478
+      ]
+    },
+    {
+      "src": "../figures/2305.18290_fig_2.png",
+      "exists": true,
+      "bytes": 526921,
+      "dimensions": [
+        1450,
+        1722
+      ]
+    }
+  ],
+  "sentence_count": 1429
+}

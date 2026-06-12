@@ -1,21 +1,5 @@
 [
   {
-    "slug": "dpo",
-    "href": "papers/dpo.html",
-    "title": "Direct Preference Optimization: Your LM is Secretly a Reward Model",
-    "arxiv": "2305.18290",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "用 BT 模型 + KL 等价性，把 RLHF 退化成监督式分类。损失函数必默写。"
-  },
-  {
     "slug": "simpo",
     "href": "papers/simpo.html",
     "title": "SimPO: Simple Preference Optimization with a Reference-Free Reward",
