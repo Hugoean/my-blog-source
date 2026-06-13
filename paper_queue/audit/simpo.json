@@ -1,0 +1,28 @@
+{
+  "slug": "simpo",
+  "title": "SimPO: Simple Preference Optimization with a Reference-Free Reward",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2405.14734_fig_1.png",
+      "exists": true,
+      "bytes": 13301,
+      "dimensions": [
+        538,
+        318
+      ]
+    },
+    {
+      "src": "../figures/2405.14734_fig_2.png",
+      "exists": true,
+      "bytes": 13755,
+      "dimensions": [
+        552,
+        321
+      ]
+    }
+  ],
+  "sentence_count": 390
+}

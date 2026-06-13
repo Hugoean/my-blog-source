@@ -1,21 +1,5 @@
 [
   {
-    "slug": "simpo",
-    "href": "papers/simpo.html",
-    "title": "SimPO: Simple Preference Optimization with a Reference-Free Reward",
-    "arxiv": "2405.14734",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "DPO 的 reference-free 简化版，长度归一化 + 目标 margin γ。小算力首选 baseline。"
-  },
-  {
     "slug": "kto",
     "href": "papers/kto.html",
     "title": "KTO: Model Alignment as Prospect Theoretic Optimization",
