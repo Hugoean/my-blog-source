@@ -726,5 +726,86 @@
       ],
       "sentence_count": 390
     }
+  },
+  {
+    "slug": "kto",
+    "href": "papers/kto.html",
+    "title": "KTO: Model Alignment as Prospect Theoretic Optimization",
+    "arxiv": "2402.01306",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "用前景理论解释损失厌恶，需要\"好/坏\"二元标签而非成对偏好。冷启动友好。",
+    "published_at": "2026-06-14",
+    "path": "source/papers-reader/papers/kto.html",
+    "audit": {
+      "slug": "kto",
+      "title": "KTO: Model Alignment as Prospect Theoretic Optimization",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2402.01306_fig_1.png",
+          "exists": true,
+          "bytes": 89364,
+          "dimensions": [
+            814,
+            574
+          ]
+        },
+        {
+          "src": "../figures/2402.01306_fig_2.png",
+          "exists": true,
+          "bytes": 81657,
+          "dimensions": [
+            1954,
+            628
+          ]
+        },
+        {
+          "src": "../figures/2402.01306_fig_3.png",
+          "exists": true,
+          "bytes": 83472,
+          "dimensions": [
+            1950,
+            632
+          ]
+        },
+        {
+          "src": "../figures/2402.01306_fig_4.png",
+          "exists": true,
+          "bytes": 75043,
+          "dimensions": [
+            1436,
+            710
+          ]
+        },
+        {
+          "src": "../figures/2402.01306_fig_5.png",
+          "exists": true,
+          "bytes": 146507,
+          "dimensions": [
+            1700,
+            932
+          ]
+        },
+        {
+          "src": "../figures/2402.01306_fig_6.png",
+          "exists": true,
+          "bytes": 80374,
+          "dimensions": [
+            774,
+            686
+          ]
+        }
+      ],
+      "sentence_count": 677
+    }
   }
 ]

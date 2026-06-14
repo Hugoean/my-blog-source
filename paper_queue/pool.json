@@ -1,20 +1,5 @@
 [
   {
-    "slug": "kto",
-    "href": "papers/kto.html",
-    "title": "KTO: Model Alignment as Prospect Theoretic Optimization",
-    "arxiv": "2402.01306",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "B",
-      "C"
-    ],
-    "priority": "read",
-    "note": "用前景理论解释损失厌恶，需要\"好/坏\"二元标签而非成对偏好。冷启动友好。"
-  },
-  {
     "slug": "ipo",
     "href": "papers/ipo.html",
     "title": "A General Theoretical Paradigm to Understand Learning from Human Preferences (IPO)",
