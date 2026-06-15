@@ -807,5 +807,33 @@
       ],
       "sentence_count": 677
     }
+  },
+  {
+    "slug": "ipo",
+    "href": "papers/ipo.html",
+    "title": "A General Theoretical Paradigm to Understand Learning from Human Preferences (IPO)",
+    "arxiv": "2310.12036",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "B",
+      "C"
+    ],
+    "priority": "read",
+    "note": "指出 BT 在 deterministic 偏好下 reward 发散 → DPO 过拟合，提 squared loss 修正。写论文必引。",
+    "published_at": "2026-06-15",
+    "path": "source/papers-reader/papers/ipo.html",
+    "audit": {
+      "slug": "ipo",
+      "title": "A General Theoretical Paradigm to Understand Learning from Human Preferences (IPO)",
+      "status": "ok",
+      "errors": [],
+      "warnings": [
+        "paper has no image gallery"
+      ],
+      "images": [],
+      "sentence_count": 503
+    }
   }
 ]
