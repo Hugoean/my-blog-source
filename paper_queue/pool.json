@@ -1,21 +1,5 @@
 [
   {
-    "slug": "grpo",
-    "href": "papers/grpo.html",
-    "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning (GRPO 出处)",
-    "arxiv": "2402.03300",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "GRPO 原论文：去掉 critic 用 group baseline，省一半显存，成为 2024-2025 RL 后训练事实标准。"
-  },
-  {
     "slug": "dapo",
     "href": "papers/dapo.html",
     "title": "DAPO: An Open-Source LLM Reinforcement Learning System at Scale",

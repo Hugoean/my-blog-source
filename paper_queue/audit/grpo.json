@@ -1,0 +1,55 @@
+{
+  "slug": "grpo",
+  "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning (GRPO 出处)",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2402.03300_fig_1.png",
+      "exists": true,
+      "bytes": 80854,
+      "dimensions": [
+        1357,
+        800
+      ]
+    },
+    {
+      "src": "../figures/2402.03300_fig_2.png",
+      "exists": true,
+      "bytes": 248050,
+      "dimensions": [
+        348,
+        443
+      ]
+    },
+    {
+      "src": "../figures/2402.03300_fig_3.png",
+      "exists": true,
+      "bytes": 892423,
+      "dimensions": [
+        795,
+        855
+      ]
+    },
+    {
+      "src": "../figures/2402.03300_fig_4.png",
+      "exists": true,
+      "bytes": 511635,
+      "dimensions": [
+        638,
+        630
+      ]
+    },
+    {
+      "src": "../figures/2402.03300_fig_5.png",
+      "exists": true,
+      "bytes": 664998,
+      "dimensions": [
+        3022,
+        2857
+      ]
+    }
+  ],
+  "sentence_count": 250
+}
