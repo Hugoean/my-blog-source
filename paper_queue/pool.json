@@ -1,20 +1,5 @@
 [
   {
-    "slug": "dapo",
-    "href": "papers/dapo.html",
-    "title": "DAPO: An Open-Source LLM Reinforcement Learning System at Scale",
-    "arxiv": "2503.14476",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "字节工程版 GRPO：Clip-Higher + Dynamic Sampling + Token-Level Loss + Overlong Reward Shaping。"
-  },
-  {
     "slug": "minillm",
     "href": "papers/minillm.html",
     "title": "MiniLLM: Knowledge Distillation of Large Language Models",

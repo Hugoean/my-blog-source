@@ -1,0 +1,19 @@
+{
+  "slug": "dapo",
+  "title": "DAPO: An Open-Source LLM Reinforcement Learning System at Scale",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2503.14476_fig_1.png",
+      "exists": true,
+      "bytes": 67728,
+      "dimensions": [
+        5186,
+        584
+      ]
+    }
+  ],
+  "sentence_count": 318
+}
