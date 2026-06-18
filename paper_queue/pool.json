@@ -1,20 +1,5 @@
 [
   {
-    "slug": "minillm",
-    "href": "papers/minillm.html",
-    "title": "MiniLLM: Knowledge Distillation of Large Language Models",
-    "arxiv": "2306.08543",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "把 KD 从 forward KL 换成 reverse KL，避免 mode-averaging，LLM 蒸馏的范式转变。"
-  },
-  {
     "slug": "distillm",
     "href": "papers/distillm.html",
     "title": "DistiLLM: Towards Streamlined Distillation for LLMs",

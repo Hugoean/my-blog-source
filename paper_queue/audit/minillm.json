@@ -1,0 +1,11 @@
+{
+  "slug": "minillm",
+  "title": "MiniLLM: Knowledge Distillation of Large Language Models",
+  "status": "ok",
+  "errors": [],
+  "warnings": [
+    "paper has no image gallery"
+  ],
+  "images": [],
+  "sentence_count": 280
+}
