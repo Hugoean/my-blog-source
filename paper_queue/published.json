@@ -972,5 +972,33 @@
       "images": [],
       "sentence_count": 280
     }
+  },
+  {
+    "slug": "distillm",
+    "href": "papers/distillm.html",
+    "title": "DistiLLM: Towards Streamlined Distillation for LLMs",
+    "arxiv": "2402.03898",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "Skew-KL 插值 + adaptive off-policy，蒸馏工程效率显著提升。",
+    "published_at": "2026-06-19",
+    "path": "source/papers-reader/papers/distillm.html",
+    "audit": {
+      "slug": "distillm",
+      "title": "DistiLLM: Towards Streamlined Distillation for LLMs",
+      "status": "ok",
+      "errors": [],
+      "warnings": [
+        "paper has no image gallery"
+      ],
+      "images": [],
+      "sentence_count": 237
+    }
   }
 ]

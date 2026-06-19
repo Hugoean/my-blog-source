@@ -1,20 +1,5 @@
 [
   {
-    "slug": "distillm",
-    "href": "papers/distillm.html",
-    "title": "DistiLLM: Towards Streamlined Distillation for LLMs",
-    "arxiv": "2402.03898",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "Skew-KL 插值 + adaptive off-policy，蒸馏工程效率显著提升。"
-  },
-  {
     "slug": "on-policy-distill",
     "href": "papers/on-policy-distill.html",
     "title": "On-Policy Distillation: Learning from Self-Generated Mistakes",
