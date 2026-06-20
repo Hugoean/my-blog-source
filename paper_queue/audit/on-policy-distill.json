@@ -1,0 +1,13 @@
+{
+  "slug": "on-policy-distill",
+  "title": "On-Policy Distillation: Learning from Self-Generated Mistakes",
+  "status": "error",
+  "errors": [
+    "sentence 76 is too long for review: 1473 chars"
+  ],
+  "warnings": [
+    "paper has no image gallery"
+  ],
+  "images": [],
+  "sentence_count": 306
+}

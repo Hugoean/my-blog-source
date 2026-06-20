@@ -1,36 +1,5 @@
 [
   {
-    "slug": "on-policy-distill",
-    "href": "papers/on-policy-distill.html",
-    "title": "On-Policy Distillation: Learning from Self-Generated Mistakes",
-    "arxiv": "2306.13649",
-    "tags": [
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "学生采样自己的输出 + 老师打分的范式，蒸馏与 RL 的桥梁。"
-  },
-  {
-    "slug": "deepseek-v3",
-    "href": "papers/deepseek-v3.html",
-    "title": "DeepSeek-V3 Technical Report",
-    "arxiv": "2412.19437",
-    "tags": [
-      "技术报告"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "2024 年底 SOTA：DeepSeekMoE + MLA 注意力 + MTP 多 token 预测 + FP8 训练。系统工程教科书。"
-  },
-  {
     "slug": "qwen-2.5",
     "href": "papers/qwen-2.5.html",
     "title": "Qwen2.5 Technical Report",

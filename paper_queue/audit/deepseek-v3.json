@@ -1,0 +1,46 @@
+{
+  "slug": "deepseek-v3",
+  "title": "DeepSeek-V3 Technical Report",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2412.19437_fig_1.png",
+      "exists": true,
+      "bytes": 114651,
+      "dimensions": [
+        1100,
+        600
+      ]
+    },
+    {
+      "src": "../figures/2412.19437_fig_2.png",
+      "exists": true,
+      "bytes": 313705,
+      "dimensions": [
+        1100,
+        600
+      ]
+    },
+    {
+      "src": "../figures/2412.19437_fig_3.png",
+      "exists": true,
+      "bytes": 112528,
+      "dimensions": [
+        1100,
+        600
+      ]
+    },
+    {
+      "src": "../figures/2412.19437_fig_4.png",
+      "exists": true,
+      "bytes": 289800,
+      "dimensions": [
+        1100,
+        600
+      ]
+    }
+  ],
+  "sentence_count": 313
+}

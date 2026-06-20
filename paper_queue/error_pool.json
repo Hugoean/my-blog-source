@@ -484,5 +484,34 @@
       "sentence_count": 223
     },
     "failed_at": "2026-06-10"
+  },
+  {
+    "slug": "on-policy-distill",
+    "href": "papers/on-policy-distill.html",
+    "title": "On-Policy Distillation: Learning from Self-Generated Mistakes",
+    "arxiv": "2306.13649",
+    "tags": [
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "学生采样自己的输出 + 老师打分的范式，蒸馏与 RL 的桥梁。",
+    "audit": {
+      "slug": "on-policy-distill",
+      "title": "On-Policy Distillation: Learning from Self-Generated Mistakes",
+      "status": "error",
+      "errors": [
+        "sentence 76 is too long for review: 1473 chars"
+      ],
+      "warnings": [
+        "paper has no image gallery"
+      ],
+      "images": [],
+      "sentence_count": 306
+    },
+    "failed_at": "2026-06-20"
   }
 ]

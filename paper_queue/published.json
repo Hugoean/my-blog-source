@@ -1000,5 +1000,69 @@
       "images": [],
       "sentence_count": 237
     }
+  },
+  {
+    "slug": "deepseek-v3",
+    "href": "papers/deepseek-v3.html",
+    "title": "DeepSeek-V3 Technical Report",
+    "arxiv": "2412.19437",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "2024 年底 SOTA：DeepSeekMoE + MLA 注意力 + MTP 多 token 预测 + FP8 训练。系统工程教科书。",
+    "published_at": "2026-06-20",
+    "path": "source/papers-reader/papers/deepseek-v3.html",
+    "audit": {
+      "slug": "deepseek-v3",
+      "title": "DeepSeek-V3 Technical Report",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2412.19437_fig_1.png",
+          "exists": true,
+          "bytes": 114651,
+          "dimensions": [
+            1100,
+            600
+          ]
+        },
+        {
+          "src": "../figures/2412.19437_fig_2.png",
+          "exists": true,
+          "bytes": 313705,
+          "dimensions": [
+            1100,
+            600
+          ]
+        },
+        {
+          "src": "../figures/2412.19437_fig_3.png",
+          "exists": true,
+          "bytes": 112528,
+          "dimensions": [
+            1100,
+            600
+          ]
+        },
+        {
+          "src": "../figures/2412.19437_fig_4.png",
+          "exists": true,
+          "bytes": 289800,
+          "dimensions": [
+            1100,
+            600
+          ]
+        }
+      ],
+      "sentence_count": 313
+    }
   }
 ]
