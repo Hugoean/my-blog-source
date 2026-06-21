@@ -1,0 +1,73 @@
+{
+  "slug": "qwen-2.5",
+  "title": "Qwen2.5 Technical Report",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2412.15115_fig_1.png",
+      "exists": true,
+      "bytes": 23295,
+      "dimensions": [
+        550,
+        346
+      ]
+    },
+    {
+      "src": "../figures/2412.15115_fig_3.png",
+      "exists": true,
+      "bytes": 71876,
+      "dimensions": [
+        942,
+        933
+      ]
+    },
+    {
+      "src": "../figures/2412.15115_fig_4.png",
+      "exists": true,
+      "bytes": 115752,
+      "dimensions": [
+        2000,
+        1027
+      ]
+    },
+    {
+      "src": "../figures/2412.15115_fig_6.png",
+      "exists": true,
+      "bytes": 22630,
+      "dimensions": [
+        600,
+        500
+      ]
+    },
+    {
+      "src": "../figures/2412.15115_fig_7.png",
+      "exists": true,
+      "bytes": 24397,
+      "dimensions": [
+        600,
+        500
+      ]
+    },
+    {
+      "src": "../figures/2412.15115_fig_8.png",
+      "exists": true,
+      "bytes": 23937,
+      "dimensions": [
+        600,
+        500
+      ]
+    },
+    {
+      "src": "../figures/2412.15115_fig_9.png",
+      "exists": true,
+      "bytes": 35303,
+      "dimensions": [
+        692,
+        577
+      ]
+    }
+  ],
+  "sentence_count": 699
+}

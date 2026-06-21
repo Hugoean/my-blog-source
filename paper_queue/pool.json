@@ -1,21 +1,5 @@
 [
   {
-    "slug": "qwen-2.5",
-    "href": "papers/qwen-2.5.html",
-    "title": "Qwen2.5 Technical Report",
-    "arxiv": "2412.15115",
-    "tags": [
-      "技术报告"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "CPT 数据章节教科书级。0.5B-72B 全规模，多语言、长上下文、数学/代码专项全覆盖。"
-  },
-  {
     "slug": "qwen-3",
     "href": "papers/qwen-3.html",
     "title": "Qwen3 Technical Report",
