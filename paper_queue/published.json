@@ -1155,5 +1155,50 @@
       ],
       "sentence_count": 699
     }
+  },
+  {
+    "slug": "qwen-3",
+    "href": "papers/qwen-3.html",
+    "title": "Qwen3 Technical Report",
+    "arxiv": "2505.09388",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "最新一代 · 思考/非思考混合模式 · 36T 预训练 · 后训练四阶段。一份就能讲清现代 pipeline。",
+    "published_at": "2026-06-22",
+    "path": "source/papers-reader/papers/qwen-3.html",
+    "audit": {
+      "slug": "qwen-3",
+      "title": "Qwen3 Technical Report",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2505.09388_fig_1.png",
+          "exists": true,
+          "bytes": 23295,
+          "dimensions": [
+            550,
+            346
+          ]
+        },
+        {
+          "src": "../figures/2505.09388_fig_2.png",
+          "exists": true,
+          "bytes": 115752,
+          "dimensions": [
+            2000,
+            1027
+          ]
+        }
+      ],
+      "sentence_count": 218
+    }
   }
 ]

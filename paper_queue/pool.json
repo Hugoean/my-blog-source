@@ -1,20 +1,5 @@
 [
   {
-    "slug": "qwen-3",
-    "href": "papers/qwen-3.html",
-    "title": "Qwen3 Technical Report",
-    "arxiv": "2505.09388",
-    "tags": [
-      "技术报告"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "最新一代 · 思考/非思考混合模式 · 36T 预训练 · 后训练四阶段。一份就能讲清现代 pipeline。"
-  },
-  {
     "slug": "deepseek-r1",
     "href": "papers/deepseek-r1.html",
     "title": "DeepSeek-R1: Incentivizing Reasoning via RL",

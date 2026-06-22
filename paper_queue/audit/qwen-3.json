@@ -1,0 +1,28 @@
+{
+  "slug": "qwen-3",
+  "title": "Qwen3 Technical Report",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2505.09388_fig_1.png",
+      "exists": true,
+      "bytes": 23295,
+      "dimensions": [
+        550,
+        346
+      ]
+    },
+    {
+      "src": "../figures/2505.09388_fig_2.png",
+      "exists": true,
+      "bytes": 115752,
+      "dimensions": [
+        2000,
+        1027
+      ]
+    }
+  ],
+  "sentence_count": 218
+}
