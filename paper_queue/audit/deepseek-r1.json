@@ -1,0 +1,39 @@
+{
+  "slug": "deepseek-r1",
+  "title": "DeepSeek-R1: Incentivizing Reasoning via RL",
+  "status": "error",
+  "errors": [
+    "sentence 58 is too long for review: 1590 chars"
+  ],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2501.12948_fig_1.png",
+      "exists": true,
+      "bytes": 4906835,
+      "dimensions": [
+        11881,
+        7646
+      ]
+    },
+    {
+      "src": "../figures/2501.12948_fig_2.png",
+      "exists": true,
+      "bytes": 909158,
+      "dimensions": [
+        2527,
+        1272
+      ]
+    },
+    {
+      "src": "../figures/2501.12948_fig_3.png",
+      "exists": true,
+      "bytes": 578676,
+      "dimensions": [
+        3385,
+        859
+      ]
+    }
+  ],
+  "sentence_count": 259
+}

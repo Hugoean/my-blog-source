@@ -513,5 +513,62 @@
       "sentence_count": 306
     },
     "failed_at": "2026-06-20"
+  },
+  {
+    "slug": "deepseek-r1",
+    "href": "papers/deepseek-r1.html",
+    "title": "DeepSeek-R1: Incentivizing Reasoning via RL",
+    "arxiv": "2501.12948",
+    "tags": [
+      "技术报告",
+      "后训练"
+    ],
+    "audience": [
+      "A",
+      "B",
+      "C"
+    ],
+    "priority": "deep",
+    "note": "R1-Zero 纯 RL · cold-start SFT + 多阶段 RL · aha moment · GRPO 工业实战 · distill 到小模型。开源推理 SOTA。",
+    "audit": {
+      "slug": "deepseek-r1",
+      "title": "DeepSeek-R1: Incentivizing Reasoning via RL",
+      "status": "error",
+      "errors": [
+        "sentence 58 is too long for review: 1590 chars"
+      ],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2501.12948_fig_1.png",
+          "exists": true,
+          "bytes": 4906835,
+          "dimensions": [
+            11881,
+            7646
+          ]
+        },
+        {
+          "src": "../figures/2501.12948_fig_2.png",
+          "exists": true,
+          "bytes": 909158,
+          "dimensions": [
+            2527,
+            1272
+          ]
+        },
+        {
+          "src": "../figures/2501.12948_fig_3.png",
+          "exists": true,
+          "bytes": 578676,
+          "dimensions": [
+            3385,
+            859
+          ]
+        }
+      ],
+      "sentence_count": 259
+    },
+    "failed_at": "2026-06-23"
   }
 ]

@@ -1,37 +1,5 @@
 [
   {
-    "slug": "deepseek-r1",
-    "href": "papers/deepseek-r1.html",
-    "title": "DeepSeek-R1: Incentivizing Reasoning via RL",
-    "arxiv": "2501.12948",
-    "tags": [
-      "技术报告",
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "B",
-      "C"
-    ],
-    "priority": "deep",
-    "note": "R1-Zero 纯 RL · cold-start SFT + 多阶段 RL · aha moment · GRPO 工业实战 · distill 到小模型。开源推理 SOTA。"
-  },
-  {
-    "slug": "kimi-k2",
-    "href": "papers/kimi-k2.html",
-    "title": "Kimi K2: Open Agentic Intelligence",
-    "arxiv": "2507.20534",
-    "tags": [
-      "技术报告"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "Muon 优化器大规模训练（面试热点！）+ agentic foundation。"
-  },
-  {
     "slug": "kimi-k1.5",
     "href": "papers/kimi-k1.5.html",
     "title": "Kimi K1.5: Scaling RL with LLMs",

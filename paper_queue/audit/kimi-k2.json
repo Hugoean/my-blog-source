@@ -1,0 +1,19 @@
+{
+  "slug": "kimi-k2",
+  "title": "Kimi K2: Open Agentic Intelligence",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2507.20534_fig_1.png",
+      "exists": true,
+      "bytes": 191072,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    }
+  ],
+  "sentence_count": 308
+}

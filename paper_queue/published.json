@@ -1200,5 +1200,41 @@
       ],
       "sentence_count": 218
     }
+  },
+  {
+    "slug": "kimi-k2",
+    "href": "papers/kimi-k2.html",
+    "title": "Kimi K2: Open Agentic Intelligence",
+    "arxiv": "2507.20534",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "A",
+      "C"
+    ],
+    "priority": "read",
+    "note": "Muon 优化器大规模训练（面试热点！）+ agentic foundation。",
+    "published_at": "2026-06-23",
+    "path": "source/papers-reader/papers/kimi-k2.html",
+    "audit": {
+      "slug": "kimi-k2",
+      "title": "Kimi K2: Open Agentic Intelligence",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2507.20534_fig_1.png",
+          "exists": true,
+          "bytes": 191072,
+          "dimensions": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "sentence_count": 308
+    }
   }
 ]
