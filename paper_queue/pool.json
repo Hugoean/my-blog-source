@@ -1,21 +1,5 @@
 [
   {
-    "slug": "kimi-k1.5",
-    "href": "papers/kimi-k1.5.html",
-    "title": "Kimi K1.5: Scaling RL with LLMs",
-    "arxiv": "2501.12599",
-    "tags": [
-      "技术报告",
-      "后训练"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "long context RL + partial rollouts + length penalty。和 R1 同期对标，方法论不同。"
-  },
-  {
     "slug": "llama-3",
     "href": "papers/llama-3.html",
     "title": "The Llama 3 Herd of Models",
