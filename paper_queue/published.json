@@ -1265,5 +1265,103 @@
       "images": [],
       "sentence_count": 543
     }
+  },
+  {
+    "slug": "llama-3",
+    "href": "papers/llama-3.html",
+    "title": "The Llama 3 Herd of Models",
+    "arxiv": "2407.21783",
+    "tags": [
+      "技术报告"
+    ],
+    "audience": [
+      "C"
+    ],
+    "priority": "skim",
+    "note": "405B dense + 多模态。92 页全方位，只读架构 + 数据 + 后训练四阶段。",
+    "published_at": "2026-06-25",
+    "path": "source/papers-reader/papers/llama-3.html",
+    "audit": {
+      "slug": "llama-3",
+      "title": "The Llama 3 Herd of Models",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2407.21783_fig_1.png",
+          "exists": true,
+          "bytes": 1068866,
+          "dimensions": [
+            23666,
+            6483
+          ]
+        },
+        {
+          "src": "../figures/2407.21783_fig_2.png",
+          "exists": true,
+          "bytes": 71548,
+          "dimensions": [
+            1556,
+            700
+          ]
+        },
+        {
+          "src": "../figures/2407.21783_fig_3.png",
+          "exists": true,
+          "bytes": 113702,
+          "dimensions": [
+            1882,
+            812
+          ]
+        },
+        {
+          "src": "../figures/2407.21783_fig_4.png",
+          "exists": true,
+          "bytes": 1355426,
+          "dimensions": [
+            9240,
+            6968
+          ]
+        },
+        {
+          "src": "../figures/2407.21783_fig_5.png",
+          "exists": true,
+          "bytes": 165052,
+          "dimensions": [
+            1606,
+            726
+          ]
+        },
+        {
+          "src": "../figures/2407.21783_fig_6.png",
+          "exists": true,
+          "bytes": 60850,
+          "dimensions": [
+            1200,
+            800
+          ]
+        },
+        {
+          "src": "../figures/2407.21783_fig_7.png",
+          "exists": true,
+          "bytes": 75122,
+          "dimensions": [
+            1200,
+            800
+          ]
+        },
+        {
+          "src": "../figures/2407.21783_fig_8.png",
+          "exists": true,
+          "bytes": 566587,
+          "dimensions": [
+            12150,
+            2958
+          ]
+        }
+      ],
+      "sentence_count": 313
+    }
   }
 ]

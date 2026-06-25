@@ -1,19 +1,5 @@
 [
   {
-    "slug": "llama-3",
-    "href": "papers/llama-3.html",
-    "title": "The Llama 3 Herd of Models",
-    "arxiv": "2407.21783",
-    "tags": [
-      "技术报告"
-    ],
-    "audience": [
-      "C"
-    ],
-    "priority": "skim",
-    "note": "405B dense + 多模态。92 页全方位，只读架构 + 数据 + 后训练四阶段。"
-  },
-  {
     "slug": "minimax-01",
     "href": "papers/minimax-01.html",
     "title": "MiniMax-01: Scaling with Lightning Attention",
