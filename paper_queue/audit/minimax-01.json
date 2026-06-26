@@ -1,0 +1,136 @@
+{
+  "slug": "minimax-01",
+  "title": "MiniMax-01: Scaling with Lightning Attention",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2501.08313_fig_1.png",
+      "exists": true,
+      "bytes": 15693,
+      "dimensions": [
+        3320,
+        512
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_2.png",
+      "exists": true,
+      "bytes": 321774,
+      "dimensions": [
+        1425,
+        555
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_3.png",
+      "exists": true,
+      "bytes": 101485,
+      "dimensions": [
+        696,
+        306
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_4.png",
+      "exists": true,
+      "bytes": 141262,
+      "dimensions": [
+        1182,
+        360
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_5.png",
+      "exists": true,
+      "bytes": 141262,
+      "dimensions": [
+        1182,
+        360
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_6.png",
+      "exists": true,
+      "bytes": 77109,
+      "dimensions": [
+        606,
+        312
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_7.png",
+      "exists": true,
+      "bytes": 599301,
+      "dimensions": [
+        1458,
+        366
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_8.png",
+      "exists": true,
+      "bytes": 516910,
+      "dimensions": [
+        1188,
+        375
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_9.png",
+      "exists": true,
+      "bytes": 393342,
+      "dimensions": [
+        890,
+        628
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_10.png",
+      "exists": true,
+      "bytes": 893846,
+      "dimensions": [
+        800,
+        533
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_11.png",
+      "exists": true,
+      "bytes": 1738022,
+      "dimensions": [
+        800,
+        1064
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_12.png",
+      "exists": true,
+      "bytes": 200337,
+      "dimensions": [
+        1541,
+        1021
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_13.png",
+      "exists": true,
+      "bytes": 1554676,
+      "dimensions": [
+        3994,
+        2246
+      ]
+    },
+    {
+      "src": "../figures/2501.08313_fig_14.png",
+      "exists": true,
+      "bytes": 4130220,
+      "dimensions": [
+        1912,
+        914
+      ]
+    }
+  ],
+  "sentence_count": 304
+}

@@ -1,21 +1,5 @@
 [
   {
-    "slug": "minimax-01",
-    "href": "papers/minimax-01.html",
-    "title": "MiniMax-01: Scaling with Lightning Attention",
-    "arxiv": "2501.08313",
-    "tags": [
-      "技术报告",
-      "其他"
-    ],
-    "audience": [
-      "A",
-      "C"
-    ],
-    "priority": "read",
-    "note": "Lightning Attention 7/8 + softmax 1/8 混合，MoE 456B，4M 上下文。线性注意力工业落地标杆。"
-  },
-  {
     "slug": "glm-4.5",
     "href": "papers/glm-4.5.html",
     "title": "GLM-4.5 Technical Report",
