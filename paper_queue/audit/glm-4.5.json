@@ -1,0 +1,37 @@
+{
+  "slug": "glm-4.5",
+  "title": "GLM-4.5 Technical Report",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2508.06471_fig_1.png",
+      "exists": true,
+      "bytes": 141974,
+      "dimensions": [
+        472,
+        461
+      ]
+    },
+    {
+      "src": "../figures/2508.06471_fig_2.png",
+      "exists": true,
+      "bytes": 146889,
+      "dimensions": [
+        472,
+        461
+      ]
+    },
+    {
+      "src": "../figures/2508.06471_fig_3.png",
+      "exists": true,
+      "bytes": 546248,
+      "dimensions": [
+        3483,
+        1944
+      ]
+    }
+  ],
+  "sentence_count": 164
+}

@@ -1,19 +1,5 @@
 [
   {
-    "slug": "glm-4.5",
-    "href": "papers/glm-4.5.html",
-    "title": "GLM-4.5 Technical Report",
-    "arxiv": "2508.06471",
-    "tags": [
-      "技术报告"
-    ],
-    "audience": [
-      "C"
-    ],
-    "priority": "skim",
-    "note": "三阶段 RL 路线，Reasoning + Coding + Agentic 三轴并进。"
-  },
-  {
     "slug": "mimo",
     "href": "papers/mimo.html",
     "title": "MiMo: Unlocking the Reasoning Potential of LM (Xiaomi)",
