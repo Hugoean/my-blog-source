@@ -1570,5 +1570,41 @@
       ],
       "sentence_count": 164
     }
+  },
+  {
+    "slug": "mimo",
+    "href": "papers/mimo.html",
+    "title": "MiMo: Unlocking the Reasoning Potential of LM (Xiaomi)",
+    "arxiv": "2505.07608",
+    "tags": [
+      "技术报告",
+      "后训练"
+    ],
+    "audience": [
+      "C"
+    ],
+    "priority": "skim",
+    "note": "小米首个推理模型 · RL on math/code · 数据合成思路 · 与 R1 对比。",
+    "published_at": "2026-06-28",
+    "path": "source/papers-reader/papers/mimo.html",
+    "audit": {
+      "slug": "mimo",
+      "title": "MiMo: Unlocking the Reasoning Potential of LM (Xiaomi)",
+      "status": "ok",
+      "errors": [],
+      "warnings": [],
+      "images": [
+        {
+          "src": "../figures/2505.07608_fig_1.png",
+          "exists": true,
+          "bytes": 429683,
+          "dimensions": [
+            3727,
+            2579
+          ]
+        }
+      ],
+      "sentence_count": 492
+    }
   }
 ]

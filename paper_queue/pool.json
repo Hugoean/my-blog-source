@@ -1,20 +1,5 @@
 [
   {
-    "slug": "mimo",
-    "href": "papers/mimo.html",
-    "title": "MiMo: Unlocking the Reasoning Potential of LM (Xiaomi)",
-    "arxiv": "2505.07608",
-    "tags": [
-      "技术报告",
-      "后训练"
-    ],
-    "audience": [
-      "C"
-    ],
-    "priority": "skim",
-    "note": "小米首个推理模型 · RL on math/code · 数据合成思路 · 与 R1 对比。"
-  },
-  {
     "slug": "yi",
     "href": "papers/yi.html",
     "title": "Yi: Open Foundation Models by 01.AI",
