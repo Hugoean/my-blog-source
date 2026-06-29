@@ -1,16 +1,1 @@
-[
-  {
-    "slug": "yi",
-    "href": "papers/yi.html",
-    "title": "Yi: Open Foundation Models by 01.AI",
-    "arxiv": "2403.04652",
-    "tags": [
-      "技术报告"
-    ],
-    "audience": [
-      "C"
-    ],
-    "priority": "skim",
-    "note": "Yi-6B / 34B，数据 pipeline 写得最细，中文优化方法系统。"
-  }
-]
+[]

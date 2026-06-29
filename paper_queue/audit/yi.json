@@ -1,0 +1,91 @@
+{
+  "slug": "yi",
+  "title": "Yi: Open Foundation Models by 01.AI",
+  "status": "ok",
+  "errors": [],
+  "warnings": [],
+  "images": [
+    {
+      "src": "../figures/2403.04652_fig_1.png",
+      "exists": true,
+      "bytes": 707156,
+      "dimensions": [
+        2201,
+        901
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_2.png",
+      "exists": true,
+      "bytes": 462767,
+      "dimensions": [
+        1628,
+        1234
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_3.png",
+      "exists": true,
+      "bytes": 903633,
+      "dimensions": [
+        6837,
+        3880
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_4.png",
+      "exists": true,
+      "bytes": 791173,
+      "dimensions": [
+        6943,
+        3880
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_5.png",
+      "exists": true,
+      "bytes": 841952,
+      "dimensions": [
+        6890,
+        3885
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_6.png",
+      "exists": true,
+      "bytes": 703201,
+      "dimensions": [
+        6890,
+        3885
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_7.png",
+      "exists": true,
+      "bytes": 234723,
+      "dimensions": [
+        1540,
+        924
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_8.png",
+      "exists": true,
+      "bytes": 221546,
+      "dimensions": [
+        1518,
+        938
+      ]
+    },
+    {
+      "src": "../figures/2403.04652_fig_9.png",
+      "exists": true,
+      "bytes": 83934,
+      "dimensions": [
+        1280,
+        639
+      ]
+    }
+  ],
+  "sentence_count": 319
+}
