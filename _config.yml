@@ -1,11 +1,11 @@
-title: Hexo
+title: Hugoean
 subtitle: ''
 description: ''
 keywords: null
-author: John Doe
+author: Hugoean
 language: en
 timezone: ''
-url: http://example.com
+url: https://hugoean.github.io
 permalink: ':year/:month/:day/:title/'
 permalink_defaults: null
 pretty_urls:
