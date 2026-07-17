@@ -439,6 +439,12 @@ html, body {
   letter-spacing: 2px;
 }
 
+.project-name a,
+.project-status a {
+  color: inherit;
+  text-decoration: none;
+}
+
 .project-desc {
   color: var(--text);
   font-size: 0.8rem;
